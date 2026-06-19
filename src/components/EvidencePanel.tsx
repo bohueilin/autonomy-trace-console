@@ -1,5 +1,5 @@
 import { LICENSE_LEVELS } from '../license'
-import type { EvidenceStatus, LicenseLevelId, PersistenceStatus } from '../types'
+import type { EvidenceStatus, HistorySource, LicenseLevelId, PersistenceStatus } from '../types'
 
 interface Props {
   /** Live status of the most recent server-episode action. */
@@ -18,6 +18,14 @@ const STATUS_LABEL: Record<PersistenceStatus, string> = {
   unavailable: 'InsForge unavailable — server trace returned locally',
 }
 
+const SOURCE_LABEL: Record<HistorySource, string> = {
+  memory: 'in-memory (this server process)',
+  insforge: 'InsForge (rehydrated)',
+  local_only: 'local-only (InsForge not configured)',
+  unavailable: 'InsForge unavailable',
+  error: 'InsForge read error',
+}
+
 function licenseColor(id?: string): string | undefined {
   return id && id in LICENSE_LEVELS ? LICENSE_LEVELS[id as LicenseLevelId].color : undefined
 }
@@ -26,6 +34,8 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
   const configured = evidence?.persistence.configured ?? false
   const table = evidence?.persistence.table ?? 'eval_episodes'
   const summary = evidence?.currentLicenseSummary ?? null
+  const source = evidence?.historySource ?? 'local_only'
+  const rows = evidence?.recentCompactRuns ?? []
 
   return (
     <div className="evidence-panel">
@@ -37,11 +47,24 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
       <div className={`evidence-status status-${status}`}>{STATUS_LABEL[status]}</div>
 
       <dl className="evidence-grid">
-        <dt>Backend</dt>
-        <dd>{reached ? 'reached' : <span className="evidence-muted">local-only (unreachable)</span>}</dd>
+        <dt>Evidence source</dt>
+        <dd>{reached ? SOURCE_LABEL[source] : <span className="evidence-muted">unreachable</span>}</dd>
 
-        <dt>Trace authority</dt>
-        <dd>server_authoritative_episode</dd>
+        <dt>Rehydrated</dt>
+        <dd>
+          {evidence?.rehydratedFromInsForge
+            ? `yes · ${evidence.rehydratedCount} row(s)`
+            : 'no'}
+        </dd>
+
+        <dt>Version mismatch</dt>
+        <dd>
+          {evidence && evidence.versionMismatchCount > 0 ? (
+            <span className="evidence-warn">{evidence.versionMismatchCount} excluded</span>
+          ) : (
+            '0'
+          )}
+        </dd>
 
         <dt>Storage</dt>
         <dd>
@@ -51,9 +74,6 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
 
         <dt>Server episodes</dt>
         <dd>{evidence?.serverEpisodeCount ?? 0}</dd>
-
-        <dt>Run id</dt>
-        <dd>{evidence?.runId ? <code>{evidence.runId}</code> : <span className="evidence-muted">—</span>}</dd>
 
         <dt>Latest trace id</dt>
         <dd>
@@ -84,6 +104,26 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
           )}
         </dd>
       </dl>
+
+      {rows.length > 0 && (
+        <div className="evidence-recent">
+          <div className="evidence-recent-label">Recent evidence</div>
+          <ul>
+            {rows.map((r) => (
+              <li key={r.traceId} className={r.versionMismatch ? 'mismatch' : ''}>
+                <span className={`mini-verdict ${r.passed ? 'ok' : 'bad'}`}>
+                  {r.passed ? 'PASS' : 'FAIL'}
+                  {r.catastrophic ? ' ⚠' : ''}
+                </span>
+                <span className="mini-scn">{r.scenarioTitle}</span>
+                <span className="mini-act">{r.action.toUpperCase()}</span>
+                {r.fallback && <span className="mini-fb">fallback</span>}
+                <span className="mini-lvl">{r.licenseLevel}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="evidence-note">
         InsForge preserves evidence. The verifier code remains the source of truth.

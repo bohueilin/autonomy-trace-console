@@ -370,17 +370,25 @@ Enough to reconstruct the evaluation:
 | Column | Notes |
 | ------ | ----- |
 | `trace_authority` | always `server_authoritative_episode`. |
-| `run_id` | groups this server process's episodes. |
-| `scenario_id`, `scenario_version`, `scenario_title`, `domain` | which scenario + set version. |
+| `trace_id`, `run_id`, `episode_index`, `run_sequence` | stable evidence identity (never mutated for UI). |
+| `environment_name`, `scenario_registry_version`, `verifier_version`, `reward_model_version`, `license_policy_version`, `app_commit` | attribution versions — replay against the exact environment/verifier/reward/license that ran. |
+| `scenario_id`, `scenario_version`, `scenario_title`, `domain` | which scenario + content version. |
 | `scenario_snapshot` | full canonical scenario (server-owned ground truth). |
-| `policy_source` | `mock` \| `nebius`. |
-| `model_name` | Nebius model id (or null). |
-| `model_input` | exact visible context the policy saw. |
-| `action`, `rationale`, `requested_info`, `confidence` | normalized decision. |
+| `requested_policy_mode` | what the client asked for: `mock` \| `nebius`. |
+| `actual_policy_source` | what actually decided: `mock` \| `nebius` (differs on fallback). |
 | `fallback`, `fallback_code` | did Nebius fall back to mock, and why. |
+| `attempted_model_input` | the `ModelPolicyView` Nebius would receive / did receive (null for a pure mock run). |
+| `actual_policy_input` | the view the policy that actually decided used (`MockPolicyView` on fallback, `ModelPolicyView` on Nebius success). |
+| `model_name` | Nebius model id (or null). |
+| `action`, `rationale`, `requested_info`, `confidence` | normalized decision. |
 | `passed`, `reward`, `category`, `catastrophic`, `expected_action`, `actual_action`, `verifier_reason`, `verifier_checks` | deterministic verifier result. |
 | `license_level`, `license_summary` | server-computed license at episode time. |
 | `created_at` | ISO timestamp. |
+
+On a Nebius **fallback**, `requested_policy_mode` (`nebius`) and
+`actual_policy_source` (`mock`) intentionally differ, and `attempted_model_input`
+(what Nebius was asked) is preserved alongside `actual_policy_input` (what the
+mock policy actually used).
 
 **InsForge preserves evidence. It is not the source of verifier truth** — the
 deterministic verifier remains authoritative.
@@ -417,22 +425,38 @@ authority + identity + versions; the Nebius no-key fallback records
 `requested_policy_mode: nebius` / `actual_policy_source: mock` / `fallback: true` /
 `fallback_code: no_key` with both inputs; and the row contains the replay fields.
 
-### Demo persistence across reloads
+### InsForge read-back / rehydration (Milestone 4)
 
-This milestone **writes** authoritative traces and **reads** them back via
-`GET /api/evidence/status` (compact backend snapshot) and `GET /api/runs/recent`
-(recent episodes) — from the server's in-memory run history:
+InsForge evidence **writes** were implemented in Milestone 3. Milestone 4 makes
+that evidence **readable and rehydratable** — an evidence-integrity feature, not a
+history UI.
 
-1. Click **Run Server Episode** a few times — watch the Evidence panel
-   (`Server episodes` count, run id, latest trace/record id, server license).
-2. **Reload the page.** The client trace list clears, but the Evidence panel is
-   repopulated from `GET /api/evidence/status` — the run id, episode count, latest
-   ids, and server license survived the reload (backend proof, not React state).
+`GET /api/evidence/status` now, on its first call:
 
-The in-memory history survives client reloads but **resets on server restart**;
-InsForge is the durable write store. Durable history across server restarts is
-**not** complete yet — reading persisted rows back **from InsForge** (rather than
-in-memory) is the next milestone.
+1. If InsForge is configured, reads the newest authoritative rows back
+   (`GET .../api/database/records/eval_episodes?trace_authority=eq.server_authoritative_episode&order=created_at.desc`).
+2. Parses them, filters to `trace_authority === "server_authoritative_episode"`,
+   and **dedupes by `trace_id`** against the current process's in-memory history
+   (so rows persisted this session aren't double-counted).
+3. **Recomputes the current server license from compatible authoritative
+   verdicts** — never trusting a stored `license_summary` as current truth.
+4. Surfaces **version-mismatched** rows instead of silently blending them: rows
+   whose `verifier_version` / `reward_model_version` / `license_policy_version`
+   differ from the current versions are counted (`versionMismatchCount`) and shown
+   but excluded from the recomputed license.
+
+The response reports `historySource` (`memory | insforge | local_only |
+unavailable | error`), `rehydratedFromInsForge`, `rehydratedCount`,
+`versionMismatchCount`, `compatibleEvidenceCount`, and compact recent rows.
+
+> **After reload, the browser asks the server for evidence status. The server can
+> rehydrate compact license history from InsForge authoritative rows rather than
+> trusting browser state.**
+
+**Durability:** with InsForge configured, authoritative evidence now survives a
+**server restart** (it is read back from InsForge). Without InsForge, the in-memory
+history still survives client reloads but resets on server restart. A full replay
+**UI** (re-rendering historical episodes) is still future work.
 
 ### Why persistence matters
 
@@ -455,12 +479,14 @@ shown and how the environment scored it.
 3. **Replayable audit semantics — DONE (Milestone 3.1).** Stable trace identity,
    attribution versions (environment / scenario registry / verifier / reward /
    license), explicit Nebius fallback attribution, and `GET /api/evidence/status`.
-4. **InsForge read-back / rehydration (next)** — query persisted rows back *from
-   InsForge* (not just in-memory) to rehydrate authoritative license history, so it
-   is durable across reload **and server restart** and the eval corpus is queryable.
-5. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
-   (review an escalation, approve a recommendation) without changing the verifier
-   or the license gate.
+4. **InsForge read-back / rehydration — DONE (Milestone 4).** `GET /api/evidence/status`
+   reads authoritative rows back from InsForge, dedupes by `trace_id`, and
+   recomputes the current license from version-compatible verdicts (mismatches
+   surfaced, not blended). Evidence survives a server restart when configured.
+5. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
+   episode, ask why autonomy was capped, and summarize the latest persisted
+   evidence (read from `/api/evidence/status`). It calls the same server-owned
+   endpoints; it does **not** change the verifier or the license gate.
 
 ---
 

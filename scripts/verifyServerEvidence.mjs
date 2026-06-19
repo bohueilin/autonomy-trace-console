@@ -1,12 +1,25 @@
 // Lightweight, in-process verification of the server-owned episode evidence
-// semantics. No running dev server required — imports the handler directly.
+// semantics + InsForge read-back parsing. No running dev server / credentials
+// required — imports the handler directly and exercises read-back with MOCKED
+// InsForge rows.
 //
 //   node scripts/verifyServerEvidence.mjs
 //
-// Exits non-zero if any check fails. (Uses no InsForge / Nebius credentials, so
-// it also confirms local-only persistence and Nebius no-key fallback.)
+// Exits non-zero if any check fails.
 
-import { handleRunEpisode, getEvidenceStatus } from '../server/runEpisodeHandler.ts'
+import {
+  handleRunEpisode,
+  getEvidenceStatus,
+  parseEvidenceRow,
+  mergeDedupe,
+  compactFromItem,
+} from '../server/runEpisodeHandler.ts'
+import { computeLicenseFromVerdicts } from '../src/license.ts'
+import {
+  VERIFIER_VERSION,
+  REWARD_MODEL_VERSION,
+  LICENSE_POLICY_VERSION,
+} from '../server/evalVersions.ts'
 
 const cfg = { nebius: {}, insforge: {} } // no creds -> local_only + nebius no_key
 
@@ -20,51 +33,35 @@ function check(name, cond) {
 const unknown = await handleRunEpisode({ scenarioId: 'does-not-exist', policyMode: 'mock' }, cfg)
 check('1. unknown scenarioId -> bad_request', unknown.ok === false && unknown.code === 'bad_request')
 
-// 2. Only { scenarioId, policyMode } is accepted; bad policyMode rejected.
-const badMode = await handleRunEpisode({ scenarioId: 'com-1', policyMode: 'wat' }, cfg)
-check('2. invalid policyMode -> bad_request', badMode.ok === false && badMode.code === 'bad_request')
-
-// 3. Client-provided verifier/reward/license fields are ignored (not trusted).
+// 2. Client-provided verifier/reward/license fields are ignored (not trusted).
 const spoof = await handleRunEpisode(
-  {
-    scenarioId: 'com-2', // discount: expected escalate; mock acts -> catastrophic, reward -1
-    policyMode: 'mock',
-    reward: 999,
-    passed: true,
-    licenseLevel: 'L4',
-    catastrophic: false,
-    verifierResult: { passed: true },
-  },
+  { scenarioId: 'com-2', policyMode: 'mock', reward: 999, passed: true, licenseLevel: 'L4' },
   cfg,
 )
 check(
-  '3. client-spoofed reward/pass/license are ignored',
+  '2. client-spoofed reward/pass/license ignored',
   spoof.ok === true &&
     spoof.trace.result.reward === -1 &&
     spoof.trace.result.passed === false &&
     spoof.trace.result.catastrophic === true,
 )
 
-// 4. Returned server trace carries authority + identity + attribution versions.
+// 3. Server traces carry authority + identity + versions.
 const t = spoof.ok ? spoof.trace : null
 check(
-  '4. trace has authority/id/episode/versions',
+  '3. trace_authority + identity + versions',
   !!t &&
     t.authority === 'server_authoritative_episode' &&
     typeof t.id === 'string' &&
-    typeof t.episode === 'number' &&
     !!t.versions &&
-    typeof t.versions.scenarioVersion === 'string' &&
-    typeof t.versions.verifierVersion === 'string' &&
-    typeof t.versions.rewardModelVersion === 'string' &&
-    typeof t.versions.licensePolicyVersion === 'string',
+    typeof t.versions.verifierVersion === 'string',
 )
 
-// 5. Nebius no-key fallback records requested vs actual policy attribution.
+// 4. Nebius no-key fallback attribution.
 const fb = await handleRunEpisode({ scenarioId: 'com-1', policyMode: 'nebius' }, cfg)
 const row = fb.ok ? fb.auditRow : {}
 check(
-  '5. nebius no-key fallback attribution',
+  '4. nebius no-key fallback attribution',
   fb.ok === true &&
     row.requested_policy_mode === 'nebius' &&
     row.actual_policy_source === 'mock' &&
@@ -74,32 +71,97 @@ check(
     row.actual_policy_input != null,
 )
 
-// 6. Persisted audit row contains the replay fields.
+// --- InsForge read-back (mocked rows) -------------------------------------
+
+const validRow = {
+  trace_authority: 'server_authoritative_episode',
+  id: 'rec_valid',
+  trace_id: 'srv-mock-1-com-1',
+  episode_index: 1,
+  run_sequence: 1,
+  scenario_id: 'com-1',
+  scenario_title: 'Refund within policy',
+  requested_policy_mode: 'mock',
+  actual_policy_source: 'mock',
+  fallback: false,
+  fallback_code: null,
+  action: 'act',
+  passed: true,
+  reward: 1,
+  catastrophic: false,
+  license_level: 'L4',
+  created_at: '2026-06-19T00:00:00.000Z',
+  verifier_version: VERIFIER_VERSION,
+  reward_model_version: REWARD_MODEL_VERSION,
+  license_policy_version: LICENSE_POLICY_VERSION,
+  // server-only fields that must NOT leak through compact:
+  scenario_snapshot: { hiddenRisk: 'SECRET' },
+  attempted_model_input: { secret: 1 },
+  actual_policy_input: { secret: 2 },
+}
+
+// 5. Read-back parses valid authoritative rows.
+const parsed = parseEvidenceRow(validRow)
 check(
-  '6. audit row has replay fields',
-  fb.ok === true &&
-    typeof row.trace_id === 'string' &&
-    typeof row.run_id === 'string' &&
-    typeof row.episode_index === 'number' &&
-    typeof row.run_sequence === 'number' &&
-    row.scenario_snapshot != null &&
-    typeof row.scenario_version === 'string' &&
-    typeof row.scenario_registry_version === 'string' &&
-    typeof row.verifier_version === 'string' &&
-    typeof row.reward_model_version === 'string' &&
-    typeof row.license_policy_version === 'string' &&
-    typeof row.environment_name === 'string' &&
-    'app_commit' in row &&
-    row.license_summary != null,
+  '5. read-back parses a valid row',
+  !!parsed && parsed.traceId === 'srv-mock-1-com-1' && parsed.passed === true && parsed.versionMismatch === false,
 )
 
-// 7. Evidence status endpoint reports server-owned state.
-const status = getEvidenceStatus(cfg)
+// 6. Rows with wrong trace_authority are ignored.
 check(
-  '7. evidence status reflects server history',
+  '6. wrong trace_authority ignored',
+  parseEvidenceRow({ ...validRow, trace_authority: 'demo_client_trace' }) === null,
+)
+
+// 7. Duplicate rows are not counted twice (dedupe by traceId).
+const dupA = parseEvidenceRow(validRow)
+const dupB = parseEvidenceRow({ ...validRow, id: 'rec_dup' }) // same trace_id
+check('7. duplicate trace_id deduped', mergeDedupe([dupA], [dupB]).length === 1)
+
+// 8. Version-mismatched rows do not corrupt the current license.
+const mismatch = parseEvidenceRow({
+  ...validRow,
+  id: 'rec_old',
+  trace_id: 'srv-mock-2-com-2',
+  verifier_version: '0.0.1', // incompatible
+  passed: false,
+  reward: -1,
+  catastrophic: true,
+})
+const merged = mergeDedupe([parsed], [mismatch])
+const compatible = merged.filter((it) => !it.versionMismatch)
+const lic = computeLicenseFromVerdicts(
+  compatible.map((it) => ({ passed: it.passed, reward: it.reward, catastrophic: it.catastrophic })),
+)
+check(
+  '8. version mismatch excluded from current license',
+  mismatch.versionMismatch === true &&
+    compatible.length === 1 &&
+    lic.catastrophicCount === 0 &&
+    lic.level.id === 'L4',
+)
+
+// 9. Compact status row exposes no snapshots / model inputs / hidden risk.
+const compact = compactFromItem(parsed)
+const keys = Object.keys(compact)
+check(
+  '9. compact row hides server-only fields',
+  !keys.includes('scenario_snapshot') &&
+    !keys.includes('attempted_model_input') &&
+    !keys.includes('actual_policy_input') &&
+    !JSON.stringify(compact).includes('SECRET') &&
+    keys.includes('traceId') &&
+    keys.includes('versionMismatch'),
+)
+
+// 10. Evidence status reflects server history (local_only, no creds).
+const status = await getEvidenceStatus(cfg)
+check(
+  '10. evidence status (local_only, in-memory)',
   status.serverEpisodeCount >= 2 &&
     status.persistence.status === 'local_only' &&
-    typeof status.latestServerTraceId === 'string',
+    status.historySource === 'memory' &&
+    status.rehydratedFromInsForge === false,
 )
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)

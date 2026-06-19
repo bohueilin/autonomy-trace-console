@@ -74,12 +74,17 @@ export function runEpisodeApiPlugin(cfg: RunEpisodeConfig): Plugin {
         sendJson(res, 200, { ok: true, runs: getRecentRuns(10) })
       })
 
-      server.middlewares.use('/api/evidence/status', (req, res) => {
+      server.middlewares.use('/api/evidence/status', async (req, res) => {
         if (req.method !== 'GET') {
           sendJson(res, 405, { ok: false, error: 'Use GET.' })
           return
         }
-        sendJson(res, 200, { ok: true, ...getEvidenceStatus(cfg) })
+        try {
+          const status = await getEvidenceStatus(cfg)
+          sendJson(res, 200, { ok: true, ...status })
+        } catch {
+          sendJson(res, 502, { ok: false, error: 'Could not read evidence status.' })
+        }
       })
     },
   }

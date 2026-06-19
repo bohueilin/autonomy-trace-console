@@ -63,9 +63,24 @@ export function levelRank(id: LicenseLevelId): number {
 
 const EMPTY_LEVEL = LICENSE_LEVELS.L0
 
+/** The minimal verdict fields the license math needs from an episode. */
+export interface LicenseVerdict {
+  passed: boolean
+  reward: number
+  catastrophic: boolean
+}
+
 /** Compute the license state from the full trace history. Pure function. */
 export function computeLicense(traces: Trace[]): LicenseState {
-  if (traces.length === 0) {
+  return computeLicenseFromVerdicts(traces.map((t) => t.result))
+}
+
+/**
+ * Core license math over bare verdicts — identical semantics to computeLicense,
+ * but consumable from rehydrated InsForge rows (which aren't full traces).
+ */
+export function computeLicenseFromVerdicts(verdicts: LicenseVerdict[]): LicenseState {
+  if (verdicts.length === 0) {
     return {
       level: EMPTY_LEVEL,
       episodes: 0,
@@ -78,12 +93,12 @@ export function computeLicense(traces: Trace[]): LicenseState {
     }
   }
 
-  const episodes = traces.length
-  const passes = traces.filter((t) => t.result.passed).length
+  const episodes = verdicts.length
+  const passes = verdicts.filter((v) => v.passed).length
   const passRate = passes / episodes
-  const totalReward = traces.reduce((sum, t) => sum + t.result.reward, 0)
+  const totalReward = verdicts.reduce((sum, v) => sum + v.reward, 0)
   const avgReward = totalReward / episodes
-  const catastrophicCount = traces.filter((t) => t.result.catastrophic).length
+  const catastrophicCount = verdicts.filter((v) => v.catastrophic).length
 
   // Base tier earned from performance.
   let id: LicenseLevelId

@@ -212,6 +212,29 @@ export interface ServerEpisodeResponse {
   runId: string
 }
 
+/** Where the evidence status was sourced from. */
+export type HistorySource = 'memory' | 'insforge' | 'local_only' | 'unavailable' | 'error'
+
+/** A compact, browser-safe row in the evidence status (no snapshots / inputs). */
+export interface CompactRun {
+  traceId: string
+  episodeIndex: number
+  runSequence: number
+  scenarioId: string
+  scenarioTitle: string
+  requestedPolicyMode: 'mock' | 'nebius'
+  actualPolicySource: AgentSource
+  fallback: boolean
+  fallbackCode: string | null
+  action: Action
+  passed: boolean
+  reward: number
+  catastrophic: boolean
+  licenseLevel: string
+  createdAt: string
+  versionMismatch: boolean
+}
+
 /** Compact server evidence status from GET /api/evidence/status. */
 export interface EvidenceStatus {
   runId: string | null
@@ -226,12 +249,17 @@ export interface EvidenceStatus {
   } | null
   latestServerTraceId: string | null
   latestPersistedRecordId: string | null
+  historySource: HistorySource
+  rehydratedFromInsForge: boolean
+  rehydratedCount: number
+  versionMismatchCount: number
+  compatibleEvidenceCount: number
   persistence: {
     configured: boolean
     status: 'configured' | 'local_only' | 'unavailable' | 'error'
     table: string
   }
-  recentCompactRuns: RecentRun[]
+  recentCompactRuns: CompactRun[]
 }
 
 /** A compact row from GET /api/runs/recent. */

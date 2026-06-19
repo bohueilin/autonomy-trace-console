@@ -251,6 +251,70 @@ body {
 .evidence-muted {
   color: var(--muted);
 }
+.evidence-warn {
+  color: var(--warn);
+  font-weight: 700;
+}
+.evidence-recent {
+  margin: 4px 0 10px;
+}
+.evidence-recent-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.evidence-recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.evidence-recent li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.evidence-recent li.mismatch {
+  opacity: 0.55;
+}
+.mini-verdict {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.mini-verdict.ok {
+  color: var(--pos);
+}
+.mini-verdict.bad {
+  color: var(--neg);
+}
+.mini-scn {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #c7cad6;
+}
+.mini-act {
+  color: var(--muted);
+}
+.mini-fb {
+  font-size: 9px;
+  text-transform: uppercase;
+  background: rgba(224, 161, 58, 0.18);
+  color: var(--warn);
+  padding: 0 5px;
+  border-radius: 4px;
+}
+.mini-lvl {
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+}
 .evidence-note {
   margin: 0;
   font-size: 11.5px;

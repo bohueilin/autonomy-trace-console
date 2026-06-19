@@ -20,7 +20,7 @@ export function TraceViewer({ traces }: Props) {
         <div className="trace-list">
           {[...traces].reverse().map((t) => (
             <div key={t.id} className={`trace-row ${t.result.passed ? 'row-pass' : 'row-fail'}`}>
-              <span className="trace-ep">#{t.episode}</span>
+              <span className="trace-ep">#{t.displayIndex ?? t.episode}</span>
               <span
                 className={`auth-tag ${
                   t.authority === 'server_authoritative_episode' ? 'auth-server' : 'auth-demo'

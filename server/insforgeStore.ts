@@ -24,6 +24,12 @@ export type PersistOutcome =
   | { status: 'local_only' } // InsForge not configured
   | { status: 'unavailable'; code: string }
 
+export type ReadOutcome =
+  | { status: 'ok'; rows: Record<string, unknown>[] }
+  | { status: 'local_only' } // InsForge not configured
+  | { status: 'unavailable' } // network / timeout / non-2xx
+  | { status: 'error' } // parse failure
+
 /** The single audit table this milestone writes to. */
 export const INSFORGE_TABLE = 'eval_episodes'
 
@@ -79,6 +85,52 @@ export async function persistEpisode(
     const aborted = (err as { name?: string } | undefined)?.name === 'AbortError'
     console.error('[insforge] insert failed:', aborted ? 'timeout' : err)
     return { status: 'unavailable', code: aborted ? 'timeout' : 'unreachable' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Read back the newest server-authoritative evidence rows. Best-effort: never
+ * throws, never surfaces the key / raw errors / base URL. Filters server-side to
+ * trace_authority === 'server_authoritative_episode', newest first.
+ */
+export async function fetchRecentEvidence(
+  cfg: InsforgeConfig,
+  limit = 50,
+): Promise<ReadOutcome> {
+  if (!insforgeConfigured(cfg)) {
+    return { status: 'local_only' }
+  }
+
+  const base = cfg.baseUrl!.replace(/\/+$/, '')
+  const query =
+    `?trace_authority=eq.server_authoritative_episode` +
+    `&order=created_at.desc&limit=${Math.max(1, Math.min(1000, limit))}`
+  const url = `${base}/api/database/records/${INSFORGE_TABLE}${query}`
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs ?? 8000)
+
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${cfg.apiKey}` },
+      signal: controller.signal,
+    })
+    if (!resp.ok) {
+      console.error(`[insforge] read ${resp.status} ${resp.statusText}`)
+      return { status: 'unavailable' }
+    }
+    const data = (await resp.json()) as unknown
+    if (!Array.isArray(data)) {
+      console.error('[insforge] read: unexpected response shape')
+      return { status: 'error' }
+    }
+    return { status: 'ok', rows: data as Record<string, unknown>[] }
+  } catch (err) {
+    const aborted = (err as { name?: string } | undefined)?.name === 'AbortError'
+    console.error('[insforge] read failed:', aborted ? 'timeout' : err)
+    return { status: 'unavailable' }
   } finally {
     clearTimeout(timer)
   }

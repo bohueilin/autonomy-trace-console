@@ -17,10 +17,20 @@
 // tsc tolerate this via allowImportingTsExtensions. Type-only imports are erased,
 // so they don't need extensions.
 import { decide, toMockView, toModelView } from '../src/agent.ts'
-import { computeLicense } from '../src/license.ts'
+import { computeLicense, computeLicenseFromVerdicts } from '../src/license.ts'
 import { SCENARIO_VERSION, seedScenarios } from '../src/seedScenarios.ts'
 import { verify } from '../src/verifier.ts'
-import type { AgentDecision, EvidenceStatus, LicenseState, RecentRun, Trace } from '../src/types'
+import type {
+  Action,
+  AgentDecision,
+  AgentSource,
+  CompactRun,
+  EvidenceStatus,
+  HistorySource,
+  LicenseState,
+  RecentRun,
+  Trace,
+} from '../src/types'
 import {
   ENVIRONMENT_NAME,
   LICENSE_POLICY_VERSION,
@@ -32,6 +42,7 @@ import {
 import { handleNebiusAction, type NebiusHandlerConfig } from './nebiusHandler.ts'
 import {
   INSFORGE_TABLE,
+  fetchRecentEvidence,
   insforgeConfigured,
   persistEpisode,
   type InsforgeConfig,
@@ -48,6 +59,35 @@ interface RunRecord {
   trace: Trace
   persistedId: string | null
   createdAt: string
+  runSequence: number
+  /** Server-computed license level at this episode's time. */
+  licenseLevel: string
+}
+
+/**
+ * A normalized, version-tagged unit of authoritative evidence — built either from
+ * an in-memory current-process trace or a row rehydrated from InsForge. This is
+ * the shape the evidence status is computed over (deduped by traceId).
+ */
+export interface EvidenceItem {
+  traceId: string
+  episodeIndex: number
+  runSequence: number
+  scenarioId: string
+  scenarioTitle: string
+  requestedPolicyMode: 'mock' | 'nebius'
+  actualPolicySource: AgentSource
+  fallback: boolean
+  fallbackCode: string | null
+  action: Action
+  passed: boolean
+  reward: number
+  catastrophic: boolean
+  licenseLevel: string
+  createdAt: string
+  persistedRecordId: string | null
+  versionMismatch: boolean
+  source: 'memory' | 'insforge'
 }
 
 export interface PersistenceOutcomeDTO {
@@ -179,10 +219,11 @@ export async function handleRunEpisode(
   }
 
   const createdAt = new Date().toISOString()
-  const record: RunRecord = { trace, persistedId: null, createdAt }
+  const record: RunRecord = { trace, persistedId: null, createdAt, runSequence, licenseLevel: '' }
   serverRecords.push(record)
 
   const license = computeLicense(serverRecords.map((r) => r.trace))
+  record.licenseLevel = license.level.id
   const licenseSummary = {
     level: license.level.id,
     name: license.level.name,
@@ -262,33 +303,223 @@ export async function handleRunEpisode(
   }
 }
 
-/** Compact server evidence status — backend proof that survives a client reload. */
-export function getEvidenceStatus(cfg: RunEpisodeConfig): EvidenceStatus {
-  const last = serverRecords[serverRecords.length - 1]
+// --- Evidence read-back / rehydration -------------------------------------
+
+// Current-process records and InsForge-rehydrated rows are kept separate, then
+// merged + deduped by trace_id when computing status. We rehydrate at most once.
+let rehydrationDone = false
+let rehydratedItems: EvidenceItem[] = []
+let readOutcomeStatus: 'ok' | 'local_only' | 'unavailable' | 'error' = 'local_only'
+
+const toStr = (v: unknown): string => (typeof v === 'string' ? v : '')
+const ACTIONS: Action[] = ['act', 'ask', 'escalate', 'stop']
+
+/** True when a row was produced by the current verifier/reward/license versions. */
+export function isVersionCompatible(row: {
+  verifierVersion?: string
+  rewardModelVersion?: string
+  licensePolicyVersion?: string
+}): boolean {
+  return (
+    row.verifierVersion === VERIFIER_VERSION &&
+    row.rewardModelVersion === REWARD_MODEL_VERSION &&
+    row.licensePolicyVersion === LICENSE_POLICY_VERSION
+  )
+}
+
+/** Parse a persisted InsForge row into an EvidenceItem. Returns null if the row
+ * is not a valid server-authoritative episode (wrong authority / missing fields). */
+export function parseEvidenceRow(raw: unknown): EvidenceItem | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  if (r.trace_authority !== 'server_authoritative_episode') return null
+
+  const traceId = toStr(r.trace_id)
+  const action = toStr(r.action) as Action
+  if (!traceId || !ACTIONS.includes(action)) return null
+  if (typeof r.passed !== 'boolean' || typeof r.reward !== 'number') return null
+
+  const requested = r.requested_policy_mode === 'nebius' ? 'nebius' : 'mock'
+  const actual = r.actual_policy_source === 'nebius' ? 'nebius' : 'mock'
+  const versionMismatch = !isVersionCompatible({
+    verifierVersion: toStr(r.verifier_version),
+    rewardModelVersion: toStr(r.reward_model_version),
+    licensePolicyVersion: toStr(r.license_policy_version),
+  })
+
+  return {
+    traceId,
+    episodeIndex: typeof r.episode_index === 'number' ? r.episode_index : 0,
+    runSequence: typeof r.run_sequence === 'number' ? r.run_sequence : 0,
+    scenarioId: toStr(r.scenario_id),
+    scenarioTitle: toStr(r.scenario_title),
+    requestedPolicyMode: requested,
+    actualPolicySource: actual,
+    fallback: r.fallback === true,
+    fallbackCode: typeof r.fallback_code === 'string' ? r.fallback_code : null,
+    action,
+    passed: r.passed,
+    reward: r.reward,
+    catastrophic: r.catastrophic === true,
+    licenseLevel: toStr(r.license_level),
+    createdAt: toStr(r.created_at),
+    persistedRecordId: toStr(r.id) || null,
+    versionMismatch,
+    source: 'insforge',
+  }
+}
+
+/** In-memory record -> EvidenceItem (always current versions, so compatible). */
+function memToItem(record: RunRecord): EvidenceItem {
+  const t = record.trace
+  return {
+    traceId: t.id,
+    episodeIndex: t.episode,
+    runSequence: record.runSequence,
+    scenarioId: t.scenario.id,
+    scenarioTitle: t.scenario.title,
+    requestedPolicyMode: t.provenance?.requestedPolicyMode ?? t.decision.source,
+    actualPolicySource: t.decision.source,
+    fallback: t.provenance?.fallback ?? false,
+    fallbackCode: t.provenance?.fallbackCode ?? null,
+    action: t.decision.action,
+    passed: t.result.passed,
+    reward: t.result.reward,
+    catastrophic: t.result.catastrophic,
+    licenseLevel: record.licenseLevel,
+    createdAt: record.createdAt,
+    persistedRecordId: record.persistedId,
+    versionMismatch: false,
+    source: 'memory',
+  }
+}
+
+/** Merge in-memory + rehydrated items, deduped by traceId (memory wins). */
+export function mergeDedupe(mem: EvidenceItem[], rehydrated: EvidenceItem[]): EvidenceItem[] {
+  const byId = new Map<string, EvidenceItem>()
+  for (const it of mem) byId.set(it.traceId, it)
+  for (const it of rehydrated) if (!byId.has(it.traceId)) byId.set(it.traceId, it)
+  return [...byId.values()].sort((a, b) => {
+    if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1
+    return b.runSequence - a.runSequence
+  })
+}
+
+/** EvidenceItem -> browser-safe compact row (no snapshots / inputs). */
+export function compactFromItem(it: EvidenceItem): CompactRun {
+  return {
+    traceId: it.traceId,
+    episodeIndex: it.episodeIndex,
+    runSequence: it.runSequence,
+    scenarioId: it.scenarioId,
+    scenarioTitle: it.scenarioTitle,
+    requestedPolicyMode: it.requestedPolicyMode,
+    actualPolicySource: it.actualPolicySource,
+    fallback: it.fallback,
+    fallbackCode: it.fallbackCode,
+    action: it.action,
+    passed: it.passed,
+    reward: it.reward,
+    catastrophic: it.catastrophic,
+    licenseLevel: it.licenseLevel,
+    createdAt: it.createdAt,
+    versionMismatch: it.versionMismatch,
+  }
+}
+
+/**
+ * Compact server evidence status — backend proof that survives a client reload.
+ * Rehydrates from InsForge at most once, dedupes by traceId, and recomputes the
+ * current license ONLY from version-compatible authoritative verdicts.
+ */
+export async function getEvidenceStatus(cfg: RunEpisodeConfig): Promise<EvidenceStatus> {
   const configured = insforgeConfigured(cfg.insforge)
-  const license = computeLicense(serverRecords.map((r) => r.trace))
+
+  // Rehydrate once.
+  if (!rehydrationDone) {
+    rehydrationDone = true
+    if (configured) {
+      const read = await fetchRecentEvidence(cfg.insforge, 100)
+      readOutcomeStatus = read.status
+      if (read.status === 'ok') {
+        const memIds = new Set(serverRecords.map((r) => r.trace.id))
+        const seen = new Set<string>()
+        rehydratedItems = read.rows
+          .map(parseEvidenceRow)
+          .filter((it): it is EvidenceItem => it !== null)
+          // drop rows already represented in this process, and intra-batch dupes
+          .filter((it) => {
+            if (memIds.has(it.traceId) || seen.has(it.traceId)) return false
+            seen.add(it.traceId)
+            return true
+          })
+      }
+    }
+  }
+
+  const memItems = serverRecords.map(memToItem)
+  const combined = mergeDedupe(memItems, rehydratedItems)
+  const compatible = combined.filter((it) => !it.versionMismatch)
+  const versionMismatchCount = combined.length - compatible.length
+
+  // Current license: recompute from compatible authoritative verdicts only —
+  // never blend version-incompatible evidence, never trust a stored summary.
+  const license =
+    compatible.length > 0
+      ? computeLicenseFromVerdicts(
+          compatible.map((it) => ({
+            passed: it.passed,
+            reward: it.reward,
+            catastrophic: it.catastrophic,
+          })),
+        )
+      : null
+
+  // historySource reflects where the picture came from.
+  let historySource: HistorySource
+  if (!configured) {
+    historySource = 'memory' // in-memory only; never persisted (also see persistence.status)
+    if (combined.length === 0) historySource = 'local_only'
+  } else if (readOutcomeStatus === 'unavailable') {
+    historySource = 'unavailable'
+  } else if (readOutcomeStatus === 'error') {
+    historySource = 'error'
+  } else if (rehydratedItems.length > 0) {
+    historySource = 'insforge'
+  } else {
+    historySource = 'memory'
+  }
+
+  const latest = combined[0]
+  const latestPersisted =
+    combined.find((it) => it.persistedRecordId)?.persistedRecordId ?? null
+
   return {
     runId: currentRunId(),
-    serverEpisodeCount: serverRecords.length,
-    currentLicenseSummary:
-      serverRecords.length === 0
-        ? null
-        : {
-            level: license.level.id,
-            name: license.level.name,
-            passRate: license.passRate,
-            avgReward: license.avgReward,
-            catastrophicCount: license.catastrophicCount,
-            episodes: license.episodes,
-          },
-    latestServerTraceId: last?.trace.id ?? null,
-    latestPersistedRecordId: last?.persistedId ?? null,
+    serverEpisodeCount: combined.length,
+    currentLicenseSummary: license
+      ? {
+          level: license.level.id,
+          name: license.level.name,
+          passRate: license.passRate,
+          avgReward: license.avgReward,
+          catastrophicCount: license.catastrophicCount,
+          episodes: license.episodes,
+        }
+      : null,
+    latestServerTraceId: latest?.traceId ?? null,
+    latestPersistedRecordId: latestPersisted,
+    historySource,
+    rehydratedFromInsForge: rehydratedItems.length > 0,
+    rehydratedCount: rehydratedItems.length,
+    versionMismatchCount,
+    compatibleEvidenceCount: compatible.length,
     persistence: {
       configured,
       status: configured ? 'configured' : 'local_only',
       table: INSFORGE_TABLE,
     },
-    recentCompactRuns: getRecentRuns(5),
+    recentCompactRuns: combined.slice(0, 5).map(compactFromItem),
   }
 }
 
