@@ -152,6 +152,19 @@ npm run dev
 > under `server/` is the production path; the handler (`server/nebiusHandler.ts`)
 > is already written to lift out cleanly.
 
+### Two policy views
+
+Each policy sees a different, deliberately scoped projection of a scenario
+(both structurally exclude `hiddenRisk` / `correctAction` / `rationale`):
+
+- **`MockPolicyView`** — what the *local mock policy* sees. May include mock-only
+  explainability: the `visibleRiskScore` and the visible-risk bands rendered in
+  the UI. This never leaves the browser.
+- **`ModelPolicyView`** (the Nebius / model view) — only model-appropriate visible
+  scenario fields: `id`, `domain`, `title`, `situation`, `visibleSignals`. It does
+  **not** include `visibleRiskScore` (a mock heuristic artifact), and the server
+  re-validates it into a `CleanModelView` before any model call.
+
 ### What is (and isn't) sent to Nebius
 
 The server builds a fresh, clean payload from the sanitized model view plus
@@ -196,6 +209,10 @@ non-blocking (falls back to mock, shows the banner) and never renders raw errors
 | `parse` | 502 | Model response wasn't valid JSON / schema. |
 | `unknown` | 502 | Could not reach the model service. |
 
+Validation runs **before** the key check: a malformed body is rejected as
+`bad_request` (400) even when Nebius is unconfigured; `no_key` (503) is returned
+only once the request is proven valid.
+
 ### Mock vs Nebius in the UI
 
 - **Agent mode toggle** (Mock Policy / Nebius Policy) and a **model-under-test**
@@ -208,6 +225,22 @@ non-blocking (falls back to mock, shows the banner) and never renders raw errors
   the episode **falls back to the local mock policy** and shows a non-blocking
   banner: *"Nebius unavailable — using local policy fallback for demo
   reliability."* Raw errors are never shown.
+
+### Live smoke test (only if a key is available before the demo)
+
+A quick manual check — no secrets are hard-coded anywhere; everything below is
+configured via `.env.local`.
+
+1. With `NEBIUS_API_KEY` + `NEBIUS_MODEL` set, run `npm run dev`, switch to
+   **Nebius Policy**, click **Run 1 Nebius Episode**.
+2. Confirm the agent card shows: **source = Nebius Token Factory**, the **model
+   name**, the chosen **action**, the **rationale**, and **confidence**.
+3. Confirm the **deterministic verifier still scores** that action (PASS/FAIL,
+   category, reward) and the license updates — exactly as for the mock policy.
+4. Invalidate the key or `NEBIUS_BASE_URL` and re-run. Confirm the **fallback**
+   fires: the mock policy runs and the *"Nebius unavailable…"* banner appears.
+5. Confirm the UI shows **no** raw errors, stack traces, keys, base URLs, or
+   upstream payloads in any of the above.
 
 ---
 
@@ -258,12 +291,73 @@ right to act" is the entire point.
 
 ---
 
+## Persistence integrity (read before adding InsForge)
+
+> Persistence must preserve **evidence**, not manufacture **trust**.
+
+The traces shown today are generated in the browser. That is fine for the local
+demo, but it carries a sharp caveat:
+
+**Do not persist browser-authored traces as authoritative license evidence.**
+A client can claim any reward, any verdict, any license level. Current client-side
+traces are **local/demo trace state**, not proof of anything.
+
+When InsForge lands, prefer a **server-owned episode path**:
+
+1. Client sends only `{ scenarioId, policyMode }`.
+2. Server loads the canonical scenario from a server-side scenario registry.
+3. Server builds the `ModelPolicyView` and calls the mock or Nebius policy.
+4. Server runs the **deterministic verifier** and computes reward + license
+   contribution.
+5. Server persists the trace.
+
+Acceptable interim fallback: persist client-generated traces **only** if clearly
+marked `trace_authority: "demo_client_trace"` — never labeled as authoritative.
+
+**Hard rule — never trust client-provided values as authoritative for:**
+`hiddenRisk`, `idealAction` / `correctAction`, `unsafeAction`, `verifierResult`,
+`reward`, `licenseLevel`, or the `catastrophic` flag. These are server/verifier
+truth only.
+
+---
+
+## InsForge Persistence Design (not implemented yet)
+
+When InsForge is added, each persisted record should carry enough to **reconstruct
+the evaluation** for audit:
+
+| Field | Notes |
+| ----- | ----- |
+| `scenarioId` | which scenario. |
+| `scenarioSnapshot` / `scenarioVersion` | snapshot or version, so reruns are reproducible. |
+| `policySource` | `mock` \| `nebius`. |
+| `modelInputVisibleContext` | the exact visible context shown to the model. |
+| `modelName` | Nebius model id (if applicable). |
+| `action` | normalized action. |
+| `rationale` | model/policy rationale. |
+| `requestedInfo` | model's requested info (if any). |
+| `confidence` | 0..1. |
+| `fallback` | boolean — did it fall back to mock? |
+| `fallbackCode` | error code if a fallback happened. |
+| `verifierResult` | the deterministic verifier output. |
+| `verifierCategory` | `correct` \| `over_cautious` \| `under_cautious` \| `catastrophic`. |
+| `catastrophic` | boolean. |
+| `reward` | server-computed. |
+| `licenseSummary` | computed license summary at the time. |
+| `traceAuthority` | `server_authoritative_episode` \| `demo_client_trace`. |
+
+**InsForge preserves traces and evidence. It does not become the source of
+verifier truth** — the deterministic verifier remains authoritative.
+
+---
+
 ## Future milestones
 
 1. **Nebius policy runner — DONE (Milestone 2).** A real model proposes actions
    server-side; the deterministic verifier scores them. Key stays server-side.
-2. **InsForge trace store (next)** — persist traces and license history so
-   autonomy is earned across sessions, not just within one page load.
+2. **InsForge trace store (next)** — persist traces + license history via the
+   **server-owned episode path** above, tagged with `traceAuthority`, so autonomy
+   is earned across sessions without trusting browser-authored evidence.
 3. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
    (review an escalation, approve a recommendation) without changing the verifier
    or the license gate.
@@ -276,8 +370,8 @@ right to act" is the entire point.
 | ---- | -------------- |
 | [`src/types.ts`](src/types.ts) | Domain model (actions, scenarios, verdicts, license). |
 | [`src/seedScenarios.ts`](src/seedScenarios.ts) | The 9 seeded scenarios with hidden risks. |
-| [`src/agent.ts`](src/agent.ts) | Mock policy + `AgentView` projection (cannot see hidden risk). |
-| [`src/nebiusClient.ts`](src/nebiusClient.ts) | Frontend client for `/api/nebius-action` (key never touched). |
+| [`src/agent.ts`](src/agent.ts) | Mock policy + `toMockView` / `toModelView` projections (neither can see hidden risk). |
+| [`src/nebiusClient.ts`](src/nebiusClient.ts) | Frontend client for `/api/nebius-action`; sends a `ModelPolicyView` (key never touched). |
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
 | `src/components/*` | Scenario, agent-action, verifier, trace, and license UI. |

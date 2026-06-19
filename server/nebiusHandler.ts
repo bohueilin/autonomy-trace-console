@@ -202,15 +202,17 @@ export async function handleNebiusAction(
   body: unknown,
   cfg: NebiusHandlerConfig,
 ): Promise<NebiusResult> {
-  if (!cfg.apiKey) {
-    return { ok: false, code: 'no_key', error: 'Nebius is not configured on the server.' }
-  }
-
-  // Validate + sanitize into a fresh clean object. The raw request body is never
-  // forwarded — only whitelisted, length-capped fields survive.
+  // Validate FIRST: a malformed request is malformed regardless of whether Nebius
+  // is configured. Sanitize into a fresh clean object — the raw request body is
+  // never forwarded; only whitelisted, length-capped fields survive.
   const view = sanitizeModelView((body as { view?: unknown } | undefined)?.view)
   if (!view) {
     return { ok: false, code: 'bad_request', error: 'Malformed or invalid request body.' }
+  }
+
+  // Only after the request is proven valid does a missing key matter.
+  if (!cfg.apiKey) {
+    return { ok: false, code: 'no_key', error: 'Nebius is not configured on the server.' }
   }
 
   const model = cfg.model || DEFAULT_MODEL
