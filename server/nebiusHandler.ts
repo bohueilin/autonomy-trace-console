@@ -216,7 +216,7 @@ export async function handleNebiusAction(
   }
 
   const model = cfg.model || DEFAULT_MODEL
-  const baseUrl = cfg.baseUrl || DEFAULT_BASE_URL
+  const baseUrl = (cfg.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, '')
   const timeoutMs = cfg.timeoutMs ?? 20000
 
   // SAFETY: the payload is built ONLY from the sanitized view plus constant
