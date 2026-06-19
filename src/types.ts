@@ -215,6 +215,15 @@ export interface ServerEpisodeResponse {
 /** Where the evidence status was sourced from. */
 export type HistorySource = 'memory' | 'insforge' | 'local_only' | 'unavailable' | 'error'
 
+/**
+ * Tamper-evidence status of a read-back row:
+ * - `valid`: a digest was present and recomputing it over the row matches.
+ * - `missing`: no digest (legacy/unknown — NOT counted as digest-verified).
+ * - `mismatched`: a digest was present but recomputation differs (excluded from
+ *   trusted evidence + current license).
+ */
+export type DigestStatus = 'valid' | 'missing' | 'mismatched'
+
 /** A compact, browser-safe row in the evidence status (no snapshots / inputs). */
 export interface CompactRun {
   traceId: string
@@ -237,6 +246,8 @@ export interface CompactRun {
   rowSchemaVersion: string | null
   /** Whether the persisted row carried an integrity digest. */
   digestPresent: boolean
+  /** Tamper-evidence status from recomputing the digest on read-back. */
+  digestStatus: DigestStatus
 }
 
 export type HistoryScope = 'global_recent' | 'run'
@@ -265,7 +276,11 @@ export interface EvidenceStatus {
   versionMismatchCount: number
   compatibleEvidenceCount: number
   digestPresentCount: number
+  digestValidCount: number
   digestMissingCount: number
+  digestMismatchedCount: number
+  /** Version-compatible AND digest-valid — the trusted-for-license set. */
+  trustedEvidenceCount: number
   lastRehydratedAt: string | null
   lastRefreshAttemptAt: string | null
   /** Sanitized read-back error code (never a raw error). */

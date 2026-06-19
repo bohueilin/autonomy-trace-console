@@ -80,10 +80,21 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
 
         <dt>Digest</dt>
         <dd>
-          {evidence
-            ? `${evidence.digestPresentCount} present · ${evidence.digestMissingCount} missing`
-            : '—'}
+          {evidence ? (
+            <>
+              {evidence.digestValidCount} valid
+              {evidence.digestMissingCount > 0 && ` · ${evidence.digestMissingCount} legacy`}
+              {evidence.digestMismatchedCount > 0 && (
+                <span className="evidence-warn"> · {evidence.digestMismatchedCount} tampered</span>
+              )}
+            </>
+          ) : (
+            '—'
+          )}
         </dd>
+
+        <dt>Trusted evidence</dt>
+        <dd>{evidence?.trustedEvidenceCount ?? 0}</dd>
 
         <dt>Storage</dt>
         <dd>
@@ -137,6 +148,13 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
                 <span className="mini-scn">{r.scenarioTitle}</span>
                 <span className="mini-act">{r.action.toUpperCase()}</span>
                 {r.fallback && <span className="mini-fb">fallback</span>}
+                <span
+                  className="mini-digest"
+                  title={`digest ${r.digestStatus}`}
+                  aria-label={`digest ${r.digestStatus}`}
+                >
+                  {r.digestStatus === 'valid' ? '✓' : r.digestStatus === 'missing' ? '?' : '✕'}
+                </span>
                 <span className="mini-lvl">{r.licenseLevel}</span>
               </li>
             ))}

@@ -500,6 +500,57 @@ The browser only ever receives compact, safe rows (no `scenario_snapshot`,
 authoritative evidence store + read-back · **Vapi (next)** = operator voice layer
 that queries this evidence and runs server-owned episodes.
 
+### Tamper-evident evidence (Milestone 4.2)
+
+Server-owned audit rows carry an `audit_row_digest` — a SHA-256 over a fixed set
+of stable canonical fields (identity, scenario id/versions, requested/actual
+policy + both policy inputs, the normalized decision, the verifier result,
+reward, license summary, and attribution versions). The digest **excludes**
+volatile values (the InsForge record id, `created_at`, the digest itself) and
+secrets, so it is deterministic across write and read.
+
+On read-back the server **recomputes the digest over the same fields** and
+classifies each row:
+
+- **`valid`** — digest present and matches → digest-verified (trusted if also
+  version-compatible).
+- **`missing`** — no digest → legacy/unknown. May display as historical, but is
+  **not** counted as digest-verified.
+- **`mismatched`** — digest present but differs → treated as drifted/tampered.
+  **Excluded** from the current license, the trusted-evidence count, and the
+  recent trusted-evidence list (surfaced only as `digestMismatchedCount`).
+
+`/api/evidence/status` reports `digestValidCount`, `digestMissingCount`,
+`digestMismatchedCount`, and `trustedEvidenceCount` (version-compatible **and**
+digest-valid). The same `computeAuditDigest` function runs on write and read, so
+there is no duplicate digest logic.
+
+> InsForge preserves evidence; the app detects evidence **drift/tampering** on
+> read-back. The deterministic verifier remains the source of truth.
+
+### Live smoke checklist
+
+Quick manual checks once credentials are available (everything degrades safely
+without them). No secrets are hard-coded — all via `.env.local`.
+
+**Nebius**
+1. Set `NEBIUS_API_KEY`, `NEBIUS_MODEL` (optional `NEBIUS_BASE_URL`); `npm run dev`.
+2. Switch to **Nebius Policy** → **Run 1 Nebius Episode**.
+3. Confirm the agent card shows Nebius source, model name, action, rationale, confidence.
+4. Remove/disable the key (or base URL) and re-run.
+5. Confirm the fallback records requested policy = Nebius, actual source = Mock, and **no raw errors** appear.
+
+**InsForge**
+1. Set `INSFORGE_BASE_URL` + `INSFORGE_API_KEY` (see `.env.example`); create the `eval_episodes` table.
+2. Run one **Run Server Episode**; confirm the Evidence panel shows a persisted record id.
+3. Hit `GET /api/evidence/status?refresh=1`; confirm evidence source = InsForge and digest counts are visible.
+4. Confirm **no raw secrets or raw audit rows** appear in the browser.
+
+**Vapi readiness**
+- Vapi is the next milestone. It must call the **existing server-owned endpoints
+  only** and must **not** become a verifier, license calculator, InsForge client,
+  Nebius secret holder, or source of truth.
+
 ### Why persistence matters
 
 For an RL environment / safeguards gym, durable traces give you a replayable,
@@ -528,7 +579,10 @@ shown and how the environment scored it.
 5. **Strict evidence read-back — DONE (Milestone 4.1).** `parseEvidenceRow` rejects
    malformed rows (no defaulting), `?refresh`/`?limit`/`?run_id` scope read-back,
    and rows carry `row_schema_version` + a SHA-256 `audit_row_digest`.
-6. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
+6. **Tamper-evident read-back — DONE (Milestone 4.2).** The digest is recomputed on
+   read-back and rows are classified `valid` / `missing` / `mismatched`; mismatched
+   (drifted/tampered) rows are excluded from the current license and trusted counts.
+7. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
    episode, ask why autonomy was capped, and summarize the latest persisted
    evidence (read from `/api/evidence/status`). It calls the same server-owned
    endpoints; it does **not** change the verifier or the license gate.

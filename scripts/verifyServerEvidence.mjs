@@ -14,6 +14,7 @@ import {
   mergeDedupe,
   compactFromItem,
   shouldAttemptReadBack,
+  computeAuditDigest,
 } from '../server/runEpisodeHandler.ts'
 import { computeLicenseFromVerdicts } from '../src/license.ts'
 import {
@@ -78,28 +79,44 @@ const validRow = {
   trace_authority: 'server_authoritative_episode',
   id: 'rec_valid',
   trace_id: 'srv-mock-1-com-1',
+  run_id: 'run_mock',
   episode_index: 1,
   run_sequence: 1,
   scenario_id: 'com-1',
+  scenario_version: '2026-06-19.1',
+  scenario_registry_version: '1.0.0',
   scenario_title: 'Refund within policy',
   requested_policy_mode: 'mock',
   actual_policy_source: 'mock',
   fallback: false,
   fallback_code: null,
   action: 'act',
+  rationale: 'looks routine',
+  requested_info: '',
+  confidence: 0.91,
   passed: true,
   reward: 1,
+  category: 'correct',
   catastrophic: false,
+  expected_action: 'act',
+  actual_action: 'act',
+  verifier_reason: null,
   license_level: 'L4',
+  license_summary: { level: 'L4', name: 'Limited Autonomy', passRate: 1, avgReward: 1, catastrophicCount: 0, episodes: 1 },
+  environment_name: 'autonomy_trace_console',
+  app_commit: null,
   created_at: '2026-06-19T00:00:00.000Z',
   verifier_version: VERIFIER_VERSION,
   reward_model_version: REWARD_MODEL_VERSION,
   license_policy_version: LICENSE_POLICY_VERSION,
+  row_schema_version: '1.0.0',
   // server-only fields that must NOT leak through compact:
   scenario_snapshot: { hiddenRisk: 'SECRET' },
   attempted_model_input: { secret: 1 },
   actual_policy_input: { secret: 2 },
 }
+// A correctly-digested copy (digest computed over the same stable fields).
+const validDigested = { ...validRow, audit_row_digest: computeAuditDigest(validRow) }
 
 // 5. Read-back parses valid authoritative rows.
 const parsed = parseEvidenceRow(validRow)
@@ -220,6 +237,72 @@ check(
   typeof prow.row_schema_version === 'string' &&
     typeof prow.audit_row_digest === 'string' &&
     prow.audit_row_digest.length === 64, // sha-256 hex
+)
+
+// --- digest validation (tamper-evidence) ----------------------------------
+
+// 21. Valid digest row -> digestStatus 'valid'.
+check('21. valid digest accepted', parseEvidenceRow(validDigested)?.digestStatus === 'valid')
+
+// 22. Tampered digest row -> 'mismatched'.
+const tampered = { ...validDigested, trace_id: 'srv-mock-9', audit_row_digest: 'f'.repeat(64) }
+const tamperedItem = parseEvidenceRow(tampered)
+check('22. tampered digest -> mismatched', tamperedItem?.digestStatus === 'mismatched')
+
+// 23. Missing digest row -> 'missing' (legacy/unknown). Distinct trace_id so it
+//     doesn't dedupe against the valid row below.
+const missing = { ...validRow, trace_id: 'srv-mock-legacy' }
+delete missing.audit_row_digest
+check('23. missing digest -> missing', parseEvidenceRow(missing)?.digestStatus === 'missing')
+
+// 24. Tampered row excluded from current license; missing not counted as verified.
+const validItem = parseEvidenceRow(validDigested)
+const missingItem = parseEvidenceRow(missing)
+const set = mergeDedupe([], [validItem, tamperedItem, missingItem])
+const licenseSet = set.filter((it) => !it.versionMismatch && it.digestStatus !== 'mismatched')
+const trusted = set.filter((it) => !it.versionMismatch && it.digestStatus === 'valid')
+check(
+  '24. mismatched excluded from license; missing not digest-verified',
+  licenseSet.length === 2 && // valid + missing kept, tampered dropped
+    trusted.length === 1 && // only the valid row is digest-verified
+    !licenseSet.some((it) => it.traceId === 'srv-mock-9'),
+)
+
+// 25. Tampered row not in recent trusted evidence.
+const recentTrusted = set.filter((it) => it.digestStatus !== 'mismatched')
+check(
+  '25. tampered row not in recent trusted evidence',
+  !recentTrusted.some((it) => it.traceId === 'srv-mock-9'),
+)
+
+// 26. Version mismatch + digest mismatch does not corrupt current license.
+const badBoth = parseEvidenceRow({
+  ...validDigested,
+  trace_id: 'srv-mock-10',
+  verifier_version: '0.0.1',
+  audit_row_digest: '0'.repeat(64),
+  passed: false,
+  reward: -1,
+  catastrophic: true,
+})
+const set2 = mergeDedupe([], [validItem, badBoth])
+const ls2 = set2.filter((it) => !it.versionMismatch && it.digestStatus !== 'mismatched')
+const lic2 = computeLicenseFromVerdicts(
+  ls2.map((it) => ({ passed: it.passed, reward: it.reward, catastrophic: it.catastrophic })),
+)
+check(
+  '26. version+digest mismatch excluded from license',
+  ls2.length === 1 && lic2.catastrophicCount === 0 && lic2.level.id === 'L4',
+)
+
+// 27. Status exposes digest counts.
+const st2 = await getEvidenceStatus(cfg)
+check(
+  '27. status digest counts present',
+  typeof st2.digestValidCount === 'number' &&
+    typeof st2.digestMissingCount === 'number' &&
+    typeof st2.digestMismatchedCount === 'number' &&
+    typeof st2.trustedEvidenceCount === 'number',
 )
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)

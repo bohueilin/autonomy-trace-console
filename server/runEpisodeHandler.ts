@@ -25,6 +25,7 @@ import type {
   AgentDecision,
   AgentSource,
   CompactRun,
+  DigestStatus,
   EvidenceStatus,
   HistorySource,
   LicenseState,
@@ -91,6 +92,7 @@ export interface EvidenceItem {
   versionMismatch: boolean
   rowSchemaVersion: string | null
   digestPresent: boolean
+  digestStatus: DigestStatus
   source: 'memory' | 'insforge'
 }
 
@@ -288,40 +290,10 @@ export async function handleRunEpisode(
     created_at: createdAt,
   }
 
-  // Integrity metadata: schema version + deterministic digest over stable replay
-  // fields (excludes volatile id/created_at and any secrets).
+  // Integrity metadata: schema version + deterministic digest over the stable
+  // replay fields OF THIS ROW (same fn used on read-back, so it's tamper-evident).
   auditRow.row_schema_version = ROW_SCHEMA_VERSION
-  auditRow.audit_row_digest = computeAuditDigest({
-    trace_id: traceId,
-    run_id: getRunId(),
-    episode_index: episode,
-    run_sequence: runSequence,
-    trace_authority: 'server_authoritative_episode',
-    scenario_id: scenario.id,
-    scenario_version: SCENARIO_VERSION,
-    scenario_registry_version: SCENARIO_REGISTRY_VERSION,
-    requested_policy_mode: policyMode,
-    actual_policy_source: decision.source,
-    attempted_model_input: attemptedModelInput,
-    actual_policy_input: actualPolicyInput,
-    action: decision.action,
-    rationale: decision.rationale,
-    requested_info: decision.requestedInfo ?? '',
-    confidence: decision.confidence,
-    passed: result.passed,
-    reward: result.reward,
-    category: result.category,
-    catastrophic: result.catastrophic,
-    expected_action: result.expectedAction,
-    actual_action: result.chosenAction,
-    verifier_reason: result.failureReason,
-    verifier_version: VERIFIER_VERSION,
-    reward_model_version: REWARD_MODEL_VERSION,
-    license_policy_version: LICENSE_POLICY_VERSION,
-    environment_name: ENVIRONMENT_NAME,
-    app_commit: versions.appCommit,
-    license_summary: licenseSummary,
-  })
+  auditRow.audit_row_digest = computeAuditDigest(auditRow)
 
   const persist = await persistEpisode(auditRow, cfg.insforge)
   if (persist.status === 'saved') record.persistedId = persist.recordId
@@ -401,12 +373,51 @@ function stableStringify(value: unknown): string {
   )
 }
 
+// The exact stable fields the integrity digest is computed over — identical on
+// write and read-back. Excludes volatile values (InsForge record id, created_at,
+// the digest itself, row_schema_version) and verbose/derivable fields
+// (scenario_snapshot, verifier_checks, model_name, fallback flags).
+const DIGEST_FIELDS = [
+  'trace_id',
+  'run_id',
+  'episode_index',
+  'run_sequence',
+  'trace_authority',
+  'scenario_id',
+  'scenario_version',
+  'scenario_registry_version',
+  'requested_policy_mode',
+  'actual_policy_source',
+  'attempted_model_input',
+  'actual_policy_input',
+  'action',
+  'rationale',
+  'requested_info',
+  'confidence',
+  'passed',
+  'reward',
+  'category',
+  'catastrophic',
+  'expected_action',
+  'actual_action',
+  'verifier_reason',
+  'verifier_version',
+  'reward_model_version',
+  'license_policy_version',
+  'environment_name',
+  'app_commit',
+  'license_summary',
+] as const
+
 /**
- * SHA-256 over the stable canonical audit fields. Excludes volatile values
- * (InsForge record id, created_at) and any secrets — only replay-relevant fields.
+ * SHA-256 over the stable canonical audit fields picked from `source` (the audit
+ * row on write, or a persisted row on read-back). Deterministic across write/read
+ * for the same evidence. Reused on both sides so a row is tamper-evident.
  */
-function computeAuditDigest(fields: Record<string, unknown>): string {
-  return createHash('sha256').update(stableStringify(fields)).digest('hex')
+export function computeAuditDigest(source: Record<string, unknown>): string {
+  const picked: Record<string, unknown> = {}
+  for (const k of DIGEST_FIELDS) picked[k] = source[k]
+  return createHash('sha256').update(stableStringify(picked)).digest('hex')
 }
 
 /** True when a row was produced by the current verifier/reward/license versions. */
@@ -482,6 +493,12 @@ export function parseEvidenceRow(raw: unknown): EvidenceItem | null {
     licensePolicyVersion,
   })
 
+  // Tamper-evidence: recompute the digest over the SAME stable fields used on
+  // write. Missing digest = legacy/unknown; present-but-different = mismatched.
+  const storedDigest = nonEmptyStr(r.audit_row_digest)
+  const digestStatus: DigestStatus =
+    storedDigest === null ? 'missing' : computeAuditDigest(r) === storedDigest ? 'valid' : 'mismatched'
+
   return {
     traceId,
     episodeIndex: r.episode_index as number,
@@ -501,7 +518,8 @@ export function parseEvidenceRow(raw: unknown): EvidenceItem | null {
     persistedRecordId: toStr(r.id) || null,
     versionMismatch,
     rowSchemaVersion: nonEmptyStr(r.row_schema_version),
-    digestPresent: nonEmptyStr(r.audit_row_digest) !== null,
+    digestPresent: storedDigest !== null,
+    digestStatus,
     source: 'insforge',
   }
 }
@@ -529,6 +547,7 @@ function memToItem(record: RunRecord): EvidenceItem {
     versionMismatch: false,
     rowSchemaVersion: ROW_SCHEMA_VERSION,
     digestPresent: true, // current-process rows always carry a digest
+    digestStatus: 'valid', // freshly produced this process — trivially valid
     source: 'memory',
   }
 }
@@ -565,6 +584,7 @@ export function compactFromItem(it: EvidenceItem): CompactRun {
     versionMismatch: it.versionMismatch,
     rowSchemaVersion: it.rowSchemaVersion,
     digestPresent: it.digestPresent,
+    digestStatus: it.digestStatus,
   }
 }
 
@@ -636,16 +656,30 @@ export async function getEvidenceStatus(
 
   const memItems = serverRecords.map(memToItem)
   const combined = mergeDedupe(memItems, rehydratedItems)
-  const compatible = combined.filter((it) => !it.versionMismatch)
-  const versionMismatchCount = combined.length - compatible.length
+
+  // Digest classification over the deduped set.
+  const versionMismatchCount = combined.filter((it) => it.versionMismatch).length
+  const digestValidCount = combined.filter((it) => it.digestStatus === 'valid').length
+  const digestMissingCount = combined.filter((it) => it.digestStatus === 'missing').length
+  const digestMismatchedCount = combined.filter((it) => it.digestStatus === 'mismatched').length
   const digestPresentCount = combined.filter((it) => it.digestPresent).length
 
-  // Current license: recompute from compatible authoritative verdicts only —
-  // never blend version-incompatible evidence, never trust a stored summary.
+  // License set: version-compatible AND NOT digest-mismatched (tampered rows are
+  // never blended; legacy "missing"-digest rows are allowed if version-compatible).
+  const licenseSet = combined.filter(
+    (it) => !it.versionMismatch && it.digestStatus !== 'mismatched',
+  )
+  // Trusted = version-compatible AND digest-valid (digest-verified).
+  const trustedEvidenceCount = combined.filter(
+    (it) => !it.versionMismatch && it.digestStatus === 'valid',
+  ).length
+
+  // Current license: recompute from the license set only — never trust a stored
+  // summary, never blend version-incompatible or tampered evidence.
   const license =
-    compatible.length > 0
+    licenseSet.length > 0
       ? computeLicenseFromVerdicts(
-          compatible.map((it) => ({
+          licenseSet.map((it) => ({
             passed: it.passed,
             reward: it.reward,
             catastrophic: it.catastrophic,
@@ -692,9 +726,12 @@ export async function getEvidenceStatus(
     rehydratedCount: rehydratedItems.length,
     rejectedMalformedCount,
     versionMismatchCount,
-    compatibleEvidenceCount: compatible.length,
+    compatibleEvidenceCount: licenseSet.length,
     digestPresentCount,
-    digestMissingCount: combined.length - digestPresentCount,
+    digestValidCount,
+    digestMissingCount,
+    digestMismatchedCount,
+    trustedEvidenceCount,
     lastRehydratedAt: lastRehydratedAtMs === null ? null : new Date(lastRehydratedAtMs).toISOString(),
     lastRefreshAttemptAt:
       lastRefreshAttemptMs === null ? null : new Date(lastRefreshAttemptMs).toISOString(),
@@ -704,7 +741,12 @@ export async function getEvidenceStatus(
       status: configured ? 'configured' : 'local_only',
       table: INSFORGE_TABLE,
     },
-    recentCompactRuns: combined.slice(0, 5).map(compactFromItem),
+    // Recent TRUSTED evidence: exclude digest-mismatched rows (still counted in
+    // digestMismatchedCount). Each row carries its digestStatus (valid | missing).
+    recentCompactRuns: combined
+      .filter((it) => it.digestStatus !== 'mismatched')
+      .slice(0, 5)
+      .map(compactFromItem),
   }
 }
 
