@@ -1,4 +1,4 @@
-import type { RecentRun, ServerEpisodeResponse } from './types'
+import type { EvidenceStatus, RecentRun, ServerEpisodeResponse } from './types'
 
 // ----------------------------------------------------------------------------
 // Frontend client for the server-owned episode path.
@@ -42,5 +42,20 @@ export async function fetchRecentRuns(): Promise<RecentRun[]> {
     return data?.ok && Array.isArray(data.runs) ? data.runs : []
   } catch {
     return []
+  }
+}
+
+/**
+ * Best-effort fetch of the compact server evidence status. Used on mount so a
+ * reload shows backend proof (run id, episode count, latest ids) rather than
+ * only local React state. Returns null if the endpoint is unreachable.
+ */
+export async function fetchEvidenceStatus(): Promise<EvidenceStatus | null> {
+  try {
+    const resp = await fetch('/api/evidence/status')
+    const data = (await resp.json()) as ({ ok?: boolean } & EvidenceStatus) | null
+    return data?.ok ? data : null
+  } catch {
+    return null
   }
 }

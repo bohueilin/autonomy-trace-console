@@ -8,7 +8,12 @@
 
 import type { Plugin, ViteDevServer } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { getRecentRuns, handleRunEpisode, type RunEpisodeConfig } from './runEpisodeHandler'
+import {
+  getEvidenceStatus,
+  getRecentRuns,
+  handleRunEpisode,
+  type RunEpisodeConfig,
+} from './runEpisodeHandler'
 
 const MAX_BODY = 1_000_000 // 1 MB cap
 
@@ -43,8 +48,19 @@ export function runEpisodeApiPlugin(cfg: RunEpisodeConfig): Plugin {
           const raw = await readBody(req)
           const body: unknown = raw ? JSON.parse(raw) : {}
           const result = await handleRunEpisode(body, cfg)
-          const status = result.ok ? 200 : result.code === 'bad_request' ? 400 : 502
-          sendJson(res, status, result)
+          if (!result.ok) {
+            sendJson(res, result.code === 'bad_request' ? 400 : 502, result)
+            return
+          }
+          // Send a CLIENT-SAFE subset — the full auditRow (incl. scenario_snapshot
+          // and attempted/actual policy inputs) stays server-side.
+          sendJson(res, 200, {
+            ok: true,
+            trace: result.trace,
+            license: result.license,
+            persistence: result.persistence,
+            runId: result.runId,
+          })
         } catch {
           sendJson(res, 400, { ok: false, code: 'bad_request', error: 'Invalid request.' })
         }
@@ -56,6 +72,14 @@ export function runEpisodeApiPlugin(cfg: RunEpisodeConfig): Plugin {
           return
         }
         sendJson(res, 200, { ok: true, runs: getRecentRuns(10) })
+      })
+
+      server.middlewares.use('/api/evidence/status', (req, res) => {
+        if (req.method !== 'GET') {
+          sendJson(res, 405, { ok: false, error: 'Use GET.' })
+          return
+        }
+        sendJson(res, 200, { ok: true, ...getEvidenceStatus(cfg) })
       })
     },
   }

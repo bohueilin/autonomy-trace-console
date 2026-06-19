@@ -120,9 +120,32 @@ export interface VerifierResult {
  */
 export type TraceAuthority = 'server_authoritative_episode' | 'demo_client_trace'
 
+/**
+ * Attribution stamped onto every server-owned trace + persisted row so an
+ * evaluation can be replayed against the exact environment that produced it.
+ */
+export interface EvalVersions {
+  environmentName: string
+  scenarioRegistryVersion: string
+  scenarioVersion: string
+  verifierVersion: string
+  rewardModelVersion: string
+  licensePolicyVersion: string
+  appCommit: string | null
+}
+
+/** Requested-vs-actual policy provenance (distinguishes Nebius fallbacks). */
+export interface TraceProvenance {
+  requestedPolicyMode: 'mock' | 'nebius'
+  actualPolicySource: AgentSource
+  fallback: boolean
+  fallbackCode: string | null
+}
+
 /** One full episode through the loop, stored for the trace viewer. */
 export interface Trace {
   id: string
+  /** Server-authoritative episode index within its run. Never mutated for UI. */
   episode: number
   scenario: Scenario
   decision: AgentDecision
@@ -131,6 +154,12 @@ export interface Trace {
   licenseSignal: string
   /** Defaults to demo_client_trace when omitted (browser-authored). */
   authority?: TraceAuthority
+  /** Present on server-owned traces — attribution for replay. */
+  versions?: EvalVersions
+  /** Present on server-owned traces — requested vs actual policy. */
+  provenance?: TraceProvenance
+  /** UI-only display order in the mixed client list. Never persisted. */
+  displayIndex?: number
 }
 
 export type LicenseLevelId = 'L0' | 'L1' | 'L2' | 'L3' | 'L4'
@@ -181,6 +210,28 @@ export interface ServerEpisodeResponse {
   license: LicenseState
   persistence: PersistenceInfo
   runId: string
+}
+
+/** Compact server evidence status from GET /api/evidence/status. */
+export interface EvidenceStatus {
+  runId: string | null
+  serverEpisodeCount: number
+  currentLicenseSummary: {
+    level: string
+    name: string
+    passRate: number
+    avgReward: number
+    catastrophicCount: number
+    episodes: number
+  } | null
+  latestServerTraceId: string | null
+  latestPersistedRecordId: string | null
+  persistence: {
+    configured: boolean
+    status: 'configured' | 'local_only' | 'unavailable' | 'error'
+    table: string
+  }
+  recentCompactRuns: RecentRun[]
 }
 
 /** A compact row from GET /api/runs/recent. */

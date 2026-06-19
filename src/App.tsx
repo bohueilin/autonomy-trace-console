@@ -2,11 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { decide, toMockView, toModelView } from './agent'
 import { fetchNebiusAction } from './nebiusClient'
-import { fetchRecentRuns, runServerEpisode as postServerEpisode } from './serverEpisodeClient'
+import { fetchEvidenceStatus, runServerEpisode as postServerEpisode } from './serverEpisodeClient'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
 import { verify } from './verifier'
-import type { AgentDecision, AgentSource, PersistenceStatus, Scenario, Trace } from './types'
+import type {
+  AgentDecision,
+  AgentSource,
+  EvidenceStatus,
+  PersistenceStatus,
+  Scenario,
+  Trace,
+} from './types'
 import { ScenarioCard } from './components/ScenarioCard'
 import { AgentActionCard } from './components/AgentActionCard'
 import { VerifierCard } from './components/VerifierCard'
@@ -15,7 +22,6 @@ import { TraceViewer } from './components/TraceViewer'
 import { EvidencePanel } from './components/EvidencePanel'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
-const DEFAULT_TABLE = 'eval_episodes'
 
 function App() {
   const [traces, setTraces] = useState<Trace[]>([])
@@ -26,16 +32,8 @@ function App() {
 
   // Server-owned evidence state.
   const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus>('idle')
-  const [persistence, setPersistence] = useState<{
-    recordId: string | null
-    configured: boolean
-    table: string
-  }>({ recordId: null, configured: false, table: DEFAULT_TABLE })
-  const [runId, setRunId] = useState<string | null>(null)
-  const [recentCount, setRecentCount] = useState(0)
-  const [serverLicense, setServerLicense] = useState<{ id: string; name: string; color: string } | null>(
-    null,
-  )
+  const [evidence, setEvidence] = useState<EvidenceStatus | null>(null)
+  const [backendReached, setBackendReached] = useState(false)
 
   const license = useMemo(() => computeLicense(traces), [traces])
   const active = traces.length > 0 ? traces[traces.length - 1] : null
@@ -45,13 +43,20 @@ function App() {
     [traces],
   )
 
-  // On mount, surface how many server-owned episodes already exist (survives
-  // client reloads while the dev server is up).
-  useEffect(() => {
-    fetchRecentRuns()
-      .then((runs) => setRecentCount(runs.length))
+  // Pull the compact server evidence status — backend proof that survives a
+  // client reload (run id, episode count, latest ids) rather than only React state.
+  function refreshEvidence() {
+    fetchEvidenceStatus()
+      .then((status) => {
+        if (status) {
+          setEvidence(status)
+          setBackendReached(true)
+        }
+      })
       .catch(() => {})
-  }, [])
+  }
+
+  useEffect(refreshEvidence, [])
 
   function buildTrace(scenario: Scenario, episode: number, decision: AgentDecision): Trace {
     const result = verify(scenario, decision)
@@ -68,6 +73,7 @@ function App() {
       result,
       licenseSignal: signal,
       authority: 'demo_client_trace',
+      displayIndex: episode,
     }
   }
 
@@ -114,23 +120,12 @@ function App() {
     try {
       const scenario = seedScenarios[cursor % seedScenarios.length]
       const res = await postServerEpisode(scenario.id, mode)
-      setTraces((prev) => [...prev, { ...res.trace, episode: prev.length + 1 }])
+      // Preserve the server-authoritative trace identity (id, episode, versions,
+      // provenance). Only add a UI-only displayIndex for the mixed client list.
+      setTraces((prev) => [...prev, { ...res.trace, displayIndex: prev.length + 1 }])
       setCursor((c) => c + 1)
-      setPersistence({
-        recordId: res.persistence.recordId ?? null,
-        configured: res.persistence.configured,
-        table: res.persistence.table,
-      })
       setPersistenceStatus(res.persistence.status)
-      setRunId(res.runId)
-      setServerLicense({
-        id: res.license.level.id,
-        name: res.license.level.name,
-        color: res.license.level.color,
-      })
-      fetchRecentRuns()
-        .then((runs) => setRecentCount(runs.length))
-        .catch(() => {})
+      refreshEvidence()
     } catch {
       setPersistenceStatus('unavailable')
       setNotice('Server episode unavailable — the local demo still works. Try again.')
@@ -267,7 +262,7 @@ function App() {
               Current episode{' '}
               {active && (
                 <span className="muted">
-                  · #{active.episode} — {active.scenario.title}
+                  · #{active.displayIndex ?? active.episode} — {active.scenario.title}
                   {active.authority === 'server_authoritative_episode' && (
                     <span className="auth-tag auth-server">server-authoritative</span>
                   )}
@@ -295,15 +290,7 @@ function App() {
 
         <aside className="side-col">
           <LicenseSummary license={license} />
-          <EvidencePanel
-            status={persistenceStatus}
-            configured={persistence.configured}
-            table={persistence.table}
-            recordId={persistence.recordId}
-            runId={runId}
-            recentCount={recentCount}
-            serverLicense={serverLicense}
-          />
+          <EvidencePanel status={persistenceStatus} evidence={evidence} reached={backendReached} />
           <div className="scenario-bank">
             <div className="bank-head">Scenario bank · {seedScenarios.length} seeded</div>
             <ul>

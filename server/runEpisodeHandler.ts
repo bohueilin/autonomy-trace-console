@@ -12,18 +12,30 @@
 // the resulting evidence; it is never consulted to decide an outcome.
 // ----------------------------------------------------------------------------
 
-import { decide, toMockView, toModelView } from '../src/agent'
-import { computeLicense } from '../src/license'
-import { SCENARIO_VERSION, seedScenarios } from '../src/seedScenarios'
-import { verify } from '../src/verifier'
-import type { AgentDecision, LicenseState, Trace } from '../src/types'
-import { handleNebiusAction, type NebiusHandlerConfig } from './nebiusHandler'
+// NOTE: value imports use explicit .ts extensions so this module also runs under
+// Node's native ESM loader (the verification script imports it directly). Vite +
+// tsc tolerate this via allowImportingTsExtensions. Type-only imports are erased,
+// so they don't need extensions.
+import { decide, toMockView, toModelView } from '../src/agent.ts'
+import { computeLicense } from '../src/license.ts'
+import { SCENARIO_VERSION, seedScenarios } from '../src/seedScenarios.ts'
+import { verify } from '../src/verifier.ts'
+import type { AgentDecision, EvidenceStatus, LicenseState, RecentRun, Trace } from '../src/types'
+import {
+  ENVIRONMENT_NAME,
+  LICENSE_POLICY_VERSION,
+  REWARD_MODEL_VERSION,
+  SCENARIO_REGISTRY_VERSION,
+  VERIFIER_VERSION,
+  getEvalVersions,
+} from './evalVersions.ts'
+import { handleNebiusAction, type NebiusHandlerConfig } from './nebiusHandler.ts'
 import {
   INSFORGE_TABLE,
   insforgeConfigured,
   persistEpisode,
   type InsforgeConfig,
-} from './insforgeStore'
+} from './insforgeStore.ts'
 
 export interface RunEpisodeConfig {
   nebius: NebiusHandlerConfig
@@ -38,19 +50,12 @@ interface RunRecord {
   createdAt: string
 }
 
-export interface RecentRunDTO {
-  id: string
-  episode: number
-  scenarioTitle: string
-  source: AgentDecision['source']
-  action: AgentDecision['action']
-  passed: boolean
-  reward: number
-  category: string
-  catastrophic: boolean
-  authority: 'server_authoritative_episode'
-  persistedId: string | null
-  createdAt: string
+export interface PersistenceOutcomeDTO {
+  configured: boolean
+  status: 'saved' | 'local_only' | 'unavailable'
+  recordId?: string | null
+  code?: string
+  table: string
 }
 
 export type RunEpisodeResult =
@@ -58,14 +63,10 @@ export type RunEpisodeResult =
       ok: true
       trace: Trace
       license: LicenseState
-      persistence: {
-        configured: boolean
-        status: 'saved' | 'local_only' | 'unavailable'
-        recordId?: string | null
-        code?: string
-        table: string
-      }
+      persistence: PersistenceOutcomeDTO
       runId: string
+      /** Full persisted audit row — for the server/verification only, NOT sent to the client. */
+      auditRow: Record<string, unknown>
     }
   | { ok: false; code: 'bad_request' | 'unknown'; error: string }
 
@@ -80,6 +81,13 @@ function getRunId(): string {
   if (!runId) runId = `run_${new Date().toISOString().replace(/[:.]/g, '-')}`
   return runId
 }
+/** Peek the run id WITHOUT generating one (for the status endpoint). */
+function currentRunId(): string | null {
+  return runId
+}
+
+// Monotonic per-process episode counter — never resets within a run.
+let runSequence = 0
 
 function licenseSignalFor(passed: boolean, catastrophic: boolean): string {
   return catastrophic ? 'caps license' : passed ? 'builds trust' : 'erodes trust'
@@ -107,17 +115,22 @@ export async function handleRunEpisode(
     return { ok: false, code: 'bad_request', error: 'Unknown scenarioId.' }
   }
 
-  // Run the policy. The model sees only the ModelPolicyView (no visibleRiskScore).
+  // Run the policy. Track requested vs actual provenance explicitly so a Nebius
+  // fallback is never confused with a genuine mock run.
+  // - attemptedModelInput: the ModelPolicyView intended for Nebius (null for mock).
+  // - actualPolicyInput:   the view actually consumed by the policy that decided.
   let decision: AgentDecision
   let fallback = false
-  let fallbackCode: string | undefined
-  let modelInput: unknown
+  let fallbackCode: string | null = null
+  let attemptedModelInput: unknown = null
+  let actualPolicyInput: unknown
 
   if (policyMode === 'nebius') {
     const modelView = toModelView(scenario)
-    modelInput = modelView
+    attemptedModelInput = modelView
     const r = await handleNebiusAction({ view: modelView }, cfg.nebius)
     if (r.ok) {
+      actualPolicyInput = modelView
       decision = {
         action: r.decision.action,
         confidence: r.decision.confidence,
@@ -127,15 +140,16 @@ export async function handleRunEpisode(
         model: r.model,
       }
     } else {
+      // Nebius failed — fall back to the mock policy, but keep both inputs.
       fallback = true
       fallbackCode = r.code
       const mockView = toMockView(scenario)
-      modelInput = mockView
+      actualPolicyInput = mockView
       decision = decide(mockView)
     }
   } else {
     const mockView = toMockView(scenario)
-    modelInput = mockView
+    actualPolicyInput = mockView
     decision = decide(mockView)
   }
 
@@ -143,14 +157,25 @@ export async function handleRunEpisode(
   const result = verify(scenario, decision)
 
   const episode = serverRecords.length + 1
+  runSequence += 1
+  const traceId = `srv-${getRunId()}-${episode}-${scenario.id}`
+  const versions = getEvalVersions()
+  const provenance = {
+    requestedPolicyMode: policyMode,
+    actualPolicySource: decision.source,
+    fallback,
+    fallbackCode,
+  }
   const trace: Trace = {
-    id: `srv-${episode}-${scenario.id}`,
+    id: traceId,
     episode,
     scenario,
     decision,
     result,
     licenseSignal: licenseSignalFor(result.passed, result.catastrophic),
     authority: 'server_authoritative_episode',
+    versions,
+    provenance,
   }
 
   const createdAt = new Date().toISOString()
@@ -158,24 +183,52 @@ export async function handleRunEpisode(
   serverRecords.push(record)
 
   const license = computeLicense(serverRecords.map((r) => r.trace))
+  const licenseSummary = {
+    level: license.level.id,
+    name: license.level.name,
+    passRate: license.passRate,
+    avgReward: license.avgReward,
+    catastrophicCount: license.catastrophicCount,
+    episodes: license.episodes,
+  }
 
-  // Build the audit row and persist (best-effort). Full evidence to reconstruct
-  // the eval, including the canonical scenario snapshot (server-owned ground truth).
-  const row: Record<string, unknown> = {
-    trace_authority: 'server_authoritative_episode',
+  // Build the replayable audit row and persist (best-effort). Includes identity,
+  // attribution versions, explicit fallback attribution, and the canonical
+  // scenario snapshot (server-owned ground truth).
+  const auditRow: Record<string, unknown> = {
+    // identity
+    trace_id: traceId,
     run_id: getRunId(),
+    episode_index: episode,
+    run_sequence: runSequence,
+    trace_authority: 'server_authoritative_episode',
+    // attribution versions
+    environment_name: ENVIRONMENT_NAME,
+    scenario_registry_version: SCENARIO_REGISTRY_VERSION,
+    verifier_version: VERIFIER_VERSION,
+    reward_model_version: REWARD_MODEL_VERSION,
+    license_policy_version: LICENSE_POLICY_VERSION,
+    app_commit: versions.appCommit,
+    // scenario
     scenario_id: scenario.id,
     scenario_version: SCENARIO_VERSION,
     scenario_title: scenario.title,
     domain: scenario.domain,
-    policy_source: decision.source,
+    scenario_snapshot: scenario,
+    // policy provenance (requested vs actual)
+    requested_policy_mode: policyMode,
+    actual_policy_source: decision.source,
+    fallback,
+    fallback_code: fallbackCode,
+    attempted_model_input: attemptedModelInput,
+    actual_policy_input: actualPolicyInput,
+    // decision
     model_name: decision.model ?? null,
     action: decision.action,
     rationale: decision.rationale,
     requested_info: decision.requestedInfo ?? '',
     confidence: decision.confidence,
-    fallback,
-    fallback_code: fallbackCode ?? null,
+    // deterministic verifier result
     passed: result.passed,
     reward: result.reward,
     category: result.category,
@@ -184,21 +237,13 @@ export async function handleRunEpisode(
     actual_action: result.chosenAction,
     verifier_reason: result.failureReason,
     verifier_checks: result.checks,
+    // license + time
     license_level: license.level.id,
-    license_summary: {
-      level: license.level.id,
-      name: license.level.name,
-      passRate: license.passRate,
-      avgReward: license.avgReward,
-      catastrophicCount: license.catastrophicCount,
-      episodes: license.episodes,
-    },
-    scenario_snapshot: scenario,
-    model_input: modelInput,
+    license_summary: licenseSummary,
     created_at: createdAt,
   }
 
-  const persist = await persistEpisode(row, cfg.insforge)
+  const persist = await persistEpisode(auditRow, cfg.insforge)
   if (persist.status === 'saved') record.persistedId = persist.recordId
 
   return {
@@ -213,11 +258,42 @@ export async function handleRunEpisode(
       table: INSFORGE_TABLE,
     },
     runId: getRunId(),
+    auditRow,
+  }
+}
+
+/** Compact server evidence status — backend proof that survives a client reload. */
+export function getEvidenceStatus(cfg: RunEpisodeConfig): EvidenceStatus {
+  const last = serverRecords[serverRecords.length - 1]
+  const configured = insforgeConfigured(cfg.insforge)
+  const license = computeLicense(serverRecords.map((r) => r.trace))
+  return {
+    runId: currentRunId(),
+    serverEpisodeCount: serverRecords.length,
+    currentLicenseSummary:
+      serverRecords.length === 0
+        ? null
+        : {
+            level: license.level.id,
+            name: license.level.name,
+            passRate: license.passRate,
+            avgReward: license.avgReward,
+            catastrophicCount: license.catastrophicCount,
+            episodes: license.episodes,
+          },
+    latestServerTraceId: last?.trace.id ?? null,
+    latestPersistedRecordId: last?.persistedId ?? null,
+    persistence: {
+      configured,
+      status: configured ? 'configured' : 'local_only',
+      table: INSFORGE_TABLE,
+    },
+    recentCompactRuns: getRecentRuns(5),
   }
 }
 
 /** Recent server-owned episodes from in-memory history (newest first). */
-export function getRecentRuns(limit = 10): RecentRunDTO[] {
+export function getRecentRuns(limit = 10): RecentRun[] {
   return serverRecords
     .slice(-limit)
     .reverse()

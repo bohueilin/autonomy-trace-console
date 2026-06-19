@@ -33,12 +33,18 @@ no matter how good the average looks.
   still scores it. The API key is server-side only (details below).
 - **Run 9-Episode Eval stays mock-only** so the headline demo is instant and
   deterministic.
+- **A server-owned episode path with InsForge evidence persistence is implemented.**
+  `POST /api/run-episode` computes the authoritative trace server-side and writes
+  a replayable audit row to InsForge (best-effort). The deterministic verifier
+  remains the source of truth.
 
 The mock pieces are mocked on purpose; everything load-bearing (the verifier and
 the license gate) is deterministic and lives in plain, readable code.
 
-**Still deferred:** InsForge trace persistence and an optional Vapi operator (see
-*Future milestones*). No auth, no real payments, no robotics simulation, no RL
+**Implemented external integrations:** Nebius model-under-test (server-side), and
+the **InsForge evidence write path**. **Still deferred:** InsForge read-back /
+rehydration (durable history across server restarts — the next milestone) and an
+optional Vapi operator. No auth, no real payments, no robotics simulation, no RL
 training, no scenario generation.
 
 ---
@@ -379,20 +385,54 @@ Enough to reconstruct the evaluation:
 **InsForge preserves evidence. It is not the source of verifier truth** — the
 deterministic verifier remains authoritative.
 
+### Replayable evaluation evidence
+
+Every server-authoritative row is **replayable, attributable, and safe to use as
+eval evidence** because it captures exactly what produced the result:
+
+- **canonical `scenario_snapshot` + `scenario_version` / `scenario_registry_version`** — the exact problem,
+- **`requested_policy_mode` vs `actual_policy_source`** + `fallback` / `fallback_code` — what was asked for vs what actually decided,
+- **`attempted_model_input` and `actual_policy_input`** — the exact policy inputs (a Nebius fallback keeps both),
+- **`action` / `rationale` / `requested_info` / `confidence`** — the normalized decision,
+- **`verifier_version` + full verifier result** and **`reward_model_version`** — how the environment scored it,
+- **`license_policy_version` + `license_summary`** — the license at episode time,
+- **`environment_name`** and **`app_commit`** (if set) — the build that ran it.
+
+So a stored row can be re-evaluated against the exact environment, verifier,
+reward model, and license policy that produced it. The returned server trace also
+carries `versions` and `provenance` for the same attribution.
+
+> InsForge stores evidence. The deterministic verifier code remains the source of
+> truth.
+
+### Verifying the audit semantics
+
+```bash
+npm run verify:evidence   # in-process checks; no running server or creds needed
+```
+
+Confirms: unknown scenarios are rejected; only `{ scenarioId, policyMode }` is
+accepted; client-spoofed reward/pass/license are ignored; the trace carries
+authority + identity + versions; the Nebius no-key fallback records
+`requested_policy_mode: nebius` / `actual_policy_source: mock` / `fallback: true` /
+`fallback_code: no_key` with both inputs; and the row contains the replay fields.
+
 ### Demo persistence across reloads
 
-This milestone **writes** authoritative traces and **reads** recent ones from the
-server's in-memory run history (`GET /api/runs/recent`):
+This milestone **writes** authoritative traces and **reads** them back via
+`GET /api/evidence/status` (compact backend snapshot) and `GET /api/runs/recent`
+(recent episodes) — from the server's in-memory run history:
 
 1. Click **Run Server Episode** a few times — watch the Evidence panel
-   (`Server episodes` count, server license, saved record id when configured).
-2. **Reload the page.** The client trace list clears, but the Evidence panel's
-   server-episode count is repopulated from the server — the run history survived
-   the reload.
+   (`Server episodes` count, run id, latest trace/record id, server license).
+2. **Reload the page.** The client trace list clears, but the Evidence panel is
+   repopulated from `GET /api/evidence/status` — the run id, episode count, latest
+   ids, and server license survived the reload (backend proof, not React state).
 
-The in-memory history survives client reloads but resets on **server** restart;
-InsForge is the durable write store. Reading persisted rows back **from InsForge**
-(rather than in-memory) is the next step.
+The in-memory history survives client reloads but **resets on server restart**;
+InsForge is the durable write store. Durable history across server restarts is
+**not** complete yet — reading persisted rows back **from InsForge** (rather than
+in-memory) is the next milestone.
 
 ### Why persistence matters
 
@@ -411,12 +451,14 @@ shown and how the environment scored it.
 1. **Nebius policy runner — DONE (Milestone 2).** A real model proposes actions
    server-side; the deterministic verifier scores them. Key stays server-side.
 2. **InsForge evidence store — DONE (Milestone 3).** Server-owned `/api/run-episode`
-   computes the authoritative trace and persists it; `/api/runs/recent` reads the
-   in-memory history. Verifier remains source of truth.
-3. **InsForge read-back (next)** — query persisted rows back *from InsForge* (not
-   just in-memory), so license history is durable across server restarts and the
-   eval corpus is queryable.
-4. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
+   computes the authoritative trace and persists it. Verifier remains source of truth.
+3. **Replayable audit semantics — DONE (Milestone 3.1).** Stable trace identity,
+   attribution versions (environment / scenario registry / verifier / reward /
+   license), explicit Nebius fallback attribution, and `GET /api/evidence/status`.
+4. **InsForge read-back / rehydration (next)** — query persisted rows back *from
+   InsForge* (not just in-memory) to rehydrate authoritative license history, so it
+   is durable across reload **and server restart** and the eval corpus is queryable.
+5. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
    (review an escalation, approve a recommendation) without changing the verifier
    or the license gate.
 
@@ -428,7 +470,7 @@ shown and how the environment scored it.
 | ---- | -------------- |
 | [`src/types.ts`](src/types.ts) | Domain model (actions, scenarios, verdicts, license). |
 | [`src/seedScenarios.ts`](src/seedScenarios.ts) | The 9 seeded scenarios with hidden risks. |
-| [`src/agent.ts`](src/agent.ts) | Mock policy + `toMockView` / `toModelView` projections (neither can see hidden risk). |
+| [`src/agent.ts`](src/agent.ts) | Mock policy + `toMockView` (`MockPolicyView`, incl. mock-only `visibleRiskScore`) / `toModelView` (`ModelPolicyView`, no risk score) projections — neither can see hidden risk. |
 | [`src/nebiusClient.ts`](src/nebiusClient.ts) | Frontend client for `/api/nebius-action`; sends a `ModelPolicyView` (key never touched). |
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
@@ -436,7 +478,9 @@ shown and how the environment scored it.
 | [`src/serverEpisodeClient.ts`](src/serverEpisodeClient.ts) | Frontend client for `/api/run-episode` + `/api/runs/recent`. |
 | [`server/nebiusHandler.ts`](server/nebiusHandler.ts) | Server-only: builds the request from visible context, calls Nebius, normalizes. |
 | [`server/nebiusPlugin.ts`](server/nebiusPlugin.ts) | Vite middleware exposing `POST /api/nebius-action`. |
-| [`server/runEpisodeHandler.ts`](server/runEpisodeHandler.ts) | Server-owned episode: canonical scenario → policy → verifier → reward → license → persist. |
-| [`server/runEpisodePlugin.ts`](server/runEpisodePlugin.ts) | Vite middleware: `POST /api/run-episode`, `GET /api/runs/recent`. |
+| [`server/runEpisodeHandler.ts`](server/runEpisodeHandler.ts) | Server-owned episode: canonical scenario → policy → verifier → reward → license → replayable audit row → persist. |
+| [`server/runEpisodePlugin.ts`](server/runEpisodePlugin.ts) | Vite middleware: `POST /api/run-episode`, `GET /api/runs/recent`, `GET /api/evidence/status`. |
 | [`server/insforgeStore.ts`](server/insforgeStore.ts) | Server-only best-effort InsForge persistence (`eval_episodes`). |
+| [`server/evalVersions.ts`](server/evalVersions.ts) | Attribution versions (environment / scenario registry / verifier / reward / license). |
+| [`scripts/verifyServerEvidence.mjs`](scripts/verifyServerEvidence.mjs) | In-process checks of the replayable audit semantics (`npm run verify:evidence`). |
 | [`src/App.tsx`](src/App.tsx) | Orchestrates the loop, eval controls, and evidence panel. |
