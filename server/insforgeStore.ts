@@ -51,6 +51,14 @@ export async function persistEpisode(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), cfg.timeoutMs ?? 8000)
 
+  // InsForge reserves id / created_at / updated_at (it auto-manages them) and
+  // rejects inserts that include them. Our digest already EXCLUDES created_at, so
+  // dropping it here is safe; read-back uses InsForge's own created_at timestamp.
+  const insertRow: Record<string, unknown> = { ...row }
+  delete insertRow.id
+  delete insertRow.created_at
+  delete insertRow.updated_at
+
   try {
     const resp = await fetch(url, {
       method: 'POST',
@@ -59,7 +67,7 @@ export async function persistEpisode(
         authorization: `Bearer ${cfg.apiKey}`,
         prefer: 'return=representation',
       },
-      body: JSON.stringify([row]), // body must be an array, even for one record
+      body: JSON.stringify([insertRow]), // body must be an array, even for one record
       signal: controller.signal,
     })
 

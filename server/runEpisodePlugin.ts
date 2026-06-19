@@ -14,6 +14,7 @@ import {
   handleRunEpisode,
   type RunEpisodeConfig,
 } from './runEpisodeHandler'
+import { handleVapiTools } from './vapiHandler'
 
 const MAX_BODY = 1_000_000 // 1 MB cap
 
@@ -72,6 +73,22 @@ export function runEpisodeApiPlugin(cfg: RunEpisodeConfig): Plugin {
           return
         }
         sendJson(res, 200, { ok: true, runs: getRecentRuns(10) })
+      })
+
+      // Thin Vapi operator adapter: routes only to run-episode / evidence-status.
+      server.middlewares.use('/api/vapi/tools', async (req, res) => {
+        if (req.method !== 'POST') {
+          sendJson(res, 405, { results: [] })
+          return
+        }
+        try {
+          const raw = await readBody(req)
+          const body: unknown = raw ? JSON.parse(raw) : {}
+          const out = await handleVapiTools(body, cfg)
+          sendJson(res, 200, out)
+        } catch {
+          sendJson(res, 200, { results: [{ toolCallId: '', result: 'Operator backend error.' }] })
+        }
       })
 
       server.middlewares.use('/api/evidence/status', async (req, res) => {

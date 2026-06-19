@@ -11,6 +11,7 @@
     "verify:evidence": "node scripts/verifyServerEvidence.mjs"
   },
   "dependencies": {
+    "openai": "^6.44.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
