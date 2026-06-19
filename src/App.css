@@ -341,14 +341,29 @@ body {
   background: rgba(255, 107, 107, 0.18);
   color: var(--neg);
 }
-.catastrophic-flag {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  color: #fff;
-  background: var(--neg);
+.category-chip {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   padding: 3px 8px;
   border-radius: 6px;
+}
+.cat-correct {
+  background: rgba(54, 201, 141, 0.18);
+  color: var(--pos);
+}
+.cat-over_cautious {
+  background: rgba(108, 140, 255, 0.18);
+  color: #9db0ff;
+}
+.cat-under_cautious {
+  background: rgba(224, 161, 58, 0.18);
+  color: var(--warn);
+}
+.cat-catastrophic {
+  background: var(--neg);
+  color: #fff;
 }
 .expected {
   font-size: 12px;
@@ -540,18 +555,25 @@ body {
   line-height: 1.4;
 }
 .license-ladder {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  list-style: none;
   margin: 16px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .ladder-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 8px 4px;
-  text-align: center;
+  padding: 7px 10px;
   color: var(--muted);
-  opacity: 0.6;
+  opacity: 0.55;
+}
+.ladder-step.earned {
+  opacity: 0.85;
 }
 .ladder-step.active {
   opacity: 1;
@@ -559,15 +581,22 @@ body {
   background: var(--panel-2);
 }
 .ladder-id {
-  display: block;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 13px;
+  min-width: 24px;
 }
 .ladder-name {
-  display: block;
-  font-size: 10.5px;
+  font-size: 12.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+}
+.ladder-here {
+  margin-left: auto;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.7;
 }
 .license-stats {
   display: grid;
@@ -661,4 +690,159 @@ body {
   color: #0c0f17;
   padding: 1px 6px;
   border-radius: 4px;
+}
+
+/* ---------- topbar license chip (fast-read outcome) ---------- */
+.license-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 14px;
+  background: var(--panel);
+}
+.chip-badge {
+  font-weight: 900;
+  font-size: 16px;
+  color: #0c0f17;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.chip-eyebrow {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.chip-name {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+/* ---------- mock policy signal bar ---------- */
+.policy-signal {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+.policy-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.band-bar {
+  position: relative;
+  display: flex;
+  height: 22px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.35;
+  border-right: 1px solid var(--bg);
+}
+.band:last-child {
+  border-right: none;
+}
+.band-act {
+  background: rgba(54, 201, 141, 0.5);
+}
+.band-ask {
+  background: rgba(108, 140, 255, 0.5);
+}
+.band-escalate {
+  background: rgba(224, 161, 58, 0.5);
+}
+.band-stop {
+  background: rgba(255, 107, 107, 0.5);
+}
+.band-active {
+  opacity: 1;
+  font-weight: 800;
+}
+.band-marker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  transform: translateX(-1px);
+}
+.policy-readout {
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-family: ui-monospace, Consolas, monospace;
+  color: #c7cad6;
+}
+.policy-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* ---------- demo polish: no horizontal overflow, fast license read ---------- */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+.main-col,
+.trace-flow,
+.brand {
+  min-width: 0;
+}
+.flow-node {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 980px) {
+  .console {
+    padding: 18px 16px 48px;
+  }
+  /* On mobile, surface the earned license before the episode detail. */
+  .layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .side-col {
+    order: -1;
+  }
+  .license-summary {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    gap: 14px;
+  }
+  .controls {
+    width: 100%;
+  }
+  .controls .btn {
+    flex: 1;
+  }
 }

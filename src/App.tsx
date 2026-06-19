@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import './App.css'
-import { decide } from './agent'
+import { decide, toAgentView } from './agent'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
 import { verify } from './verifier'
@@ -21,7 +21,8 @@ function App() {
 
   function makeTrace(scenarioIndex: number, episode: number): Trace {
     const scenario = seedScenarios[scenarioIndex]
-    const decision = decide(scenario)
+    // The agent only ever receives the projected view — it cannot read hiddenRisk.
+    const decision = decide(toAgentView(scenario))
     const result = verify(scenario, decision)
     const signal = result.catastrophic
       ? 'caps license'
@@ -76,14 +77,29 @@ function App() {
           <p className="tagline">Agents should earn autonomy before they exercise it.</p>
           <p className="future">warm-up for → Autonomy License Gym</p>
         </div>
+        <div
+          className="license-chip"
+          style={{ borderColor: license.level.color }}
+          aria-label={`Current autonomy license: ${license.level.id} ${license.level.name}`}
+        >
+          <span className="chip-badge" style={{ background: license.level.color }}>
+            {license.level.id}
+          </span>
+          <span className="chip-text">
+            <span className="chip-eyebrow">Autonomy license</span>
+            <span className="chip-name" style={{ color: license.level.color }}>
+              {license.level.name}
+            </span>
+          </span>
+        </div>
         <div className="controls">
-          <button className="btn primary" onClick={runEpisode}>
-            ▶ Run Episode
+          <button className="btn primary" onClick={runEpisode} aria-label="Run a single episode">
+            <span aria-hidden="true">▶</span> Run Episode
           </button>
-          <button className="btn" onClick={runFullEval}>
-            ⏩ Run 9-Episode Eval
+          <button className="btn" onClick={runFullEval} aria-label="Run the full nine-episode evaluation">
+            <span aria-hidden="true">⏩</span> Run 9-Episode Eval
           </button>
-          <button className="btn ghost" onClick={reset}>
+          <button className="btn ghost" onClick={reset} aria-label="Reset the console">
             Reset
           </button>
         </div>

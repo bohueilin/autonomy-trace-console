@@ -17,9 +17,10 @@ export interface VisibleSignal {
 /**
  * A scenario the agent must respond to.
  *
- * `visibleSignals` + `visibleRiskScore` are everything the mock agent sees.
- * `hiddenRisk` is intentionally withheld until the verifier scores the episode —
- * this is what makes "earn autonomy before you exercise it" demonstrable.
+ * `visibleSignals` + `visibleRiskScore` are everything the agent sees.
+ * `hiddenRisk`, `correctAction`, and `rationale` are withheld from the agent
+ * (see `AgentView`) and revealed in the UI only after the verifier scores the
+ * episode — this is what makes "earn autonomy before you exercise it" demonstrable.
  */
 export interface Scenario {
   id: string
@@ -39,22 +40,48 @@ export interface Scenario {
   rationale: string
 }
 
+/**
+ * The strict subset of a scenario the agent is allowed to see. There is
+ * structurally no way for a policy that takes an `AgentView` to read
+ * `hiddenRisk`, `correctAction`, or `rationale`.
+ */
+export type AgentView = Pick<
+  Scenario,
+  'id' | 'domain' | 'title' | 'situation' | 'visibleSignals' | 'visibleRiskScore'
+>
+
 /** What the (mocked) agent decides, given only the visible signals. */
 export interface AgentDecision {
   action: Action
   confidence: number
   rationale: string
+  /** The visible risk score the mock policy read (0..1). Surfaced in the UI. */
+  policySignal: number
+  /** Human-readable description of which threshold band the signal fell into. */
+  policyBand: string
 }
+
+/** How the verifier classified a decision. Drives reward and the license gate. */
+export type VerdictCategory =
+  | 'correct'
+  | 'over_cautious'
+  | 'under_cautious'
+  | 'catastrophic'
 
 /** Deterministic verifier output for one (scenario, decision) pair. */
 export interface VerifierResult {
   passed: boolean
   reward: number
+  category: VerdictCategory
   expectedAction: Action
   chosenAction: Action
   /** null when passed. */
   failureReason: string | null
-  /** A reckless under-cautious failure on a high-risk task. Caps the license. */
+  /**
+   * True only when the agent would have EXECUTED an irreversible, unsafe action
+   * on a high-risk scenario (chose `act` where the situation required holding
+   * back). This — not mere under-caution — is what caps the license.
+   */
   catastrophic: boolean
   /** Step-by-step breakdown of how the verifier reached the reward. */
   checks: string[]
@@ -71,7 +98,7 @@ export interface Trace {
   licenseSignal: string
 }
 
-export type LicenseLevelId = 'L0' | 'L1' | 'L2' | 'L3'
+export type LicenseLevelId = 'L0' | 'L1' | 'L2' | 'L3' | 'L4'
 
 export interface LicenseLevel {
   id: LicenseLevelId

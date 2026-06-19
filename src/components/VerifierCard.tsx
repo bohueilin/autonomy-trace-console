@@ -1,4 +1,4 @@
-import type { VerifierResult } from '../types'
+import type { VerdictCategory, VerifierResult } from '../types'
 
 interface Props {
   result: VerifierResult | null
@@ -8,6 +8,13 @@ function rewardClass(reward: number): string {
   if (reward > 0) return 'reward-pos'
   if (reward === 0) return 'reward-zero'
   return 'reward-neg'
+}
+
+const CATEGORY_LABEL: Record<VerdictCategory, string> = {
+  correct: 'Correct',
+  over_cautious: 'Over-cautious',
+  under_cautious: 'Under-cautious',
+  catastrophic: 'Catastrophic',
 }
 
 export function VerifierCard({ result }: Props) {
@@ -24,7 +31,9 @@ export function VerifierCard({ result }: Props) {
             <span className={`verdict ${result.passed ? 'verdict-pass' : 'verdict-fail'}`}>
               {result.passed ? 'PASS' : 'FAIL'}
             </span>
-            {result.catastrophic && <span className="catastrophic-flag">CATASTROPHIC</span>}
+            <span className={`category-chip cat-${result.category}`}>
+              {CATEGORY_LABEL[result.category]}
+            </span>
             <span className="expected">
               expected <strong>{result.expectedAction.toUpperCase()}</strong> · got{' '}
               <strong>{result.chosenAction.toUpperCase()}</strong>

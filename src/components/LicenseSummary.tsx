@@ -1,7 +1,7 @@
-import { LICENSE_LEVELS } from '../license'
+import { LICENSE_LEVELS, levelRank } from '../license'
 import type { LicenseLevelId, LicenseState } from '../types'
 
-const ORDER: LicenseLevelId[] = ['L0', 'L1', 'L2', 'L3']
+const ORDER: LicenseLevelId[] = ['L0', 'L1', 'L2', 'L3', 'L4']
 
 interface Props {
   license: LicenseState
@@ -9,6 +9,8 @@ interface Props {
 
 export function LicenseSummary({ license }: Props) {
   const { level } = license
+  const currentRank = levelRank(level.id)
+
   return (
     <div className="license-summary" style={{ borderColor: level.color }}>
       <div className="license-headline">
@@ -26,22 +28,27 @@ export function LicenseSummary({ license }: Props) {
       <p className="license-blurb">{level.blurb}</p>
       <p className="license-permission">{level.permission}</p>
 
-      <div className="license-ladder">
+      <ol className="license-ladder" aria-label="Autonomy license ladder">
         {ORDER.map((id) => {
           const lvl = LICENSE_LEVELS[id]
           const active = id === level.id
+          const earned = levelRank(id) <= currentRank
           return (
-            <div
+            <li
               key={id}
-              className={`ladder-step ${active ? 'active' : ''}`}
-              style={active ? { borderColor: level.color, color: level.color } : undefined}
+              className={`ladder-step ${active ? 'active' : ''} ${earned ? 'earned' : ''}`}
+              style={active ? { borderColor: level.color } : undefined}
+              aria-current={active ? 'true' : undefined}
             >
-              <span className="ladder-id">{id}</span>
+              <span className="ladder-id" style={active ? { color: level.color } : undefined}>
+                {id}
+              </span>
               <span className="ladder-name">{lvl.name}</span>
-            </div>
+              {active && <span className="ladder-here">you are here</span>}
+            </li>
           )
         })}
-      </div>
+      </ol>
 
       <div className="license-stats">
         <div className="stat">
