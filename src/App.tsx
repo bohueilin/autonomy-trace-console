@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import './App.css'
-import { decide, toAgentView } from './agent'
+import { decide, toMockView, toModelView } from './agent'
 import { fetchNebiusAction } from './nebiusClient'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
@@ -54,15 +54,15 @@ function App() {
   async function decideFor(
     scenario: Scenario,
   ): Promise<{ decision: AgentDecision; fellBack: boolean }> {
-    const view = toAgentView(scenario)
     if (mode === 'nebius') {
       try {
-        return { decision: await fetchNebiusAction(view), fellBack: false }
+        // The model receives the ModelPolicyView only (no visibleRiskScore).
+        return { decision: await fetchNebiusAction(toModelView(scenario)), fellBack: false }
       } catch {
-        return { decision: decide(view), fellBack: true }
+        return { decision: decide(toMockView(scenario)), fellBack: true }
       }
     }
-    return { decision: decide(view), fellBack: false }
+    return { decision: decide(toMockView(scenario)), fellBack: false }
   }
 
   // Run a single episode against the next scenario in round-robin order.
@@ -93,7 +93,7 @@ function App() {
     setNotice(null)
     try {
       const fresh = seedScenarios.map((s, i) =>
-        buildTrace(s, i + 1, decide(toAgentView(s))),
+        buildTrace(s, i + 1, decide(toMockView(s))),
       )
       setTraces(fresh)
       setCursor(seedScenarios.length)

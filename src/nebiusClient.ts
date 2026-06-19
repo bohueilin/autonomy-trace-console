@@ -1,4 +1,4 @@
-import type { AgentDecision, AgentView } from './types'
+import type { AgentDecision, ModelPolicyView } from './types'
 
 // ----------------------------------------------------------------------------
 // Frontend client for the server-side Nebius boundary.
@@ -25,7 +25,7 @@ interface ServerErr {
   error: string
 }
 
-export async function fetchNebiusAction(view: AgentView): Promise<AgentDecision> {
+export async function fetchNebiusAction(view: ModelPolicyView): Promise<AgentDecision> {
   const resp = await fetch('/api/nebius-action', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

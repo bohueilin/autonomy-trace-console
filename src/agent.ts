@@ -1,4 +1,4 @@
-import type { AgentDecision, Action, AgentView, Scenario } from './types'
+import type { AgentDecision, Action, MockPolicyView, ModelPolicyView, Scenario } from './types'
 
 // ----------------------------------------------------------------------------
 // Mocked agent policy.
@@ -11,12 +11,10 @@ import type { AgentDecision, Action, AgentView, Scenario } from './types'
 // heuristic — the bands below are the entire decision rule, and they are shown
 // in the UI next to every decision.
 //
-// Safety: `decide` takes an `AgentView`, which is a strict subset of a Scenario
-// that does NOT include `hiddenRisk`, `correctAction`, or `rationale`. The
-// policy structurally cannot read them.
-//
-// (No Nebius / LLM call yet — a learned policy swaps in behind `decide`'s shape
-// later, still consuming only the AgentView.)
+// Safety: `decide` takes a `MockPolicyView`, a strict subset of a Scenario that
+// does NOT include `hiddenRisk`, `correctAction`, or `rationale`. The policy
+// structurally cannot read them. A real model-under-test instead consumes a
+// `ModelPolicyView`, which additionally omits the mock-only `visibleRiskScore`.
 // ----------------------------------------------------------------------------
 
 export interface PolicyBand {
@@ -47,8 +45,8 @@ const REASONS: Record<Action, string> = {
   stop: 'Visible signals indicate a clear danger; the policy stops.',
 }
 
-/** Project a full scenario down to only what the agent is allowed to see. */
-export function toAgentView(scenario: Scenario): AgentView {
+/** Project a scenario down to what the LOCAL MOCK policy may see. */
+export function toMockView(scenario: Scenario): MockPolicyView {
   return {
     id: scenario.id,
     domain: scenario.domain,
@@ -59,8 +57,22 @@ export function toAgentView(scenario: Scenario): AgentView {
   }
 }
 
+/**
+ * Project a scenario down to what a real MODEL-under-test may see. Note the
+ * absence of `visibleRiskScore` — the model must reason from raw visible signals.
+ */
+export function toModelView(scenario: Scenario): ModelPolicyView {
+  return {
+    id: scenario.id,
+    domain: scenario.domain,
+    title: scenario.title,
+    situation: scenario.situation,
+    visibleSignals: scenario.visibleSignals,
+  }
+}
+
 /** Decide an action from the view's visible risk signal. Deterministic. */
-export function decide(view: AgentView): AgentDecision {
+export function decide(view: MockPolicyView): AgentDecision {
   const score = view.visibleRiskScore
   const band = bandFor(score)
   // Confidence is highest at the extremes of the visible risk scale.

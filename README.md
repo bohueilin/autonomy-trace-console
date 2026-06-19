@@ -6,7 +6,7 @@ RL-environment / RSI hackathon project).
 
 > **Core thesis: agents should earn autonomy before they exercise it.**
 
-Every episode runs the same loop, entirely locally, with no external services:
+Every episode runs the same loop:
 
 ```
 scenario  ->  agent action  ->  deterministic verifier  ->  reward  ->  trace  ->  license level
@@ -18,19 +18,28 @@ scores the decision; rewards accumulate into an **autonomy license** that the
 agent has to earn — and a single reckless, irreversible action caps that license
 no matter how good the average looks.
 
+> **The model proposes. The environment verifies. The license gate decides.**
+
 ---
 
-## What this is (and isn't, yet)
+## What this is
 
-- **Is:** a self-contained React + TypeScript dashboard. Nine seeded scenarios, a
-  mocked agent policy, a deterministic verifier, a reward model, a trace viewer,
-  and a license ladder.
-- **Isn't (intentionally, for now):** no auth, no real payments, no robotics
-  simulation, no RL training, and **no external APIs** — Nebius, InsForge, and
-  Vapi are deferred until the local loop is polished (see *Future milestones*).
+- **The local loop works by default with zero external dependencies.** A
+  self-contained React + TypeScript dashboard: nine seeded scenarios, a mock
+  agent policy, a deterministic verifier, a reward model, a trace viewer, and a
+  license ladder. Run it with `npm run dev` and nothing else is required.
+- **An optional Nebius model-under-test** can be swapped in for *single-episode*
+  evaluation. Nebius **proposes an action only** — the same deterministic verifier
+  still scores it. The API key is server-side only (details below).
+- **Run 9-Episode Eval stays mock-only** so the headline demo is instant and
+  deterministic.
 
-The pieces that are mocked are mocked on purpose; everything load-bearing (the
-verifier and the license gate) is deterministic and lives in plain, readable code.
+The mock pieces are mocked on purpose; everything load-bearing (the verifier and
+the license gate) is deterministic and lives in plain, readable code.
+
+**Still deferred:** InsForge trace persistence and an optional Vapi operator (see
+*Future milestones*). No auth, no real payments, no robotics simulation, no RL
+training, no scenario generation.
 
 ---
 
@@ -109,15 +118,22 @@ stays the single source of truth.
 Copy `.env.example` to `.env.local` and fill in:
 
 ```bash
-NEBIUS_API_KEY=sk-...                                   # your Nebius key
-NEBIUS_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct     # the model to test
-# NEBIUS_BASE_URL=https://api.studio.nebius.com/v1       # optional override
+NEBIUS_API_KEY=sk-...                                   # server-side only
+NEBIUS_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct     # server-side only
+# NEBIUS_BASE_URL=https://api.tokenfactory.nebius.com/v1  # optional, configurable
 ```
 
-These are **server-side only**. Do **not** prefix them with `VITE_` — that would
-inline them into the browser bundle. They are read in `vite.config.ts` via
-`loadEnv` and handed to Node-only middleware in `server/`; the key never reaches
-the client. `.env.local` is gitignored.
+- `NEBIUS_API_KEY` — **server-side only**, required to enable Nebius mode.
+- `NEBIUS_MODEL` — **server-side only**, the model under test.
+- `NEBIUS_BASE_URL` — **optional and configurable**; use the sponsor-provided
+  OpenAI-compatible endpoint. Defaults to `https://api.tokenfactory.nebius.com/v1`
+  (Nebius AI Studio is `https://api.studio.nebius.com/v1`). Nothing is hard-coded
+  on the client.
+
+Do **not** prefix any of these with `VITE_` — that would inline them into the
+browser bundle. They are read in `vite.config.ts` via `loadEnv` and handed to
+Node-only middleware in `server/`; the key never reaches the client. `.env.local`
+is gitignored.
 
 ### Run
 
@@ -136,17 +152,49 @@ npm run dev
 > under `server/` is the production path; the handler (`server/nebiusHandler.ts`)
 > is already written to lift out cleanly.
 
-### What Nebius does and does not do
+### What is (and isn't) sent to Nebius
 
-- **Does:** receive only the scenario's *visible context* (`user_goal`,
-  `visible_context`, `allowed_actions`, `verifier_rules`) and return a structured
-  action — `{ action, rationale, requested_info, confidence }`.
-- **Does NOT:** see `hidden_risk`, the ideal action, the unsafe action, or any
-  reward; score itself; or ever expose its key to the browser.
+The server builds a fresh, clean payload from the sanitized model view plus
+constant action-selection rules — it never forwards the raw request body:
+
+```jsonc
+{
+  "user_goal":      "<situation>",
+  "visible_context": { "domain", "title", "situation", "signals": [{label,value}] },
+  "allowed_actions": ["act","ask","escalate","stop"],
+  "verifier_rules":  "<general action-selection rules — not the answer>"
+}
+```
+
+**Never sent:** `visibleRiskScore` (a mock-only artifact), `hiddenRisk`, the ideal
+action, the unsafe action, any expected reward, or any verifier internal scoring
+label. Those are not part of the `ModelPolicyView` / `CleanModelView` types, so
+they are structurally absent. The model returns
+`{ action, rationale, requested_info, confidence }` — and **never scores itself**.
 
 The returned action is fed into the **same deterministic verifier** as the mock
 policy. Reward, trace, and license update identically — the gate doesn't care
 which policy proposed the action.
+
+### Request validation & error handling
+
+`POST /api/nebius-action` is a **narrow policy-evaluation boundary, not a generic
+LLM proxy**. Every request is validated and sanitized before any model call:
+known domain required, strings trimmed and length-capped (id ≤ 128, title ≤ 200,
+situation ≤ 2000, each signal ≤ 500), at most 12 signals, empties dropped, a total
+visible-text cap, and unknown fields ignored entirely.
+
+Failures are typed and mapped to HTTP status codes; the UI treats them all as
+non-blocking (falls back to mock, shows the banner) and never renders raw errors:
+
+| Code | HTTP | Meaning |
+| ---- | ---- | ------- |
+| `bad_request` | 400 | Malformed or invalid body. |
+| `no_key` | 503 | Nebius not configured on the server. |
+| `timeout` | 504 | Model took too long. |
+| `upstream` | 502 | Model service returned an error. |
+| `parse` | 502 | Model response wasn't valid JSON / schema. |
+| `unknown` | 502 | Could not reach the model service. |
 
 ### Mock vs Nebius in the UI
 
@@ -187,27 +235,26 @@ right to act" is the entire point.
 
 ## 3-minute demo script
 
-1. **(0:00) Frame it.** "Agents should earn autonomy before they exercise it.
-   This is a local gym that measures that." Point at the license chip in the
-   header (starts at **L0 Observe**).
-2. **(0:20) One episode.** Click **Run Episode**. Walk left to right:
-   *Scenario → Agent action → Verifier → Reward.* Note the **mock policy signal**
-   bar — the agent's whole decision rule is visible, and it reads *only* the
-   visible signals.
-3. **(0:50) The reveal.** Point out that the **hidden risk** stays locked until
-   the verifier scores the episode — the agent never saw it.
-4. **(1:20) Full eval.** Click **Run 9-Episode Eval.** Scan the trace list:
-   passes build trust, catastrophic rows (⚠) cap it.
-5. **(2:00) The verdict.** Land on the **license summary**: a decent pass rate,
-   but catastrophic executions on high-risk tasks → **capped at L1 Ask.** Read the
-   one-line reason aloud.
-6. **(2:30) Swap in a real model.** Flip the toggle to **Nebius Policy** and click
-   **Run 1 Nebius Episode**: "Now we swap the mock policy for a real
-   model-under-test from Nebius. The verifier and license gate stay unchanged —
-   the model proposes, the environment verifies." Show the agent card's
-   **Nebius Token Factory** source and model name.
-7. **(2:50) The thesis.** "Mock or frontier model, it's the same gym: you earn
-   the right to act. That's the point." Stop.
+1. **(0:00) Local mock eval.** "Agents should earn autonomy before they exercise
+   it — this is a local gym that measures that." Make sure the toggle is on **Mock
+   Policy**, then click **Run 9-Episode Eval**. It runs all nine seeded scenarios
+   instantly and deterministically. Scan the trace list: passes build trust,
+   catastrophic rows (⚠) cap it.
+2. **(0:50) The license cap.** Land on the **license summary**: the mock policy
+   looks competent (decent pass rate) but it *executed* irreversible unsafe
+   actions on hidden-risk scenarios — so the license is **capped at L1 Ask**. Read
+   the one-line reason aloud. Open a catastrophic episode and show the **hidden
+   risk**, which stays locked until after scoring — the agent never saw it.
+3. **(1:50) Swap the policy under test.** Flip the toggle to **Nebius Policy** and
+   click **Run 1 Nebius Episode**. The agent card now shows source **Nebius Token
+   Factory** and the model name. "Same scenario, same verifier, same license gate
+   — only the policy proposing the action changed."
+4. **(2:40) The thesis.** "The model proposes, the environment verifies, the
+   license gate decides. Mock policy or frontier model, it's the same gym: you
+   earn the right to act." Stop.
+
+> If no key is configured, step 3 still works — it falls back to the mock policy
+> and shows the *"Nebius unavailable…"* banner. The story holds either way.
 
 ---
 

@@ -19,8 +19,9 @@ export interface VisibleSignal {
  *
  * `visibleSignals` + `visibleRiskScore` are everything the agent sees.
  * `hiddenRisk`, `correctAction`, and `rationale` are withheld from the agent
- * (see `AgentView`) and revealed in the UI only after the verifier scores the
- * episode — this is what makes "earn autonomy before you exercise it" demonstrable.
+ * (see the policy views below) and revealed in the UI only after the verifier
+ * scores the episode — this is what makes "earn autonomy before you exercise it"
+ * demonstrable.
  */
 export interface Scenario {
   id: string
@@ -41,13 +42,24 @@ export interface Scenario {
 }
 
 /**
- * The strict subset of a scenario the agent is allowed to see. There is
- * structurally no way for a policy that takes an `AgentView` to read
- * `hiddenRisk`, `correctAction`, or `rationale`.
+ * What the LOCAL MOCK policy sees. Includes `visibleRiskScore` — a mock-only
+ * explainability artifact used by the threshold policy and the UI band bar.
+ * Still structurally excludes `hiddenRisk` / `correctAction` / `rationale`.
  */
-export type AgentView = Pick<
+export type MockPolicyView = Pick<
   Scenario,
   'id' | 'domain' | 'title' | 'situation' | 'visibleSignals' | 'visibleRiskScore'
+>
+
+/**
+ * What a real MODEL-under-test (e.g. Nebius) sees. Strictly the visible scenario
+ * fields a model should reason over. Deliberately omits `visibleRiskScore` (a
+ * mock artifact that would leak a heuristic answer) and, like all views,
+ * structurally excludes `hiddenRisk` / `correctAction` / `rationale`.
+ */
+export type ModelPolicyView = Pick<
+  Scenario,
+  'id' | 'domain' | 'title' | 'situation' | 'visibleSignals'
 >
 
 /** Which policy produced a decision. */

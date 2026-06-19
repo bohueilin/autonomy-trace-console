@@ -10,7 +10,27 @@
 
 import type { Plugin, ViteDevServer } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { handleNebiusAction, type NebiusHandlerConfig } from './nebiusHandler'
+import {
+  handleNebiusAction,
+  type NebiusErrorCode,
+  type NebiusHandlerConfig,
+} from './nebiusHandler'
+
+// Typed error -> HTTP status. Keep in sync with NebiusErrorCode.
+function statusFor(code: NebiusErrorCode): number {
+  switch (code) {
+    case 'bad_request':
+      return 400
+    case 'no_key':
+      return 503
+    case 'timeout':
+      return 504
+    case 'upstream':
+    case 'parse':
+    case 'unknown':
+      return 502
+  }
+}
 
 const MAX_BODY = 1_000_000 // 1 MB cap — these requests are tiny.
 
@@ -45,8 +65,7 @@ export function nebiusApiPlugin(cfg: NebiusHandlerConfig): Plugin {
           const raw = await readBody(req)
           const body: unknown = raw ? JSON.parse(raw) : {}
           const result = await handleNebiusAction(body, cfg)
-          // no_key -> 503 (service not configured); other failures -> 502.
-          const status = result.ok ? 200 : result.code === 'no_key' ? 503 : 502
+          const status = result.ok ? 200 : statusFor(result.code)
           sendJson(res, status, result)
         } catch {
           sendJson(res, 400, { ok: false, code: 'bad_request', error: 'Invalid request.' })
