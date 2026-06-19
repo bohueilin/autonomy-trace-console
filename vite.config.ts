@@ -27,7 +27,12 @@ export default defineConfig(({ mode }) => {
       nebiusApiPlugin(nebius),
       runEpisodeApiPlugin({ nebius, insforge }),
     ],
-    // Honor a PORT env var (used by preview/CI tooling); fall back to Vite's default.
-    server: process.env.PORT ? { port: Number(process.env.PORT) } : undefined,
+    server: {
+      // Honor a PORT env var (used by preview/CI tooling); fall back to default.
+      ...(process.env.PORT ? { port: Number(process.env.PORT) } : {}),
+      // Allow public tunnels (ngrok / cloudflared / localtunnel) to reach the dev
+      // server so the Vapi operator webhook can call /api/vapi/tools.
+      allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io', '.loca.lt'],
+    },
   }
 })
