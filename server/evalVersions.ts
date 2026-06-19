@@ -20,6 +20,9 @@ export const REWARD_MODEL_VERSION = '1.0.0'
 /** Behavior version of the license ladder + gate (src/license.ts). */
 export const LICENSE_POLICY_VERSION = '1.0.0'
 
+/** Schema version of the persisted audit row (bump when columns change). */
+export const ROW_SCHEMA_VERSION = '1.0.0'
+
 /** Optional build commit, from env if available; otherwise null. */
 export const APP_COMMIT: string | null = process.env.APP_COMMIT ?? null
 

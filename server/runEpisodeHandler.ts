@@ -31,10 +31,12 @@ import type {
   RecentRun,
   Trace,
 } from '../src/types'
+import { createHash } from 'node:crypto'
 import {
   ENVIRONMENT_NAME,
   LICENSE_POLICY_VERSION,
   REWARD_MODEL_VERSION,
+  ROW_SCHEMA_VERSION,
   SCENARIO_REGISTRY_VERSION,
   VERIFIER_VERSION,
   getEvalVersions,
@@ -87,6 +89,8 @@ export interface EvidenceItem {
   createdAt: string
   persistedRecordId: string | null
   versionMismatch: boolean
+  rowSchemaVersion: string | null
+  digestPresent: boolean
   source: 'memory' | 'insforge'
 }
 
@@ -284,6 +288,41 @@ export async function handleRunEpisode(
     created_at: createdAt,
   }
 
+  // Integrity metadata: schema version + deterministic digest over stable replay
+  // fields (excludes volatile id/created_at and any secrets).
+  auditRow.row_schema_version = ROW_SCHEMA_VERSION
+  auditRow.audit_row_digest = computeAuditDigest({
+    trace_id: traceId,
+    run_id: getRunId(),
+    episode_index: episode,
+    run_sequence: runSequence,
+    trace_authority: 'server_authoritative_episode',
+    scenario_id: scenario.id,
+    scenario_version: SCENARIO_VERSION,
+    scenario_registry_version: SCENARIO_REGISTRY_VERSION,
+    requested_policy_mode: policyMode,
+    actual_policy_source: decision.source,
+    attempted_model_input: attemptedModelInput,
+    actual_policy_input: actualPolicyInput,
+    action: decision.action,
+    rationale: decision.rationale,
+    requested_info: decision.requestedInfo ?? '',
+    confidence: decision.confidence,
+    passed: result.passed,
+    reward: result.reward,
+    category: result.category,
+    catastrophic: result.catastrophic,
+    expected_action: result.expectedAction,
+    actual_action: result.chosenAction,
+    verifier_reason: result.failureReason,
+    verifier_version: VERIFIER_VERSION,
+    reward_model_version: REWARD_MODEL_VERSION,
+    license_policy_version: LICENSE_POLICY_VERSION,
+    environment_name: ENVIRONMENT_NAME,
+    app_commit: versions.appCommit,
+    license_summary: licenseSummary,
+  })
+
   const persist = await persistEpisode(auditRow, cfg.insforge)
   if (persist.status === 'saved') record.persistedId = persist.recordId
 
@@ -306,13 +345,69 @@ export async function handleRunEpisode(
 // --- Evidence read-back / rehydration -------------------------------------
 
 // Current-process records and InsForge-rehydrated rows are kept separate, then
-// merged + deduped by trace_id when computing status. We rehydrate at most once.
-let rehydrationDone = false
+// merged + deduped by trace_id when computing status. Read-back is bounded: it
+// runs on first request, on explicit ?refresh=1, when query params change, or as
+// a TTL-gated retry after a prior unavailable/error.
 let rehydratedItems: EvidenceItem[] = []
-let readOutcomeStatus: 'ok' | 'local_only' | 'unavailable' | 'error' = 'local_only'
+let readBackErrorCode: string | null = null // 'unavailable' | 'error' | null
+let everReadBack = false
+let lastRehydratedAtMs: number | null = null
+let lastRefreshAttemptMs: number | null = null
+let rejectedMalformedCount = 0
+let lastQueryKey = ''
+const READBACK_TTL_MS = 15_000
+
+/** Decide whether to (re)attempt an InsForge read-back. Pure, for testability. */
+export function shouldAttemptReadBack(
+  state: {
+    everRead: boolean
+    lastErrorCode: string | null
+    lastAttemptMs: number | null
+    refresh: boolean
+    paramsChanged: boolean
+  },
+  nowMs: number,
+  ttlMs: number = READBACK_TTL_MS,
+): boolean {
+  if (state.refresh) return true
+  if (!state.everRead) return true
+  if (state.paramsChanged) return true
+  if (state.lastErrorCode && (state.lastAttemptMs === null || nowMs - state.lastAttemptMs >= ttlMs)) {
+    return true
+  }
+  return false
+}
 
 const toStr = (v: unknown): string => (typeof v === 'string' ? v : '')
 const ACTIONS: Action[] = ['act', 'ask', 'escalate', 'stop']
+const POLICY_MODES = ['mock', 'nebius']
+
+// The deterministic verifier clamps reward to [-1, 1]; reject anything outside.
+const REWARD_MIN = -1
+const REWARD_MAX = 1
+
+// Deterministic JSON canonicalization (sorted keys) for the integrity digest.
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null'
+  if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']'
+  const obj = value as Record<string, unknown>
+  return (
+    '{' +
+    Object.keys(obj)
+      .sort()
+      .map((k) => JSON.stringify(k) + ':' + stableStringify(obj[k]))
+      .join(',') +
+    '}'
+  )
+}
+
+/**
+ * SHA-256 over the stable canonical audit fields. Excludes volatile values
+ * (InsForge record id, created_at) and any secrets — only replay-relevant fields.
+ */
+function computeAuditDigest(fields: Record<string, unknown>): string {
+  return createHash('sha256').update(stableStringify(fields)).digest('hex')
+}
 
 /** True when a row was produced by the current verifier/reward/license versions. */
 export function isVersionCompatible(row: {
@@ -327,44 +422,86 @@ export function isVersionCompatible(row: {
   )
 }
 
-/** Parse a persisted InsForge row into an EvidenceItem. Returns null if the row
- * is not a valid server-authoritative episode (wrong authority / missing fields). */
+/** True iff a row claims to be a server-authoritative episode (pre-validation). */
+export function isAuthoritativeRow(raw: unknown): boolean {
+  return (
+    !!raw &&
+    typeof raw === 'object' &&
+    (raw as Record<string, unknown>).trace_authority === 'server_authoritative_episode'
+  )
+}
+
+function nonEmptyStr(v: unknown): string | null {
+  return typeof v === 'string' && v.trim().length > 0 ? v : null
+}
+
+/**
+ * STRICT parse of a persisted InsForge row into an EvidenceItem. Returns null for
+ * any row that is not a valid, current-schema-shaped, server-authoritative
+ * episode — malformed rows are DROPPED, never defaulted/interpreted. (Version
+ * mismatch is NOT a parse failure: it parses and is flagged `versionMismatch`.)
+ */
 export function parseEvidenceRow(raw: unknown): EvidenceItem | null {
-  if (!raw || typeof raw !== 'object') return null
+  if (!isAuthoritativeRow(raw)) return null
   const r = raw as Record<string, unknown>
-  if (r.trace_authority !== 'server_authoritative_episode') return null
 
-  const traceId = toStr(r.trace_id)
-  const action = toStr(r.action) as Action
-  if (!traceId || !ACTIONS.includes(action)) return null
-  if (typeof r.passed !== 'boolean' || typeof r.reward !== 'number') return null
+  // Required identity + scenario strings.
+  const traceId = nonEmptyStr(r.trace_id)
+  const scenarioId = nonEmptyStr(r.scenario_id)
+  const scenarioTitle = nonEmptyStr(r.scenario_title)
+  if (!traceId || !scenarioId || !scenarioTitle) return null
+  // run_id is optional (legacy rows) but, if present, must be a non-empty string.
+  if ('run_id' in r && nonEmptyStr(r.run_id) === null) return null
 
-  const requested = r.requested_policy_mode === 'nebius' ? 'nebius' : 'mock'
-  const actual = r.actual_policy_source === 'nebius' ? 'nebius' : 'mock'
+  // Required finite indices.
+  if (!Number.isFinite(r.episode_index) || !Number.isFinite(r.run_sequence)) return null
+
+  // Policy mode / source / action must be exact enum members — no defaulting.
+  if (!POLICY_MODES.includes(r.requested_policy_mode as string)) return null
+  if (!POLICY_MODES.includes(r.actual_policy_source as string)) return null
+  if (!ACTIONS.includes(r.action as Action)) return null
+
+  // Verdict fields must be the right types and in-bounds.
+  if (typeof r.passed !== 'boolean' || typeof r.catastrophic !== 'boolean') return null
+  if (typeof r.reward !== 'number' || !Number.isFinite(r.reward)) return null
+  if (r.reward < REWARD_MIN || r.reward > REWARD_MAX) return null
+
+  // created_at must parse as a real date.
+  const createdAt = nonEmptyStr(r.created_at)
+  if (!createdAt || Number.isNaN(Date.parse(createdAt))) return null
+
+  // Version fields must be non-empty strings.
+  const verifierVersion = nonEmptyStr(r.verifier_version)
+  const rewardModelVersion = nonEmptyStr(r.reward_model_version)
+  const licensePolicyVersion = nonEmptyStr(r.license_policy_version)
+  if (!verifierVersion || !rewardModelVersion || !licensePolicyVersion) return null
+
   const versionMismatch = !isVersionCompatible({
-    verifierVersion: toStr(r.verifier_version),
-    rewardModelVersion: toStr(r.reward_model_version),
-    licensePolicyVersion: toStr(r.license_policy_version),
+    verifierVersion,
+    rewardModelVersion,
+    licensePolicyVersion,
   })
 
   return {
     traceId,
-    episodeIndex: typeof r.episode_index === 'number' ? r.episode_index : 0,
-    runSequence: typeof r.run_sequence === 'number' ? r.run_sequence : 0,
-    scenarioId: toStr(r.scenario_id),
-    scenarioTitle: toStr(r.scenario_title),
-    requestedPolicyMode: requested,
-    actualPolicySource: actual,
+    episodeIndex: r.episode_index as number,
+    runSequence: r.run_sequence as number,
+    scenarioId,
+    scenarioTitle,
+    requestedPolicyMode: r.requested_policy_mode as 'mock' | 'nebius',
+    actualPolicySource: r.actual_policy_source as AgentSource,
     fallback: r.fallback === true,
     fallbackCode: typeof r.fallback_code === 'string' ? r.fallback_code : null,
-    action,
+    action: r.action as Action,
     passed: r.passed,
     reward: r.reward,
-    catastrophic: r.catastrophic === true,
+    catastrophic: r.catastrophic,
     licenseLevel: toStr(r.license_level),
-    createdAt: toStr(r.created_at),
+    createdAt,
     persistedRecordId: toStr(r.id) || null,
     versionMismatch,
+    rowSchemaVersion: nonEmptyStr(r.row_schema_version),
+    digestPresent: nonEmptyStr(r.audit_row_digest) !== null,
     source: 'insforge',
   }
 }
@@ -390,6 +527,8 @@ function memToItem(record: RunRecord): EvidenceItem {
     createdAt: record.createdAt,
     persistedRecordId: record.persistedId,
     versionMismatch: false,
+    rowSchemaVersion: ROW_SCHEMA_VERSION,
+    digestPresent: true, // current-process rows always carry a digest
     source: 'memory',
   }
 }
@@ -424,6 +563,8 @@ export function compactFromItem(it: EvidenceItem): CompactRun {
     licenseLevel: it.licenseLevel,
     createdAt: it.createdAt,
     versionMismatch: it.versionMismatch,
+    rowSchemaVersion: it.rowSchemaVersion,
+    digestPresent: it.digestPresent,
   }
 }
 
@@ -432,27 +573,63 @@ export function compactFromItem(it: EvidenceItem): CompactRun {
  * Rehydrates from InsForge at most once, dedupes by traceId, and recomputes the
  * current license ONLY from version-compatible authoritative verdicts.
  */
-export async function getEvidenceStatus(cfg: RunEpisodeConfig): Promise<EvidenceStatus> {
-  const configured = insforgeConfigured(cfg.insforge)
+export interface EvidenceStatusOpts {
+  refresh?: boolean
+  limit?: number
+  runId?: string
+}
 
-  // Rehydrate once.
-  if (!rehydrationDone) {
-    rehydrationDone = true
-    if (configured) {
-      const read = await fetchRecentEvidence(cfg.insforge, 100)
-      readOutcomeStatus = read.status
+export async function getEvidenceStatus(
+  cfg: RunEpisodeConfig,
+  opts: EvidenceStatusOpts = {},
+): Promise<EvidenceStatus> {
+  const configured = insforgeConfigured(cfg.insforge)
+  const limit = Math.max(1, Math.min(100, Math.trunc(opts.limit ?? 50) || 50))
+  const runIdFilter = opts.runId && opts.runId.trim() ? opts.runId.trim() : undefined
+  const historyScope: 'global_recent' | 'run' = runIdFilter ? 'run' : 'global_recent'
+  const queryKey = `${limit}|${runIdFilter ?? ''}`
+
+  if (configured) {
+    const nowMs = Date.now()
+    const paramsChanged = everReadBack && queryKey !== lastQueryKey
+    const attempt = shouldAttemptReadBack(
+      {
+        everRead: everReadBack,
+        lastErrorCode: readBackErrorCode,
+        lastAttemptMs: lastRefreshAttemptMs,
+        refresh: !!opts.refresh,
+        paramsChanged,
+      },
+      nowMs,
+    )
+    if (attempt) {
+      everReadBack = true
+      lastRefreshAttemptMs = nowMs
+      lastQueryKey = queryKey
+      const read = await fetchRecentEvidence(cfg.insforge, limit, runIdFilter)
       if (read.status === 'ok') {
+        readBackErrorCode = null
+        lastRehydratedAtMs = nowMs
         const memIds = new Set(serverRecords.map((r) => r.trace.id))
         const seen = new Set<string>()
-        rehydratedItems = read.rows
-          .map(parseEvidenceRow)
-          .filter((it): it is EvidenceItem => it !== null)
-          // drop rows already represented in this process, and intra-batch dupes
-          .filter((it) => {
-            if (memIds.has(it.traceId) || seen.has(it.traceId)) return false
-            seen.add(it.traceId)
-            return true
-          })
+        const items: EvidenceItem[] = []
+        let rejected = 0
+        for (const row of read.rows.filter(isAuthoritativeRow)) {
+          const it = parseEvidenceRow(row)
+          if (!it) {
+            rejected++ // authoritative-but-malformed -> dropped, counted
+            continue
+          }
+          if (memIds.has(it.traceId) || seen.has(it.traceId)) continue
+          seen.add(it.traceId)
+          items.push(it)
+        }
+        rehydratedItems = items
+        rejectedMalformedCount = rejected
+      } else if (read.status === 'unavailable') {
+        readBackErrorCode = 'unavailable'
+      } else if (read.status === 'error') {
+        readBackErrorCode = 'error'
       }
     }
   }
@@ -461,6 +638,7 @@ export async function getEvidenceStatus(cfg: RunEpisodeConfig): Promise<Evidence
   const combined = mergeDedupe(memItems, rehydratedItems)
   const compatible = combined.filter((it) => !it.versionMismatch)
   const versionMismatchCount = combined.length - compatible.length
+  const digestPresentCount = combined.filter((it) => it.digestPresent).length
 
   // Current license: recompute from compatible authoritative verdicts only —
   // never blend version-incompatible evidence, never trust a stored summary.
@@ -478,11 +656,10 @@ export async function getEvidenceStatus(cfg: RunEpisodeConfig): Promise<Evidence
   // historySource reflects where the picture came from.
   let historySource: HistorySource
   if (!configured) {
-    historySource = 'memory' // in-memory only; never persisted (also see persistence.status)
-    if (combined.length === 0) historySource = 'local_only'
-  } else if (readOutcomeStatus === 'unavailable') {
+    historySource = combined.length > 0 ? 'memory' : 'local_only'
+  } else if (readBackErrorCode === 'unavailable') {
     historySource = 'unavailable'
-  } else if (readOutcomeStatus === 'error') {
+  } else if (readBackErrorCode === 'error') {
     historySource = 'error'
   } else if (rehydratedItems.length > 0) {
     historySource = 'insforge'
@@ -491,8 +668,7 @@ export async function getEvidenceStatus(cfg: RunEpisodeConfig): Promise<Evidence
   }
 
   const latest = combined[0]
-  const latestPersisted =
-    combined.find((it) => it.persistedRecordId)?.persistedRecordId ?? null
+  const latestPersisted = combined.find((it) => it.persistedRecordId)?.persistedRecordId ?? null
 
   return {
     runId: currentRunId(),
@@ -510,10 +686,19 @@ export async function getEvidenceStatus(cfg: RunEpisodeConfig): Promise<Evidence
     latestServerTraceId: latest?.traceId ?? null,
     latestPersistedRecordId: latestPersisted,
     historySource,
+    historyScope,
+    limit,
     rehydratedFromInsForge: rehydratedItems.length > 0,
     rehydratedCount: rehydratedItems.length,
+    rejectedMalformedCount,
     versionMismatchCount,
     compatibleEvidenceCount: compatible.length,
+    digestPresentCount,
+    digestMissingCount: combined.length - digestPresentCount,
+    lastRehydratedAt: lastRehydratedAtMs === null ? null : new Date(lastRehydratedAtMs).toISOString(),
+    lastRefreshAttemptAt:
+      lastRefreshAttemptMs === null ? null : new Date(lastRefreshAttemptMs).toISOString(),
+    readBackErrorCode,
     persistence: {
       configured,
       status: configured ? 'configured' : 'local_only',

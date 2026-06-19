@@ -458,6 +458,48 @@ unavailable | error`), `rehydratedFromInsForge`, `rehydratedCount`,
 history still survives client reloads but resets on server restart. A full replay
 **UI** (re-rendering historical episodes) is still future work.
 
+### Evidence read-back strictness (Milestone 4.1)
+
+Read-back is strict enough that the next layer (Vapi) can query it safely:
+
+- **Authority gate.** Only rows with `trace_authority === "server_authoritative_episode"`
+  are considered.
+- **Malformed rows are rejected, never defaulted.** `parseEvidenceRow` requires
+  every replay-critical field with the right type — `trace_id`, `episode_index`,
+  `run_sequence`, `scenario_id`, `scenario_title`, `created_at` (must parse as a
+  date), and non-empty `verifier_version` / `reward_model_version` /
+  `license_policy_version`. `requested_policy_mode` and `actual_policy_source`
+  must be exactly `mock` or `nebius`; `action` must be exactly one of the four;
+  `passed` / `catastrophic` must be boolean; `reward` must be finite and within
+  the verifier bounds `[-1, 1]`. Anything else is dropped and counted as
+  `rejectedMalformedCount` (raw rows are never shown in the browser).
+- **Version mismatches are surfaced, not blended.** Rows whose
+  verifier/reward/license versions differ from the current ones are kept for
+  display but **excluded from the recomputed current license**
+  (`versionMismatchCount`).
+- **History scope.** Status reflects **global recent** authoritative evidence by
+  default; pass `?run_id=...` to scope to one run. `?limit=` is clamped to 1–100.
+  `?refresh=1` forces a bounded re-read; otherwise read-back runs once and retries
+  only after a TTL when the prior attempt was `unavailable` / `error`.
+- **Integrity metadata for replay.** New rows carry `row_schema_version` and a
+  deterministic `audit_row_digest` (SHA-256 over stable replay fields — excludes
+  the InsForge record id, `created_at`, and any secrets). Read-back surfaces
+  `digestPresentCount` / `digestMissingCount`; old rows without a digest are not
+  rejected.
+
+```text
+GET /api/evidence/status                      # global recent, limit 50
+GET /api/evidence/status?refresh=1&limit=50   # force a bounded re-read
+GET /api/evidence/status?run_id=run_...        # scope to one run
+```
+
+The browser only ever receives compact, safe rows (no `scenario_snapshot`,
+`attempted_model_input`, `actual_policy_input`, hidden risk, or raw rows).
+
+**Sponsor path:** Nebius = model-under-test / policy runner · InsForge = strict
+authoritative evidence store + read-back · **Vapi (next)** = operator voice layer
+that queries this evidence and runs server-owned episodes.
+
 ### Why persistence matters
 
 For an RL environment / safeguards gym, durable traces give you a replayable,
@@ -483,7 +525,10 @@ shown and how the environment scored it.
    reads authoritative rows back from InsForge, dedupes by `trace_id`, and
    recomputes the current license from version-compatible verdicts (mismatches
    surfaced, not blended). Evidence survives a server restart when configured.
-5. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
+5. **Strict evidence read-back — DONE (Milestone 4.1).** `parseEvidenceRow` rejects
+   malformed rows (no defaulting), `?refresh`/`?limit`/`?run_id` scope read-back,
+   and rows carry `row_schema_version` + a SHA-256 `audit_row_digest`.
+6. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
    episode, ask why autonomy was capped, and summarize the latest persisted
    evidence (read from `/api/evidence/status`). It calls the same server-owned
    endpoints; it does **not** change the verifier or the license gate.

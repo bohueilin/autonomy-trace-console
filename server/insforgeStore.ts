@@ -98,15 +98,17 @@ export async function persistEpisode(
 export async function fetchRecentEvidence(
   cfg: InsforgeConfig,
   limit = 50,
+  runId?: string,
 ): Promise<ReadOutcome> {
   if (!insforgeConfigured(cfg)) {
     return { status: 'local_only' }
   }
 
   const base = cfg.baseUrl!.replace(/\/+$/, '')
-  const query =
+  let query =
     `?trace_authority=eq.server_authoritative_episode` +
     `&order=created_at.desc&limit=${Math.max(1, Math.min(1000, limit))}`
+  if (runId) query += `&run_id=eq.${encodeURIComponent(runId)}`
   const url = `${base}/api/database/records/${INSFORGE_TABLE}${query}`
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), cfg.timeoutMs ?? 8000)

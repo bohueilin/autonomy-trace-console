@@ -80,7 +80,13 @@ export function runEpisodeApiPlugin(cfg: RunEpisodeConfig): Plugin {
           return
         }
         try {
-          const status = await getEvidenceStatus(cfg)
+          const params = new URL(req.url ?? '', 'http://localhost').searchParams
+          const limitRaw = Number(params.get('limit'))
+          const status = await getEvidenceStatus(cfg, {
+            refresh: params.get('refresh') === '1',
+            limit: Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : undefined,
+            runId: params.get('run_id') ?? undefined,
+          })
           sendJson(res, 200, { ok: true, ...status })
         } catch {
           sendJson(res, 502, { ok: false, error: 'Could not read evidence status.' })

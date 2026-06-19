@@ -233,7 +233,13 @@ export interface CompactRun {
   licenseLevel: string
   createdAt: string
   versionMismatch: boolean
+  /** Schema version of the persisted row (null for legacy rows). */
+  rowSchemaVersion: string | null
+  /** Whether the persisted row carried an integrity digest. */
+  digestPresent: boolean
 }
+
+export type HistoryScope = 'global_recent' | 'run'
 
 /** Compact server evidence status from GET /api/evidence/status. */
 export interface EvidenceStatus {
@@ -250,10 +256,20 @@ export interface EvidenceStatus {
   latestServerTraceId: string | null
   latestPersistedRecordId: string | null
   historySource: HistorySource
+  historyScope: HistoryScope
+  /** Read-back row limit actually applied (clamped). */
+  limit: number
   rehydratedFromInsForge: boolean
   rehydratedCount: number
+  rejectedMalformedCount: number
   versionMismatchCount: number
   compatibleEvidenceCount: number
+  digestPresentCount: number
+  digestMissingCount: number
+  lastRehydratedAt: string | null
+  lastRefreshAttemptAt: string | null
+  /** Sanitized read-back error code (never a raw error). */
+  readBackErrorCode: string | null
   persistence: {
     configured: boolean
     status: 'configured' | 'local_only' | 'unavailable' | 'error'

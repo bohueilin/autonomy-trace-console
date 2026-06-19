@@ -57,6 +57,9 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
             : 'no'}
         </dd>
 
+        <dt>Scope</dt>
+        <dd>{evidence?.historyScope === 'run' ? 'one run' : 'global recent'}</dd>
+
         <dt>Version mismatch</dt>
         <dd>
           {evidence && evidence.versionMismatchCount > 0 ? (
@@ -64,6 +67,22 @@ export function EvidencePanel({ status, evidence, reached }: Props) {
           ) : (
             '0'
           )}
+        </dd>
+
+        <dt>Malformed dropped</dt>
+        <dd>
+          {evidence && evidence.rejectedMalformedCount > 0 ? (
+            <span className="evidence-warn">{evidence.rejectedMalformedCount}</span>
+          ) : (
+            '0'
+          )}
+        </dd>
+
+        <dt>Digest</dt>
+        <dd>
+          {evidence
+            ? `${evidence.digestPresentCount} present · ${evidence.digestMissingCount} missing`
+            : '—'}
         </dd>
 
         <dt>Storage</dt>

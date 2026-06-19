@@ -13,6 +13,7 @@ import {
   parseEvidenceRow,
   mergeDedupe,
   compactFromItem,
+  shouldAttemptReadBack,
 } from '../server/runEpisodeHandler.ts'
 import { computeLicenseFromVerdicts } from '../src/license.ts'
 import {
@@ -141,17 +142,20 @@ check(
     lic.level.id === 'L4',
 )
 
-// 9. Compact status row exposes no snapshots / model inputs / hidden risk.
+// 9. Compact status row exposes no snapshots / model inputs / hidden risk, and
+//    DOES carry schema/digest metadata.
 const compact = compactFromItem(parsed)
 const keys = Object.keys(compact)
 check(
-  '9. compact row hides server-only fields',
+  '9. compact row hides server-only fields + carries schema/digest',
   !keys.includes('scenario_snapshot') &&
     !keys.includes('attempted_model_input') &&
     !keys.includes('actual_policy_input') &&
     !JSON.stringify(compact).includes('SECRET') &&
     keys.includes('traceId') &&
-    keys.includes('versionMismatch'),
+    keys.includes('versionMismatch') &&
+    keys.includes('rowSchemaVersion') &&
+    keys.includes('digestPresent'),
 )
 
 // 10. Evidence status reflects server history (local_only, no creds).
@@ -161,7 +165,61 @@ check(
   status.serverEpisodeCount >= 2 &&
     status.persistence.status === 'local_only' &&
     status.historySource === 'memory' &&
-    status.rehydratedFromInsForge === false,
+    status.rehydratedFromInsForge === false &&
+    status.historyScope === 'global_recent' &&
+    status.limit === 50,
+)
+
+// --- strict parse rejections (malformed dropped, not defaulted) -----------
+const strip = (k) => {
+  const c = { ...validRow }
+  delete c[k]
+  return c
+}
+check('11. missing scenario_title dropped', parseEvidenceRow(strip('scenario_title')) === null)
+check(
+  '12. unknown requested_policy_mode rejected',
+  parseEvidenceRow({ ...validRow, requested_policy_mode: 'wat' }) === null,
+)
+check(
+  '13. unknown actual_policy_source rejected',
+  parseEvidenceRow({ ...validRow, actual_policy_source: 'wat' }) === null,
+)
+check('14. missing catastrophic rejected', parseEvidenceRow(strip('catastrophic')) === null)
+check(
+  '15. out-of-range / non-finite reward rejected',
+  parseEvidenceRow({ ...validRow, reward: 5 }) === null &&
+    parseEvidenceRow({ ...validRow, reward: Number.NaN }) === null,
+)
+check(
+  '16. invalid created_at rejected',
+  parseEvidenceRow({ ...validRow, created_at: 'not-a-date' }) === null,
+)
+check('17. unknown action rejected', parseEvidenceRow({ ...validRow, action: 'fly' }) === null)
+check(
+  '18. empty version field rejected',
+  parseEvidenceRow({ ...validRow, verifier_version: '' }) === null,
+)
+
+// 19. Read-back refresh / retry gate.
+const now = 1_000_000
+check(
+  '19. read-back gate (first/refresh/retry vs cached)',
+  shouldAttemptReadBack({ everRead: false, lastErrorCode: null, lastAttemptMs: null, refresh: false, paramsChanged: false }, now) === true &&
+    shouldAttemptReadBack({ everRead: true, lastErrorCode: null, lastAttemptMs: now, refresh: true, paramsChanged: false }, now) === true &&
+    shouldAttemptReadBack({ everRead: true, lastErrorCode: null, lastAttemptMs: now, refresh: false, paramsChanged: false }, now) === false &&
+    shouldAttemptReadBack({ everRead: true, lastErrorCode: 'unavailable', lastAttemptMs: now - 20000, refresh: false, paramsChanged: false }, now) === true &&
+    shouldAttemptReadBack({ everRead: true, lastErrorCode: 'unavailable', lastAttemptMs: now - 1000, refresh: false, paramsChanged: false }, now) === false,
+)
+
+// 20. New persisted rows carry row_schema_version + audit_row_digest.
+const persisted = await handleRunEpisode({ scenarioId: 'rob-1', policyMode: 'mock' }, cfg)
+const prow = persisted.ok ? persisted.auditRow : {}
+check(
+  '20. persisted row has schema version + digest',
+  typeof prow.row_schema_version === 'string' &&
+    typeof prow.audit_row_digest === 'string' &&
+    prow.audit_row_digest.length === 64, // sha-256 hex
 )
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
