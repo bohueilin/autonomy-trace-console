@@ -128,7 +128,8 @@ body {
 .btn:disabled:hover {
   border-color: var(--line);
 }
-.mock-tag {
+.mock-tag,
+.server-tag {
   margin-left: 7px;
   font-size: 9px;
   text-transform: uppercase;
@@ -139,8 +140,125 @@ body {
   border-radius: 4px;
   vertical-align: middle;
 }
+.server-tag {
+  background: rgba(54, 201, 141, 0.18);
+  color: var(--pos);
+}
 .btn.primary .mock-tag {
   background: rgba(12, 15, 23, 0.25);
+}
+
+/* authority tags (server-authoritative vs demo client trace) */
+.auth-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.auth-server {
+  background: rgba(54, 201, 141, 0.18);
+  color: var(--pos);
+  margin-left: 8px;
+}
+.auth-demo {
+  background: rgba(139, 143, 163, 0.18);
+  color: var(--muted);
+}
+
+/* ---------- evidence store panel ---------- */
+.evidence-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.evidence-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.evidence-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.evidence-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.evidence-dot.status-saving {
+  background: var(--warn);
+}
+.evidence-dot.status-saved {
+  background: var(--pos);
+}
+.evidence-dot.status-local_only {
+  background: var(--accent);
+}
+.evidence-dot.status-unavailable {
+  background: var(--neg);
+}
+.evidence-status {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.evidence-status.status-saved {
+  color: var(--pos);
+}
+.evidence-status.status-saving {
+  color: var(--warn);
+}
+.evidence-status.status-local_only {
+  color: #9db0ff;
+}
+.evidence-status.status-unavailable {
+  color: var(--neg);
+}
+.evidence-status.status-idle {
+  color: var(--muted);
+}
+.evidence-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0 0 10px;
+  font-size: 12px;
+}
+.evidence-grid dt {
+  color: var(--muted);
+}
+.evidence-grid dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.evidence-grid code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.evidence-muted {
+  color: var(--muted);
+}
+.evidence-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #b7bbc9;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  font-style: italic;
 }
 .btn {
   background: var(--panel-2);

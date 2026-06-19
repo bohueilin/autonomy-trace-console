@@ -21,6 +21,18 @@ export function TraceViewer({ traces }: Props) {
           {[...traces].reverse().map((t) => (
             <div key={t.id} className={`trace-row ${t.result.passed ? 'row-pass' : 'row-fail'}`}>
               <span className="trace-ep">#{t.episode}</span>
+              <span
+                className={`auth-tag ${
+                  t.authority === 'server_authoritative_episode' ? 'auth-server' : 'auth-demo'
+                }`}
+                title={
+                  t.authority === 'server_authoritative_episode'
+                    ? 'Server-authoritative episode (persisted evidence)'
+                    : 'Demo client trace (not authoritative)'
+                }
+              >
+                {t.authority === 'server_authoritative_episode' ? 'server' : 'demo'}
+              </span>
               <span className="trace-flow">
                 <span className="flow-node scenario">{t.scenario.title}</span>
                 <span className="flow-arrow">→</span>

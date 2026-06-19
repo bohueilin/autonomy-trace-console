@@ -111,6 +111,15 @@ export interface VerifierResult {
   checks: string[]
 }
 
+/**
+ * Where a trace's evidence comes from.
+ * - `server_authoritative_episode`: computed by the server-owned episode path
+ *   (canonical scenario + deterministic verifier), suitable as license evidence.
+ * - `demo_client_trace`: generated in the browser for the local demo — NOT
+ *   authoritative evidence.
+ */
+export type TraceAuthority = 'server_authoritative_episode' | 'demo_client_trace'
+
 /** One full episode through the loop, stored for the trace viewer. */
 export interface Trace {
   id: string
@@ -120,6 +129,8 @@ export interface Trace {
   result: VerifierResult
   /** How this episode nudged the license signal. */
   licenseSignal: string
+  /** Defaults to demo_client_trace when omitted (browser-authored). */
+  authority?: TraceAuthority
 }
 
 export type LicenseLevelId = 'L0' | 'L1' | 'L2' | 'L3' | 'L4'
@@ -142,4 +153,48 @@ export interface LicenseState {
   catastrophicCount: number
   /** Why the loop landed on this level (gate explanation). */
   reason: string
+}
+
+// ---------------------------------------------------------------------------
+// Server-owned episode + InsForge persistence (client-facing shapes).
+// ---------------------------------------------------------------------------
+
+/** UI persistence status for a server-owned episode. */
+export type PersistenceStatus = 'idle' | 'saving' | 'saved' | 'local_only' | 'unavailable'
+
+/** Persistence outcome returned by the server for one episode. */
+export interface PersistenceInfo {
+  /** Whether InsForge credentials are configured on the server. */
+  configured: boolean
+  status: 'saved' | 'local_only' | 'unavailable'
+  /** InsForge record id when saved. */
+  recordId?: string | null
+  /** Failure code when status === 'unavailable' (never a raw error). */
+  code?: string
+  /** Storage table used. */
+  table: string
+}
+
+/** Response from POST /api/run-episode. */
+export interface ServerEpisodeResponse {
+  trace: Trace
+  license: LicenseState
+  persistence: PersistenceInfo
+  runId: string
+}
+
+/** A compact row from GET /api/runs/recent. */
+export interface RecentRun {
+  id: string
+  episode: number
+  scenarioTitle: string
+  source: AgentSource
+  action: Action
+  passed: boolean
+  reward: number
+  category: VerdictCategory
+  catastrophic: boolean
+  authority: TraceAuthority
+  persistedId?: string | null
+  createdAt: string
 }

@@ -282,72 +282,127 @@ right to act" is the entire point.
    click **Run 1 Nebius Episode**. The agent card now shows source **Nebius Token
    Factory** and the model name. "Same scenario, same verifier, same license gate
    — only the policy proposing the action changed."
-4. **(2:40) The thesis.** "The model proposes, the environment verifies, the
-   license gate decides. Mock policy or frontier model, it's the same gym: you
-   earn the right to act." Stop.
+4. **(2:25) Server-owned evidence.** Click **Run Server Episode**. The client sent
+   only `{ scenarioId, policyMode }`; the *server* loaded the canonical scenario,
+   ran the verifier, and persisted the trace. Point at the **Evidence store**
+   panel: trace authority `server_authoritative_episode`, the saved record id (or
+   *Local only* if InsForge isn't configured), and the server license. Reload the
+   page — the server episode count persists.
+5. **(2:45) The thesis.** "The model proposes, the environment verifies, the
+   license gate decides — and InsForge preserves the evidence. The verifier code
+   stays the source of truth." Stop.
 
-> If no key is configured, step 3 still works — it falls back to the mock policy
-> and shows the *"Nebius unavailable…"* banner. The story holds either way.
+> If no Nebius key is configured, step 3 still falls back to mock with a banner;
+> if no InsForge key is configured, step 4 still runs server-side and shows
+> *Local only*. The story holds either way.
 
 ---
 
-## Persistence integrity (read before adding InsForge)
+## Server-owned episodes & InsForge evidence store (Milestone 3)
 
 > Persistence must preserve **evidence**, not manufacture **trust**.
 
-The traces shown today are generated in the browser. That is fine for the local
-demo, but it carries a sharp caveat:
+A browser can claim any reward, verdict, or license level — so browser-authored
+traces are **local/demo state**, never authoritative. Milestone 3 adds a
+**server-owned episode path** that computes the authoritative result on the
+server and persists it to InsForge as evidence.
 
-**Do not persist browser-authored traces as authoritative license evidence.**
-A client can claim any reward, any verdict, any license level. Current client-side
-traces are **local/demo trace state**, not proof of anything.
+### The server-owned flow (`POST /api/run-episode`)
 
-When InsForge lands, prefer a **server-owned episode path**:
+The client sends **only** `{ scenarioId, policyMode }`. Everything authoritative
+happens on the server:
 
-1. Client sends only `{ scenarioId, policyMode }`.
-2. Server loads the canonical scenario from a server-side scenario registry.
-3. Server builds the `ModelPolicyView` and calls the mock or Nebius policy.
-4. Server runs the **deterministic verifier** and computes reward + license
-   contribution.
-5. Server persists the trace.
+1. Load the canonical scenario from the server-side registry (`src/seedScenarios`).
+2. Build the policy view — `MockPolicyView` for mock, `ModelPolicyView` for Nebius.
+3. Run the policy (mock locally, or Nebius via the existing server boundary;
+   **on Nebius failure, fall back to mock** and record `fallback` + `fallbackCode`).
+4. Run the **deterministic verifier** (the source of truth).
+5. Compute reward + the license summary over a **server-owned run history**.
+6. Persist the trace to InsForge (best-effort).
+7. Return the server-computed trace; the client just renders it.
 
-Acceptable interim fallback: persist client-generated traces **only** if clearly
-marked `trace_authority: "demo_client_trace"` — never labeled as authoritative.
-
-**Hard rule — never trust client-provided values as authoritative for:**
+**Hard trust boundary — the server never trusts client-provided values for:**
 `hiddenRisk`, `idealAction` / `correctAction`, `unsafeAction`, `verifierResult`,
-`reward`, `licenseLevel`, or the `catastrophic` flag. These are server/verifier
-truth only.
+`reward`, `licenseLevel`, `catastrophic`, pass/fail, expected action, or the
+license summary. The client cannot even send them — it sends only the two fields
+above.
 
----
+### Server-authoritative vs local/demo-only
 
-## InsForge Persistence Design (not implemented yet)
+| | Authority | Persisted? | License |
+| --- | --- | --- | --- |
+| **Run Server Episode** | `server_authoritative_episode` | yes (InsForge, best-effort) | server-computed over server run history |
+| **Run Episode / Run 9-Episode Eval** | `demo_client_trace` | no | client session view only |
 
-When InsForge is added, each persisted record should carry enough to **reconstruct
-the evaluation** for audit:
+The header **license chip** reflects the local *client session* (the visible
+trace list). The **Evidence store** panel reflects the **server's own
+authoritative run history** and may differ — that's expected; the panel is the
+authoritative one. Traces are tagged `server` / `demo` in the trace list.
 
-| Field | Notes |
-| ----- | ----- |
-| `scenarioId` | which scenario. |
-| `scenarioSnapshot` / `scenarioVersion` | snapshot or version, so reruns are reproducible. |
-| `policySource` | `mock` \| `nebius`. |
-| `modelInputVisibleContext` | the exact visible context shown to the model. |
-| `modelName` | Nebius model id (if applicable). |
-| `action` | normalized action. |
-| `rationale` | model/policy rationale. |
-| `requestedInfo` | model's requested info (if any). |
-| `confidence` | 0..1. |
-| `fallback` | boolean — did it fall back to mock? |
-| `fallbackCode` | error code if a fallback happened. |
-| `verifierResult` | the deterministic verifier output. |
-| `verifierCategory` | `correct` \| `over_cautious` \| `under_cautious` \| `catastrophic`. |
-| `catastrophic` | boolean. |
-| `reward` | server-computed. |
-| `licenseSummary` | computed license summary at the time. |
-| `traceAuthority` | `server_authoritative_episode` \| `demo_client_trace`. |
+### Configure InsForge
 
-**InsForge preserves traces and evidence. It does not become the source of
-verifier truth** — the deterministic verifier remains authoritative.
+Set these in `.env.local` (**server-side only — never `VITE_`**):
+
+```bash
+INSFORGE_BASE_URL=https://your-app.insforge.app   # no trailing /api
+INSFORGE_API_KEY=ins_...                          # admin/service key, server-side only
+```
+
+Then create a table named **`eval_episodes`** in your InsForge project (via the
+InsForge CLI / dashboard / agent skill — the data API does not create schemas).
+Suggested columns (or use a single JSON column + a few scalars — the hackathon
+build sends the flat row below). Records are inserted via
+`POST {INSFORGE_BASE_URL}/api/database/records/eval_episodes`.
+
+**Without these vars the app still works** — episodes run server-side and the
+Evidence panel shows **Local only**.
+
+### What InsForge persists (audit row)
+
+Enough to reconstruct the evaluation:
+
+| Column | Notes |
+| ------ | ----- |
+| `trace_authority` | always `server_authoritative_episode`. |
+| `run_id` | groups this server process's episodes. |
+| `scenario_id`, `scenario_version`, `scenario_title`, `domain` | which scenario + set version. |
+| `scenario_snapshot` | full canonical scenario (server-owned ground truth). |
+| `policy_source` | `mock` \| `nebius`. |
+| `model_name` | Nebius model id (or null). |
+| `model_input` | exact visible context the policy saw. |
+| `action`, `rationale`, `requested_info`, `confidence` | normalized decision. |
+| `fallback`, `fallback_code` | did Nebius fall back to mock, and why. |
+| `passed`, `reward`, `category`, `catastrophic`, `expected_action`, `actual_action`, `verifier_reason`, `verifier_checks` | deterministic verifier result. |
+| `license_level`, `license_summary` | server-computed license at episode time. |
+| `created_at` | ISO timestamp. |
+
+**InsForge preserves evidence. It is not the source of verifier truth** — the
+deterministic verifier remains authoritative.
+
+### Demo persistence across reloads
+
+This milestone **writes** authoritative traces and **reads** recent ones from the
+server's in-memory run history (`GET /api/runs/recent`):
+
+1. Click **Run Server Episode** a few times — watch the Evidence panel
+   (`Server episodes` count, server license, saved record id when configured).
+2. **Reload the page.** The client trace list clears, but the Evidence panel's
+   server-episode count is repopulated from the server — the run history survived
+   the reload.
+
+The in-memory history survives client reloads but resets on **server** restart;
+InsForge is the durable write store. Reading persisted rows back **from InsForge**
+(rather than in-memory) is the next step.
+
+### Why persistence matters
+
+For an RL environment / safeguards gym, durable traces give you a replayable,
+auditable **eval corpus**: license history over time, reproducibility (scenario
+snapshots + versions), and after-the-fact audit of exactly what each policy was
+shown and how the environment scored it.
+
+> **Local traces prove the environment works. InsForge turns them into a durable
+> eval corpus.**
 
 ---
 
@@ -355,10 +410,13 @@ verifier truth** — the deterministic verifier remains authoritative.
 
 1. **Nebius policy runner — DONE (Milestone 2).** A real model proposes actions
    server-side; the deterministic verifier scores them. Key stays server-side.
-2. **InsForge trace store (next)** — persist traces + license history via the
-   **server-owned episode path** above, tagged with `traceAuthority`, so autonomy
-   is earned across sessions without trusting browser-authored evidence.
-3. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
+2. **InsForge evidence store — DONE (Milestone 3).** Server-owned `/api/run-episode`
+   computes the authoritative trace and persists it; `/api/runs/recent` reads the
+   in-memory history. Verifier remains source of truth.
+3. **InsForge read-back (next)** — query persisted rows back *from InsForge* (not
+   just in-memory), so license history is durable across server restarts and the
+   eval corpus is queryable.
+4. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
    (review an escalation, approve a recommendation) without changing the verifier
    or the license gate.
 
@@ -374,7 +432,11 @@ verifier truth** — the deterministic verifier remains authoritative.
 | [`src/nebiusClient.ts`](src/nebiusClient.ts) | Frontend client for `/api/nebius-action`; sends a `ModelPolicyView` (key never touched). |
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
-| `src/components/*` | Scenario, agent-action, verifier, trace, and license UI. |
+| `src/components/*` | Scenario, agent-action, verifier, trace, license, and evidence UI. |
+| [`src/serverEpisodeClient.ts`](src/serverEpisodeClient.ts) | Frontend client for `/api/run-episode` + `/api/runs/recent`. |
 | [`server/nebiusHandler.ts`](server/nebiusHandler.ts) | Server-only: builds the request from visible context, calls Nebius, normalizes. |
 | [`server/nebiusPlugin.ts`](server/nebiusPlugin.ts) | Vite middleware exposing `POST /api/nebius-action`. |
-| [`src/App.tsx`](src/App.tsx) | Orchestrates the loop and the eval controls. |
+| [`server/runEpisodeHandler.ts`](server/runEpisodeHandler.ts) | Server-owned episode: canonical scenario → policy → verifier → reward → license → persist. |
+| [`server/runEpisodePlugin.ts`](server/runEpisodePlugin.ts) | Vite middleware: `POST /api/run-episode`, `GET /api/runs/recent`. |
+| [`server/insforgeStore.ts`](server/insforgeStore.ts) | Server-only best-effort InsForge persistence (`eval_episodes`). |
+| [`src/App.tsx`](src/App.tsx) | Orchestrates the loop, eval controls, and evidence panel. |

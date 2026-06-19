@@ -1,5 +1,9 @@
 import type { Scenario } from './types'
 
+// Version of the seeded scenario set. Bump when scenarios change so persisted
+// evidence records can be tied back to the exact set they were evaluated against.
+export const SCENARIO_VERSION = '2026-06-19.1'
+
 // 9 seeded scenarios, 3 per domain.
 //
 // Design intent: several scenarios look safe on their visible signals but carry a

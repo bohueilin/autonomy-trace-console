@@ -1,18 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { decide, toMockView, toModelView } from './agent'
 import { fetchNebiusAction } from './nebiusClient'
+import { fetchRecentRuns, runServerEpisode as postServerEpisode } from './serverEpisodeClient'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
 import { verify } from './verifier'
-import type { AgentDecision, AgentSource, Scenario, Trace } from './types'
+import type { AgentDecision, AgentSource, PersistenceStatus, Scenario, Trace } from './types'
 import { ScenarioCard } from './components/ScenarioCard'
 import { AgentActionCard } from './components/AgentActionCard'
 import { VerifierCard } from './components/VerifierCard'
 import { LicenseSummary } from './components/LicenseSummary'
 import { TraceViewer } from './components/TraceViewer'
+import { EvidencePanel } from './components/EvidencePanel'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
+const DEFAULT_TABLE = 'eval_episodes'
 
 function App() {
   const [traces, setTraces] = useState<Trace[]>([])
@@ -21,18 +24,36 @@ function App() {
   const [mode, setMode] = useState<AgentSource>('mock')
   const [running, setRunning] = useState(false)
 
+  // Server-owned evidence state.
+  const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus>('idle')
+  const [persistence, setPersistence] = useState<{
+    recordId: string | null
+    configured: boolean
+    table: string
+  }>({ recordId: null, configured: false, table: DEFAULT_TABLE })
+  const [runId, setRunId] = useState<string | null>(null)
+  const [recentCount, setRecentCount] = useState(0)
+  const [serverLicense, setServerLicense] = useState<{ id: string; name: string; color: string } | null>(
+    null,
+  )
+
   const license = useMemo(() => computeLicense(traces), [traces])
   const active = traces.length > 0 ? traces[traces.length - 1] : null
 
-  // The model name surfaced once a Nebius decision has come back at least once.
   const nebiusModel = useMemo(
     () => [...traces].reverse().find((t) => t.decision.source === 'nebius')?.decision.model,
     [traces],
   )
 
+  // On mount, surface how many server-owned episodes already exist (survives
+  // client reloads while the dev server is up).
+  useEffect(() => {
+    fetchRecentRuns()
+      .then((runs) => setRecentCount(runs.length))
+      .catch(() => {})
+  }, [])
+
   function buildTrace(scenario: Scenario, episode: number, decision: AgentDecision): Trace {
-    // The verifier is the source of truth — it scores `decision.action` regardless
-    // of whether the mock policy or the Nebius model produced it.
     const result = verify(scenario, decision)
     const signal = result.catastrophic
       ? 'caps license'
@@ -46,17 +67,15 @@ function App() {
       decision,
       result,
       licenseSignal: signal,
+      authority: 'demo_client_trace',
     }
   }
 
-  // Produce a decision for one scenario. In Nebius mode, call the server; on any
-  // failure fall back to the deterministic mock policy so the demo never stalls.
   async function decideFor(
     scenario: Scenario,
   ): Promise<{ decision: AgentDecision; fellBack: boolean }> {
     if (mode === 'nebius') {
       try {
-        // The model receives the ModelPolicyView only (no visibleRiskScore).
         return { decision: await fetchNebiusAction(toModelView(scenario)), fellBack: false }
       } catch {
         return { decision: decide(toMockView(scenario)), fellBack: true }
@@ -65,8 +84,7 @@ function App() {
     return { decision: decide(toMockView(scenario)), fellBack: false }
   }
 
-  // Run a single episode against the next scenario in round-robin order.
-  // Uses the selected mode (Nebius = one real model call, with mock fallback).
+  // Local/demo single episode (client-authored trace).
   async function runEpisode() {
     if (running) return
     setRunning(true)
@@ -85,16 +103,48 @@ function App() {
     }
   }
 
-  // Run all 9 seeded scenarios as one fresh eval. Intentionally MOCK-ONLY: the
-  // headline eval stays instant and deterministic for demo reliability. Use
-  // "Run 1 Nebius Episode" to exercise the real model one scenario at a time.
+  // Server-owned episode: the server loads the canonical scenario, runs the
+  // policy + deterministic verifier, computes license, and persists evidence.
+  // The client only sends { scenarioId, policyMode } and renders the result.
+  async function runServerEpisode() {
+    if (running) return
+    setRunning(true)
+    setNotice(null)
+    setPersistenceStatus('saving')
+    try {
+      const scenario = seedScenarios[cursor % seedScenarios.length]
+      const res = await postServerEpisode(scenario.id, mode)
+      setTraces((prev) => [...prev, { ...res.trace, episode: prev.length + 1 }])
+      setCursor((c) => c + 1)
+      setPersistence({
+        recordId: res.persistence.recordId ?? null,
+        configured: res.persistence.configured,
+        table: res.persistence.table,
+      })
+      setPersistenceStatus(res.persistence.status)
+      setRunId(res.runId)
+      setServerLicense({
+        id: res.license.level.id,
+        name: res.license.level.name,
+        color: res.license.level.color,
+      })
+      fetchRecentRuns()
+        .then((runs) => setRecentCount(runs.length))
+        .catch(() => {})
+    } catch {
+      setPersistenceStatus('unavailable')
+      setNotice('Server episode unavailable — the local demo still works. Try again.')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  // Full 9-episode eval — intentionally MOCK-ONLY and client-side for reliability.
   function runFullEval() {
     if (running) return
     setNotice(null)
     try {
-      const fresh = seedScenarios.map((s, i) =>
-        buildTrace(s, i + 1, decide(toMockView(s))),
-      )
+      const fresh = seedScenarios.map((s, i) => buildTrace(s, i + 1, decide(toMockView(s))))
       setTraces(fresh)
       setCursor(seedScenarios.length)
     } catch {
@@ -180,6 +230,15 @@ function App() {
             </button>
             <button
               className="btn"
+              onClick={runServerEpisode}
+              disabled={running}
+              aria-label="Run a server-owned episode and persist the evidence"
+            >
+              <span aria-hidden="true">🗄</span> Run Server Episode
+              <span className="server-tag">evidence</span>
+            </button>
+            <button
+              className="btn"
               onClick={runFullEval}
               disabled={running}
               aria-label="Run the full nine-episode evaluation with the mock policy"
@@ -206,7 +265,14 @@ function App() {
           <section className="episode-flow">
             <h2 className="section-title">
               Current episode{' '}
-              {active && <span className="muted">· #{active.episode} — {active.scenario.title}</span>}
+              {active && (
+                <span className="muted">
+                  · #{active.episode} — {active.scenario.title}
+                  {active.authority === 'server_authoritative_episode' && (
+                    <span className="auth-tag auth-server">server-authoritative</span>
+                  )}
+                </span>
+              )}
             </h2>
             {active ? (
               <div className="flow-grid">
@@ -229,6 +295,15 @@ function App() {
 
         <aside className="side-col">
           <LicenseSummary license={license} />
+          <EvidencePanel
+            status={persistenceStatus}
+            configured={persistence.configured}
+            table={persistence.table}
+            recordId={persistence.recordId}
+            runId={runId}
+            recentCount={recentCount}
+            serverLicense={serverLicense}
+          />
           <div className="scenario-bank">
             <div className="bank-head">Scenario bank · {seedScenarios.length} seeded</div>
             <ul>
