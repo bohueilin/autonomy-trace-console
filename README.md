@@ -91,6 +91,76 @@ npm run lint     # eslint
 npm run preview  # preview the production build
 ```
 
+The app runs fully **without any Nebius configuration** — Mock Policy is the
+default and everything works offline.
+
+---
+
+## Nebius Token Factory (the model-under-test)
+
+Milestone 2 adds a real model as the agent, while the deterministic verifier
+stays the single source of truth.
+
+> **The model proposes. The environment verifies. The license gate decides.**
+> The model is never asked to grade itself.
+
+### Configure
+
+Copy `.env.example` to `.env.local` and fill in:
+
+```bash
+NEBIUS_API_KEY=sk-...                                   # your Nebius key
+NEBIUS_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct     # the model to test
+# NEBIUS_BASE_URL=https://api.studio.nebius.com/v1       # optional override
+```
+
+These are **server-side only**. Do **not** prefix them with `VITE_` — that would
+inline them into the browser bundle. They are read in `vite.config.ts` via
+`loadEnv` and handed to Node-only middleware in `server/`; the key never reaches
+the client. `.env.local` is gitignored.
+
+### Run
+
+There is **no separate server to start**. The API lives as Vite dev middleware,
+so the single command runs both the frontend and the `POST /api/nebius-action`
+endpoint on the same origin:
+
+```bash
+npm run dev
+```
+
+> **Why middleware instead of a standalone server?** It is the simplest reliable
+> boundary for the demo: one process, one command, same origin (no CORS, no extra
+> dependencies). The tradeoff is that the endpoint exists under `npm run dev`
+> only — not in a static `vite preview`/production build. A standalone server
+> under `server/` is the production path; the handler (`server/nebiusHandler.ts`)
+> is already written to lift out cleanly.
+
+### What Nebius does and does not do
+
+- **Does:** receive only the scenario's *visible context* (`user_goal`,
+  `visible_context`, `allowed_actions`, `verifier_rules`) and return a structured
+  action — `{ action, rationale, requested_info, confidence }`.
+- **Does NOT:** see `hidden_risk`, the ideal action, the unsafe action, or any
+  reward; score itself; or ever expose its key to the browser.
+
+The returned action is fed into the **same deterministic verifier** as the mock
+policy. Reward, trace, and license update identically — the gate doesn't care
+which policy proposed the action.
+
+### Mock vs Nebius in the UI
+
+- **Agent mode toggle** (Mock Policy / Nebius Policy) and a **model-under-test**
+  badge sit next to the run buttons.
+- **Run Episode** uses the selected mode. In Nebius mode it becomes
+  **Run 1 Nebius Episode** — a single real model call.
+- **Run 9-Episode Eval is mock-only by design**, kept instant and deterministic
+  for the headline demo. (Tagged `mock` in the UI.)
+- If Nebius is unreachable (no key, timeout, upstream error, missing endpoint),
+  the episode **falls back to the local mock policy** and shows a non-blocking
+  banner: *"Nebius unavailable — using local policy fallback for demo
+  reliability."* Raw errors are never shown.
+
 ---
 
 ## What the 9-episode eval demonstrates
@@ -131,21 +201,22 @@ right to act" is the entire point.
 5. **(2:00) The verdict.** Land on the **license summary**: a decent pass rate,
    but catastrophic executions on high-risk tasks → **capped at L1 Ask.** Read the
    one-line reason aloud.
-6. **(2:40) The thesis.** "It looked competent. It did not earn the right to act.
-   That's what the gym is for." Mention the next milestone (a real policy runner)
-   and stop.
+6. **(2:30) Swap in a real model.** Flip the toggle to **Nebius Policy** and click
+   **Run 1 Nebius Episode**: "Now we swap the mock policy for a real
+   model-under-test from Nebius. The verifier and license gate stay unchanged —
+   the model proposes, the environment verifies." Show the agent card's
+   **Nebius Token Factory** source and model name.
+7. **(2:50) The thesis.** "Mock or frontier model, it's the same gym: you earn
+   the right to act. That's the point." Stop.
 
 ---
 
 ## Future milestones
 
-These are deliberately **not** built yet — the local loop comes first.
-
-1. **Nebius policy runner** — replace the mock policy behind `decide()` with a
-   real model call. The agent still consumes only the `AgentView` (it cannot see
-   hidden risk). API keys stay server-side — **no client-side key exposure.**
-2. **InsForge trace store** — persist traces and license history so autonomy is
-   earned across sessions, not just within one page load.
+1. **Nebius policy runner — DONE (Milestone 2).** A real model proposes actions
+   server-side; the deterministic verifier scores them. Key stays server-side.
+2. **InsForge trace store (next)** — persist traces and license history so
+   autonomy is earned across sessions, not just within one page load.
 3. **Optional Vapi operator** — a voice interface for the human-in-the-loop steps
    (review an escalation, approve a recommendation) without changing the verifier
    or the license gate.
@@ -159,7 +230,10 @@ These are deliberately **not** built yet — the local loop comes first.
 | [`src/types.ts`](src/types.ts) | Domain model (actions, scenarios, verdicts, license). |
 | [`src/seedScenarios.ts`](src/seedScenarios.ts) | The 9 seeded scenarios with hidden risks. |
 | [`src/agent.ts`](src/agent.ts) | Mock policy + `AgentView` projection (cannot see hidden risk). |
+| [`src/nebiusClient.ts`](src/nebiusClient.ts) | Frontend client for `/api/nebius-action` (key never touched). |
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
 | `src/components/*` | Scenario, agent-action, verifier, trace, and license UI. |
+| [`server/nebiusHandler.ts`](server/nebiusHandler.ts) | Server-only: builds the request from visible context, calls Nebius, normalizes. |
+| [`server/nebiusPlugin.ts`](server/nebiusPlugin.ts) | Vite middleware exposing `POST /api/nebius-action`. |
 | [`src/App.tsx`](src/App.tsx) | Orchestrates the loop and the eval controls. |

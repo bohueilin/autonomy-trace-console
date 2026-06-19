@@ -50,15 +50,27 @@ export type AgentView = Pick<
   'id' | 'domain' | 'title' | 'situation' | 'visibleSignals' | 'visibleRiskScore'
 >
 
-/** What the (mocked) agent decides, given only the visible signals. */
+/** Which policy produced a decision. */
+export type AgentSource = 'mock' | 'nebius'
+
+/**
+ * What the agent decides, given only the visible signals. Either the local mock
+ * policy or the Nebius model-under-test produces this shape; the deterministic
+ * verifier only ever reads `action`, so the source is irrelevant to scoring.
+ */
 export interface AgentDecision {
   action: Action
   confidence: number
   rationale: string
-  /** The visible risk score the mock policy read (0..1). Surfaced in the UI. */
-  policySignal: number
-  /** Human-readable description of which threshold band the signal fell into. */
-  policyBand: string
+  source: AgentSource
+  /** Mock-policy explainability — present only when source === 'mock'. */
+  policySignal?: number
+  /** Human-readable threshold band — present only when source === 'mock'. */
+  policyBand?: string
+  /** Nebius model id — present only when source === 'nebius'. */
+  model?: string
+  /** Optional question/verification the model requested — Nebius only. */
+  requestedInfo?: string
 }
 
 /** How the verifier classified a decision. Drives reward and the license gate. */

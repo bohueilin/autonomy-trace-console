@@ -70,6 +70,7 @@ export function decide(view: AgentView): AgentDecision {
     action: band.action,
     confidence,
     rationale: REASONS[band.action],
+    source: 'mock',
     policySignal: score,
     policyBand: `visible risk ${score.toFixed(2)} in [${band.from.toFixed(2)}, ${
       band.to >= 1 ? '1.00' : band.to.toFixed(2)
