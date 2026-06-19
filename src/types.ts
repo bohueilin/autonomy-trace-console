@@ -274,12 +274,18 @@ export interface EvidenceStatus {
   rehydratedCount: number
   rejectedMalformedCount: number
   versionMismatchCount: number
+  /** Rows whose versions are compatible with the current eval code (digest-independent). */
   compatibleEvidenceCount: number
   digestPresentCount: number
   digestValidCount: number
   digestMissingCount: number
   digestMismatchedCount: number
-  /** Version-compatible AND digest-valid — the trusted-for-license set. */
+  /**
+   * Compatible AND digest-valid (digest-verified). A strict subset of
+   * compatibleEvidenceCount — they differ whenever missing-digest (legacy) or
+   * mismatched-digest rows are present. Missing-digest rows are version-compatible
+   * but NOT digest-verified.
+   */
   trustedEvidenceCount: number
   lastRehydratedAt: string | null
   lastRefreshAttemptAt: string | null

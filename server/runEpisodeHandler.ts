@@ -373,27 +373,59 @@ function stableStringify(value: unknown): string {
   )
 }
 
-// The exact stable fields the integrity digest is computed over — identical on
-// write and read-back. Excludes volatile values (InsForge record id, created_at,
-// the digest itself, row_schema_version) and verbose/derivable fields
-// (scenario_snapshot, verifier_checks, model_name, fallback flags).
+// The stable fields the integrity digest is computed over — identical on write
+// and read-back. This is an ALLOW-LIST (not a deny-list) on purpose: InsForge
+// injects its own `id` / `createdAt` / `updatedAt`, so hashing only known fields
+// keeps write and read comparable.
+//
+// Scope = every persisted, non-secret field the app displays / sorts / summarizes
+// / may replay / a future Vapi operator may narrate. Expanding scope is the SAFE
+// direction for tamper-evidence: a field InsForge happens to normalize yields a
+// false `mismatched` (conservative under-trust), never a false `valid`.
+//
+// INTENTIONALLY EXCLUDED:
+//  - `id`            — assigned by InsForge (volatile, not server-authored).
+//  - `audit_row_digest` — the digest itself.
+//  - `createdAt` / `updatedAt` — InsForge's own row timestamps (not our column).
+//  - `created_at`    — OUR server timestamp, excluded because timestamp columns
+//                      are the most likely to be normalized on round-trip, which
+//                      would make EVERY rehydrated row falsely mismatch and defeat
+//                      the feature. (Documented in README.)
 const DIGEST_FIELDS = [
+  // identity
   'trace_id',
   'run_id',
   'episode_index',
   'run_sequence',
   'trace_authority',
+  // attribution / versions
+  'environment_name',
+  'scenario_registry_version',
+  'verifier_version',
+  'reward_model_version',
+  'license_policy_version',
+  'app_commit',
+  'row_schema_version',
+  // scenario (incl. canonical snapshot — server-side only, never sent to browser)
   'scenario_id',
   'scenario_version',
-  'scenario_registry_version',
+  'scenario_title',
+  'domain',
+  'scenario_snapshot',
+  // policy provenance + inputs
   'requested_policy_mode',
   'actual_policy_source',
+  'fallback',
+  'fallback_code',
   'attempted_model_input',
   'actual_policy_input',
+  'model_name',
+  // normalized decision
   'action',
   'rationale',
   'requested_info',
   'confidence',
+  // verifier result
   'passed',
   'reward',
   'category',
@@ -401,11 +433,9 @@ const DIGEST_FIELDS = [
   'expected_action',
   'actual_action',
   'verifier_reason',
-  'verifier_version',
-  'reward_model_version',
-  'license_policy_version',
-  'environment_name',
-  'app_commit',
+  'verifier_checks',
+  // license
+  'license_level',
   'license_summary',
 ] as const
 
@@ -664,14 +694,15 @@ export async function getEvidenceStatus(
   const digestMismatchedCount = combined.filter((it) => it.digestStatus === 'mismatched').length
   const digestPresentCount = combined.filter((it) => it.digestPresent).length
 
-  // License set: version-compatible AND NOT digest-mismatched (tampered rows are
-  // never blended; legacy "missing"-digest rows are allowed if version-compatible).
-  const licenseSet = combined.filter(
-    (it) => !it.versionMismatch && it.digestStatus !== 'mismatched',
-  )
-  // Trusted = version-compatible AND digest-valid (digest-verified).
-  const trustedEvidenceCount = combined.filter(
-    (it) => !it.versionMismatch && it.digestStatus === 'valid',
+  // COMPATIBLE = versions compatible with current eval code (independent of digest).
+  const versionCompatible = combined.filter((it) => !it.versionMismatch)
+  // LICENSE SET = compatible AND NOT digest-mismatched (tampered rows are never
+  // blended; legacy "missing"-digest rows are allowed if version-compatible).
+  const licenseSet = versionCompatible.filter((it) => it.digestStatus !== 'mismatched')
+  // TRUSTED = compatible AND digest-valid (digest-verified). Strictly a subset of
+  // compatible — differs whenever missing/mismatched-digest rows are present.
+  const trustedEvidenceCount = versionCompatible.filter(
+    (it) => it.digestStatus === 'valid',
   ).length
 
   // Current license: recompute from the license set only — never trust a stored
@@ -726,7 +757,7 @@ export async function getEvidenceStatus(
     rehydratedCount: rehydratedItems.length,
     rejectedMalformedCount,
     versionMismatchCount,
-    compatibleEvidenceCount: licenseSet.length,
+    compatibleEvidenceCount: versionCompatible.length,
     digestPresentCount,
     digestValidCount,
     digestMissingCount,

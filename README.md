@@ -502,31 +502,65 @@ that queries this evidence and runs server-owned episodes.
 
 ### Tamper-evident evidence (Milestone 4.2)
 
-Server-owned audit rows carry an `audit_row_digest` — a SHA-256 over a fixed set
-of stable canonical fields (identity, scenario id/versions, requested/actual
-policy + both policy inputs, the normalized decision, the verifier result,
-reward, license summary, and attribution versions). The digest **excludes**
-volatile values (the InsForge record id, `created_at`, the digest itself) and
-secrets, so it is deterministic across write and read.
+Server-owned audit rows carry an `audit_row_digest` — a SHA-256 over a canonical
+(sorted-key) serialization of a fixed `DIGEST_FIELDS` allow-list. The same
+`computeAuditDigest` function runs on **write** (over the audit row) and on
+**read-back** (over the persisted row), so a row is comparable across the trip —
+no duplicate digest logic.
 
-On read-back the server **recomputes the digest over the same fields** and
-classifies each row:
+On read-back the server **recomputes the digest** and classifies each row:
 
-- **`valid`** — digest present and matches → digest-verified (trusted if also
-  version-compatible).
+- **`valid`** — digest present and matches → digest-verified.
 - **`missing`** — no digest → legacy/unknown. May display as historical, but is
   **not** counted as digest-verified.
-- **`mismatched`** — digest present but differs → treated as drifted/tampered.
-  **Excluded** from the current license, the trusted-evidence count, and the
-  recent trusted-evidence list (surfaced only as `digestMismatchedCount`).
-
-`/api/evidence/status` reports `digestValidCount`, `digestMissingCount`,
-`digestMismatchedCount`, and `trustedEvidenceCount` (version-compatible **and**
-digest-valid). The same `computeAuditDigest` function runs on write and read, so
-there is no duplicate digest logic.
+- **`mismatched`** — digest present but differs → drifted/tampered. **Excluded**
+  from the current license, the trusted-evidence count, and the recent
+  trusted-evidence list (surfaced only as `digestMismatchedCount`).
 
 > InsForge preserves evidence; the app detects evidence **drift/tampering** on
 > read-back. The deterministic verifier remains the source of truth.
+
+### Digest scope and trust language (Milestone 4.2.1)
+
+The digest covers **license-critical evidence *plus* the displayed/provenance
+fields** the UI or a future Vapi operator may summarize — so they are
+tamper-evident too, not just the license inputs. Covered: identity (`trace_id`,
+`run_id`, `episode_index`, `run_sequence`, `trace_authority`); attribution
+versions (`*_version`, `environment_name`, `app_commit`, `row_schema_version`);
+scenario (`scenario_id`, `scenario_version`, `scenario_title`, `domain`,
+`scenario_snapshot`); policy provenance + inputs (`requested_policy_mode`,
+`actual_policy_source`, `fallback`, `fallback_code`, `attempted_model_input`,
+`actual_policy_input`, `model_name`); the normalized decision; the verifier result
+(incl. `verifier_checks`); and the license (`license_level`, `license_summary`).
+
+It is an **allow-list** because InsForge injects its own `id` / `createdAt` /
+`updatedAt` — hashing only known fields keeps write and read comparable.
+Expanding scope is the **safe** direction for tamper-evidence: a field InsForge
+might normalize yields a false `mismatched` (conservative under-trust), never a
+false `valid`.
+
+**Intentionally excluded:** the InsForge-assigned `id`, the digest itself, and our
+server `created_at` — timestamp columns are the most likely to be normalized on
+round-trip, which would make *every* rehydrated row falsely mismatch and defeat
+the feature. (`license_summary` and `scenario_snapshot` are JSON and assumed
+preserved; if a backend normalizes JSON numbers they would surface as
+`mismatched` — i.e. under-trusted, never silently trusted.)
+
+**Compatibility and trust are separate, and reported separately:**
+
+- `compatibleEvidenceCount` — rows whose **versions** are compatible with the
+  current verifier/reward/license code (digest-independent).
+- `trustedEvidenceCount` — rows that are **compatible AND digest-valid**. A strict
+  subset of compatible; the two differ whenever missing-digest (legacy) or
+  mismatched rows are present.
+- Missing-digest legacy rows may be version-compatible but are **not**
+  digest-verified. Mismatched rows are excluded from the current license and the
+  recent trusted-evidence list.
+
+The current license is recomputed from **version-compatible AND not-mismatched**
+verdicts (legacy missing-digest rows allowed; tampered rows never blended).
+`/api/evidence/status` reports `digestValidCount`, `digestMissingCount`,
+`digestMismatchedCount`, `compatibleEvidenceCount`, and `trustedEvidenceCount`.
 
 ### Live smoke checklist
 
@@ -582,7 +616,10 @@ shown and how the environment scored it.
 6. **Tamper-evident read-back — DONE (Milestone 4.2).** The digest is recomputed on
    read-back and rows are classified `valid` / `missing` / `mismatched`; mismatched
    (drifted/tampered) rows are excluded from the current license and trusted counts.
-7. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
+7. **Digest scope + trust language — DONE (Milestone 4.2.1).** The digest covers
+   license-critical *plus* displayed/provenance fields; `compatibleEvidenceCount`
+   (version) and `trustedEvidenceCount` (version + digest-valid) are distinct.
+8. **Vapi Operator Mode (next)** — a voice interface that can run a server-owned
    episode, ask why autonomy was capped, and summarize the latest persisted
    evidence (read from `/api/evidence/status`). It calls the same server-owned
    endpoints; it does **not** change the verifier or the license gate.

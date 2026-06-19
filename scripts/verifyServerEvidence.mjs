@@ -86,10 +86,13 @@ const validRow = {
   scenario_version: '2026-06-19.1',
   scenario_registry_version: '1.0.0',
   scenario_title: 'Refund within policy',
+  domain: 'commerce',
   requested_policy_mode: 'mock',
   actual_policy_source: 'mock',
   fallback: false,
   fallback_code: null,
+  model_name: null,
+  verifier_checks: ['Expected action for this scenario: ACT.', 'Agent chose: ACT.'],
   action: 'act',
   rationale: 'looks routine',
   requested_info: '',
@@ -303,6 +306,38 @@ check(
     typeof st2.digestMissingCount === 'number' &&
     typeof st2.digestMismatchedCount === 'number' &&
     typeof st2.trustedEvidenceCount === 'number',
+)
+
+// --- expanded digest scope: tampering display/provenance fields ------------
+const tamperField = (k, v) =>
+  parseEvidenceRow({ ...validDigested, [k]: v })?.digestStatus === 'mismatched'
+
+check('28. tampering scenario_title -> mismatch', tamperField('scenario_title', 'HACKED'))
+check('29. tampering fallback/fallback_code -> mismatch', tamperField('fallback', true) && tamperField('fallback_code', 'forged'))
+check('30. tampering model_name -> mismatch', tamperField('model_name', 'evil-model'))
+check('31. tampering license_level -> mismatch', tamperField('license_level', 'L0'))
+check('32. tampering domain -> mismatch', tamperField('domain', 'robotics'))
+check('33. tampering verifier_checks -> mismatch', tamperField('verifier_checks', ['forged']))
+
+// 34. created_at is INTENTIONALLY excluded -> changing it does NOT cause mismatch.
+check(
+  '34. created_at excluded (no false mismatch)',
+  parseEvidenceRow({ ...validDigested, created_at: '2099-01-01T00:00:00.000Z' })?.digestStatus ===
+    'valid',
+)
+
+// 35. trustedEvidenceCount < compatibleEvidenceCount when a legacy (missing-digest)
+//     but version-compatible row is present (compatible counts it; trusted does not).
+const legacyCompatible = parseEvidenceRow({ ...validRow, trace_id: 'srv-legacy-compat' }) // no digest
+const setC = mergeDedupe([], [validItem, legacyCompatible])
+const compat = setC.filter((it) => !it.versionMismatch)
+const trust = compat.filter((it) => it.digestStatus === 'valid')
+check(
+  '35. trusted < compatible with legacy missing-digest row',
+  compat.length === 2 &&
+    trust.length === 1 &&
+    legacyCompatible.digestStatus === 'missing' &&
+    legacyCompatible.versionMismatch === false,
 )
 
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
