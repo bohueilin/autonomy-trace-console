@@ -1,27 +1,37 @@
-Both new tests run and pass. All gates are green.
+All gates pass. Implementation complete.
 
 ## Implementation Report
 
-Implemented `design.md` exactly — storage-backed first-write-wins for gym `/v1` evidence idempotency. No objection: the plan is well-scoped, doesn't touch verifier/license semantics, and the partial unique index is the right storage boundary.
+Implemented `design.md` exactly — closing the `/v1` first-write-wins hole where a confirmed storage conflict could leak the later computed verdict.
 
 ### Files changed
-- **`migrations/20260620080000_harden-eval-episode-idempotency.sql`** (new): partial `CREATE UNIQUE INDEX IF NOT EXISTS eval_episodes_authoritative_trace_id_uidx ON public.eval_episodes (trace_id) WHERE trace_authority = 'server_authoritative_episode'`, plus a `COMMENT ON INDEX` documenting it as the idempotency storage boundary. No `BEGIN/COMMIT`, no rewrite, no backfill.
-- **`server/insforgeStore.ts`**: added `PersistOnceOutcome` type, `fetchEvidenceByTraceId(cfg, traceId)` (single-row lookup, same best-effort `ok/local_only/unavailable/error` contract as `fetchRecentEvidence`), `persistEpisodeOnce(row, cfg)` (conflict-aware insert), and an `isUniqueConflict` helper. `persistEpisode` and `fetchRecentEvidence` left fully intact (still used by `runEpisodeHandler.ts`).
-- **`server/env/gym.ts`**: switched gym persistence to `persistEpisodeOnce`; factored the row→verdict rehydration out of `loadRunVerdicts` into a shared `rowToVerdict` helper; on an `existing` (conflict) outcome, rehydrates the winning row and returns the original verdict/action/license with `persisted: true` and the existing `recordId`. Dev fallback unchanged.
-- **`server/env/gym.test.ts`**: added a configured-InsForge test with mocked `globalThis.fetch` (restored in `finally`) — com-2, first step `act` persists catastrophic; replay `escalate` with a missed read-before-write + 409 unique conflict + trace lookup returning the original row asserts the correction does **not** win.
-- **`server/runEpisodeHandler.test.ts`**: added a regression building the **real** gym `stepEpisode` field shape (`requested_policy_mode/actual_policy_source: 'external'`, `scenario_snapshot`, `actual_policy_input`, `model_name`, digest) and asserting digest-valid + version-compatible (⇒ trusted + license-eligible).
-- **`README.md`**: idempotency-invariant note near the InsForge setup section (unique `trace_id`, `npx @insforge/cli db migrations up --all`). No secrets/live values.
+- `server/env/gym.ts`
+- `server/env/gym.test.ts`
 
 ### Key decisions
-- **Conflict detection**: HTTP 409 is canonical; also treat a 4xx body carrying `23505` / `duplicate key` / `unique constraint` / `already exists` as a conflict. The error body is read for classification only — never logged, never parsed for secrets.
-- **Re-read failure after a confirmed conflict** returns `{ status: 'unavailable', code: 'conflict_reread_failed' }` so `existing` always carries a real row; gym then stays best-effort and never lets the later action win.
-- Refactored the duplicated rehydration logic into `rowToVerdict` rather than copy-pasting it for the conflict path — same digest/version/type validation reused on both read paths.
+1. **`rowToVerdict` hardened (gym.ts).** Added a `CATEGORIES` constant and rewrote the validator to reject a persisted row unless every replay-critical field is authoritative and well-typed:
+   - `trace_authority === 'server_authoritative_episode'`
+   - non-empty string `trace_id`, `run_id`, `scenario_id`
+   - matching verifier/reward/license versions
+   - present digest equal to `computeAuditDigest(row)`
+   - `passed` boolean; `reward` finite and within `[-1, 1]`; `catastrophic` boolean
+   - `category` ∈ {correct, over_cautious, under_cautious, catastrophic}
+   - `expected_action`/`actual_action` ∈ `ACTIONS`
+   - Removed the old `'unknown'`/`'stop'` defaulting — a malformed field now rejects the whole row instead of silently coercing it.
 
-### Gate results — all pass
-- `npm run build` ✅
-- `npm run lint` ✅ (clean)
+2. **`stepEpisode` fails closed (gym.ts).** In the `out.status === 'existing'` branch, when `rowToVerdict(out.row)` returns `null`, it now returns `{ ok: false, code: 'unknown', error }` instead of falling through to the newly computed verdict. Added an explicit branch for `out.status === 'unavailable' && out.code === 'conflict_reread_failed'` that also fails closed. Other `unavailable`/`local_only` outcomes keep their best-effort behavior. No reward/info/license/persisted/corrected action is returned on these failures.
+
+3. **Two new tests (gym.test.ts).**
+   - Confirmed conflict + empty trace lookup → `conflict_reread_failed` → asserts `ok === false`, `code === 'unknown'`, and no `reward`/`info`/`license`/`persisted` leak.
+   - Confirmed conflict + malformed winner row (digest recomputed over the row, so rejection comes from strict field validation on an invalid `category`, not a digest mismatch) → asserts `ok === false`, `code === 'unknown'`, no corrected reward/license/info.
+   - Added imports for `computeAuditDigest` and the three version constants.
+
+### Gate results — all PASS
+- `npm run build` ✅ (tsc + vite)
+- `npm run lint` ✅ (fixed one unused-var TS6133 I introduced)
 - `npm run verify:evidence` ✅ (40 checks)
-- `npm test` ✅ (31 tests, incl. the 2 new ones, verified individually)
+- `npm test` ✅ (33 passed, was 31 — the two new tests plus the unchanged valid-conflict test all green)
+- `npm run gates` ✅
 
 ### Deferred / open questions for Codex
-- **None deferred within scope.** Adjacent items spotted but intentionally NOT done (per scope): (1) `runEpisodeHandler.ts`'s legacy `/api/run-episode` path still uses `persistEpisode` (non-conflict-aware) — fine for the single-process in-memory history, but if that path ever needs the same storage guarantee it could also adopt `persistEpisodeOnce`; (2) no test exercises the `conflict_reread_failed` branch — covered by code review, not a test, this round.
+- None deferred within scope. Adjacent item I did **not** touch (per scope): `loadRunVerdicts` silently treats `fetchRecentEvidence` `unavailable`/`error` as an empty run, so a read failure on the *read-before-write* path could still let a fresh verdict compute and persist where a prior row exists but isn't visible. The unique-index conflict path now catches the persist-time collision, but a future round may want to consider whether read-path unavailability should also be more conservative. Flagging only — not implemented.

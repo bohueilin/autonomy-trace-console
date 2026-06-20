@@ -1,49 +1,44 @@
-## Review
+## Review — P0/P1/P2
 
-Verdict: ACCEPT for this round’s schema-unification change.
+**P0 — conflict re-read failure lets the later replay win. Verdict: NEEDS-FIX.**  
+`server/insforgeStore.ts:199-206` correctly turns a confirmed duplicate insert plus failed trace lookup into `{ status: 'unavailable', code: 'conflict_reread_failed' }`, but `server/env/gym.ts:390-425` ignores that code and falls through to `server/env/gym.ts:436-453`, returning the newly computed action/reward/license. That violates the round’s first-write-wins acceptance criterion for the exact case where storage already proved an earlier row exists. Recommendation: make `stepEpisode` treat `conflict_reread_failed` as a hard replay uncertainty, not best-effort success: either retry the lookup and replay the winner, or return a non-success error such as `unknown/conflict_reread_failed` without returning the corrected action/license.
 
-P0: None.
+**P1 — gym rehydration parser is looser than the evidence parser.**  
+`server/env/gym.ts:202-228` accepts a row if digest/version/pass/reward are present, then defaults malformed `catastrophic`, `category`, `expected_action`, and `actual_action` values. The stricter evidence parser rejects malformed authority/provenance/action/verdict fields at `server/runEpisodeHandler.ts:400-424`. Recommendation: share a strict persisted-row parser or harden `rowToVerdict` to validate `trace_authority`, `run_id`, `scenario_id`, action enums, finite reward bounds, boolean `catastrophic`, and non-empty required identity before it can influence replay/license.
 
-P1: Scope breach: the design explicitly said not to touch gym replay/idempotency logic, but this commit changed `server/env/gym.ts` and `server/env/gym.test.ts`. See [.agentloop/design.md](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/design.md:13) and [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:272). The change looks directionally correct, but it violates the two-agent protocol’s small-diff boundary. Recommendation: next round should either fully validate the gym idempotency work or revert it intentionally.
+**P2 — tests miss the failure mode that breaks the invariant.**  
+`server/env/gym.test.ts:174-185` covers duplicate conflict plus successful trace lookup, but not duplicate conflict plus failed/empty trace lookup. That is the branch that currently returns the later corrected result. Recommendation: add a test where the second insert returns 409 and the trace lookup returns 500 or `[]`; assert the corrected action is not returned and no improved license is emitted.
 
-P1: `/v1` first-write-wins is still not atomic with configured InsForge. `stepEpisode` loads prior verdicts, checks `existing`, then later writes, so two concurrent steps for the same signed episode can both miss the row and both persist conflicting rows. See [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:275) and [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:382). Recommendation: enforce uniqueness at the storage boundary on `trace_id` or an explicit idempotency key, use insert-conflict handling, then re-read and return the winning verdict.
+**Gates:** `.agentloop/gates.log:67-87` reports build/lint/evidence/tests all passing, but the test suite is not yet honest for the conflict failure path above.
 
-P1: Trust boundary remains DB-write-authenticated, not digest-authenticated. `parseEvidenceRow` accepts any row with allowed provenance and a recomputed plain SHA digest, and license status includes any compatible non-mismatched row. See [server/runEpisodeHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.ts:417), [server/runEpisodeHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.ts:444), and [server/runEpisodeHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.ts:617). This is acceptable for the current service-key-only prototype, but not production hardening. Recommendation: pair InsForge RLS/service-only writes with either server-only write isolation or an HMAC/signature if untrusted writers may ever reach the table.
+**Verdict: NEEDS-FIX for this round’s change.**
 
-P2: The new external evidence tests use a synthetic legacy-shaped row, not an actual `/v1` row produced by `stepEpisode`. See [scripts/verifyServerEvidence.mjs](/Users/bohueilin/hackathons/0619/autonomy-trace-console/scripts/verifyServerEvidence.mjs:349) and [server/runEpisodeHandler.test.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.test.ts:52). Recommendation: add a focused mocked-persistence test that steps the gym, captures the persisted audit row, and proves `parseEvidenceRow` and `/api/evidence/status` include it as trusted external evidence.
+## Next design — the plan for the next round
 
-P2: The previous design file has stray trailing text after the gates fence at [.agentloop/design.md](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/design.md:65). Recommendation: overwrite cleanly in the next design.
+**Objective**  
+Close the remaining `/v1` idempotency hole: once InsForge reports a unique conflict, the environment must never return the later action/reward/license unless it can rehydrate the first-written row.
 
-Acceptance criteria: Met. `EvidencePolicySource` keeps `AgentSource` narrow, `parseEvidenceRow` accepts `external`, unknown provenance is rejected, compact rows type-check, and digest checks still pass. Gates are green per [.agentloop/gates.log](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/gates.log:87).
-
-## Next design
-
-Objective: Make gym `/v1` evidence idempotency production-shaped and prove real gym external rows flow into trusted evidence.
-
-Scope:
+**Scope**  
+Touch only:
 - `server/env/gym.ts`
 - `server/env/gym.test.ts`
-- `server/insforgeStore.ts`
-- `server/runEpisodeHandler.test.ts`
-- `scripts/verifyServerEvidence.mjs`
-- Optional migration/docs stub only if needed to express the unique `trace_id` requirement.
+- optionally `server/insforgeStore.ts` if a distinct conflict outcome type is needed
 
-Steps:
-1. Add an explicit storage-level idempotency plan for gym rows: `trace_id` must be unique for authoritative evidence.
-2. Update `persistEpisode` or add a gym-specific persistence helper so duplicate `trace_id` writes do not create conflicting authoritative rows.
-3. On duplicate/conflict, re-read the existing row and return the original verdict, reward, info, license, and record id.
-4. Keep the dev fallback behavior first-write-wins, but add a test for configured-persistence replay/concurrent duplicate behavior using mocked fetch.
-5. Add a test that runs `resetEpisode` + `stepEpisode`, captures the actual persisted `/v1` audit row, parses it with `parseEvidenceRow`, and proves it is trusted/license-eligible.
-6. Do not change verifier or license scoring semantics.
+**Steps**  
+1. In `stepEpisode`, special-case `out.status === 'unavailable' && out.code === 'conflict_reread_failed'`.
+2. Do not fall through to the newly computed verdict for that case.
+3. Return a deterministic non-success response, or retry lookup once and replay only if the original row is digest-valid.
+4. Harden `rowToVerdict` to reject malformed rows instead of defaulting action/verdict fields.
+5. Add tests for 409 plus failed trace lookup and 409 plus malformed winner row.
 
-Acceptance criteria:
-- Replaying the same episode cannot overwrite or improve the first verdict in dev fallback or configured persistence mode.
-- Duplicate/concurrent same-episode writes produce at most one authoritative row per `trace_id`.
-- The response for a replay returns the original action/result, not the later submitted action.
-- A real gym-produced `external` row is accepted by evidence parsing and included in trusted evidence.
-- No client-supplied reward/pass/license/scenario fields are trusted.
+**Acceptance criteria**  
+- A duplicate insert conflict can never return the replayed/corrected action.
+- If the winner row cannot be read or validated, the API returns an error/uncertain result, not a forged improved license.
+- Valid conflict rehydration still returns the original reward/action/license and record id.
+- Malformed persisted rows are rejected before they influence replay/license.
 
-Gates:
+**Gates**  
+Run:
 ```bash
 npm run build
 npm run lint

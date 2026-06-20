@@ -1,86 +1,69 @@
 ## Objective
 
-Make gym `/v1` evidence idempotency storage-backed for the GOAL “One evidence schema” and “Gym is canonical” checkboxes: a signed episode’s first verified verdict must be the only authoritative row for its `trace_id`.
+Close the remaining `/v1` first-write-wins hole for the GOAL “Gym is canonical” and “One evidence schema” checkboxes: a confirmed storage conflict must never return the later computed action/license unless the first-written row is validly rehydrated.
 
 ## Scope
 
-Create/change exactly:
+Change only:
 
-- `server/insforgeStore.ts`
 - `server/env/gym.ts`
 - `server/env/gym.test.ts`
-- `server/runEpisodeHandler.test.ts`
-- `migrations/20260620080000_harden-eval-episode-idempotency.sql`
-- `README.md` only for a short note documenting the `trace_id` uniqueness requirement and migration command
 
 Do NOT touch:
 
 - verifier or license scoring semantics
+- `server/insforgeStore.ts`
+- migrations
+- legacy `/api/run-episode`
+- UI files
 - scenario content/count
-- UI components
-- Vite middleware consolidation
-- Nebius/Vapi handlers
-- broader RLS policies beyond what is explicitly listed below
 
 ## Steps
 
-1. Add `migrations/20260620080000_harden-eval-episode-idempotency.sql` with one focused invariant:
-   - Create a unique index on `public.eval_episodes(trace_id)` for rows where `trace_authority = 'server_authoritative_episode'`.
-   - Use a clear index name, for example `eval_episodes_authoritative_trace_id_uidx`.
-   - Do not add `BEGIN`/`COMMIT`.
-   - Do not attempt a table rewrite or data backfill in this round.
-   - Add a SQL comment explaining that this is the storage boundary for gym episode idempotency.
+1. In `server/env/gym.ts`, harden `rowToVerdict` so persisted rows influence replay/license only if all required authoritative fields are valid:
+   - `trace_authority === "server_authoritative_episode"`
+   - non-empty string `trace_id`, `run_id`, and `scenario_id`
+   - current verifier/reward/license versions
+   - `audit_row_digest` present and equal to `computeAuditDigest(row)`
+   - `passed` is boolean
+   - `reward` is finite and within `[-1, 1]`
+   - `catastrophic` is boolean
+   - `category` is one of `correct | over_cautious | under_cautious | catastrophic`
+   - `expected_action` and `actual_action` are in `ACTIONS`
+   - no defaulting to `unknown` or `stop` for malformed persisted fields
 
-2. In `server/insforgeStore.ts`, add a targeted lookup helper:
-   - `fetchEvidenceByTraceId(cfg, traceId)` that uses the existing REST path:
-     `/api/database/records/eval_episodes?trace_authority=eq.server_authoritative_episode&trace_id=eq.<encoded>&limit=1`
-   - Return the same style as `fetchRecentEvidence`: never throw, never expose secrets, return `ok/local_only/unavailable/error`.
-   - Keep the existing `fetchRecentEvidence` API intact.
+2. In `stepEpisode`, keep the existing `out.status === "existing"` replay path, but change the invalid-winner case:
+   - if `rowToVerdict(out.row)` returns `null`, return `{ ok: false, code: "unknown", error: ... }`
+   - do not fall through to the newly computed verdict
+   - do not return reward, info, license, `persisted: true`, or the corrected action
 
-3. In `server/insforgeStore.ts`, make persistence conflict-aware:
-   - Extend `PersistOutcome` or add a new helper named `persistEpisodeOnce`.
-   - It must still insert an array body.
-   - On normal `2xx`, return the saved record id as today.
-   - On duplicate/unique-conflict responses, re-read the existing row by `trace_id` and return an explicit “existing” outcome with the existing row and record id.
-   - Treat HTTP `409` as a duplicate. If InsForge surfaces unique violations as another non-2xx status with a recognizable conflict body/code, handle that too, but do not rely on logging or parsing secrets.
-   - Non-conflict failures remain `unavailable`.
+3. In `stepEpisode`, special-case confirmed conflict re-read failure:
+   - if `out.status === "unavailable" && out.code === "conflict_reread_failed"`, return `{ ok: false, code: "unknown", error: ... }`
+   - do not fall through to the newly computed verdict
+   - keep other `unavailable` outcomes as current best-effort behavior
 
-4. In `server/env/gym.ts`, use the conflict-aware helper for configured InsForge:
-   - Before computing a new verdict, keep the existing `loadRunVerdicts` replay check.
-   - After computing `auditRow`, call the new conflict-aware persistence helper.
-   - If persistence returns `saved`, keep the current response.
-   - If persistence returns `existing`, rehydrate the existing row into the same replay response shape used by the earlier `existing` branch: original reward, original `info.actualAction`, original license, `persisted: true`, and existing `recordId`.
-   - Do not let the later submitted action improve the response when a conflict occurs.
-   - If persistence is `unavailable`, keep current best-effort semantics, but do not append duplicate dev rows.
+4. In `server/env/gym.test.ts`, add a configured-InsForge test for conflict plus failed/empty trace lookup:
+   - mock read-before-write as empty
+   - mock insert as `409` duplicate/unique conflict
+   - mock `fetchEvidenceByTraceId` as `500` or `[]`
+   - call `stepEpisode` with the corrected action for `com-2`
+   - assert `ok === false`, `code === "unknown"`, and no corrected reward/license is returned
 
-5. In `server/env/gym.test.ts`, add configured-InsForge mocked `fetch` coverage:
-   - Use a config with fake `baseUrl` and `apiKey`.
-   - Mock `globalThis.fetch` inside the test and restore it afterward.
-   - Scenario: reset `com-2`, first step submits catastrophic `act`.
-   - Mock read-before-write as empty, insert as success, and assert the response is catastrophic and persisted.
-   - Then replay the same `episodeId` with correct `escalate`.
-   - Mock read-before-write as empty again to simulate a race/stale read, mock insert as duplicate conflict, mock trace lookup returning the first persisted catastrophic row.
-   - Assert replay returns the original catastrophic result/action, not the corrected action, with `persisted: true` and the original record id.
-   - Assert no client-supplied reward/pass/license fields are involved.
+5. In `server/env/gym.test.ts`, add a configured-InsForge test for conflict plus malformed winner row:
+   - return a trace lookup row that is digest-valid but has an invalid persisted action, category, reward, or `catastrophic`
+   - recompute `audit_row_digest` for that malformed row so the rejection is from strict field validation, not only digest mismatch
+   - assert `ok === false` and the later corrected action/license is not returned
 
-6. In `server/runEpisodeHandler.test.ts`, add a focused integration-style parser regression:
-   - Build a real gym-shaped row matching fields produced by `stepEpisode`, including `requested_policy_mode: "external"`, `actual_policy_source: "external"`, `scenario_snapshot`, `actual_policy_input`, `model_name`, and `audit_row_digest`.
-   - Parse it with `parseEvidenceRow`.
-   - Assert it is digest-valid, version-compatible, trusted evidence, and license-eligible.
-   - This should use the actual field shape, not only a legacy row with provenance flipped.
-
-7. Add a short README note near the InsForge setup section:
-   - State that authoritative evidence requires a unique `trace_id`.
-   - Mention applying migrations with `npx @insforge/cli db migrations up --all`.
-   - Do not add secrets or live project values.
+6. Ensure the existing valid-conflict test still passes:
+   - duplicate conflict plus valid winner row returns the original catastrophic result/action/license and original record id
 
 ## Acceptance criteria
 
-- Configured InsForge mode is first-write-wins even when the pre-insert read misses an existing row and the insert hits a unique conflict.
-- A replay returns the original verdict/action/license and original record id.
-- The database invariant for authoritative evidence uniqueness is documented in a migration.
-- Dev fallback replay behavior remains unchanged and still first-write-wins.
-- Real gym-produced `external` row shape parses as digest-valid trusted evidence.
+- A confirmed duplicate conflict with unreadable winner row returns a non-success response.
+- A confirmed duplicate conflict with malformed winner row returns a non-success response.
+- Neither failure mode can return the later corrected action, reward, or improved license.
+- Valid conflict rehydration still returns the original first-written verdict and record id.
+- Persisted gym rows with malformed replay-critical fields are rejected before they affect license computation.
 - No verifier/license scoring semantics change.
 
 ## Gates

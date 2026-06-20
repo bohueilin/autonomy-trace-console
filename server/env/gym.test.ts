@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { computeAuditDigest } from '../evidence/digest.ts'
+import {
+  LICENSE_POLICY_VERSION,
+  REWARD_MODEL_VERSION,
+  VERIFIER_VERSION,
+} from '../evalVersions.ts'
 import { resetEpisode, stepEpisode, type GymConfig } from './gym.ts'
 
 // Empty InsForge credentials -> the env uses its in-memory dev fallback, so the
@@ -187,6 +193,125 @@ describe('stepEpisode', () => {
       // The client only ever supplied `action`; reward/passed/license are computed
       // by the deterministic verifier, never taken from the request.
       expect(replay).not.toHaveProperty('clientReward')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  it('configured InsForge: a confirmed conflict whose winning row cannot be read back fails closed', async () => {
+    // The unique index proves a first verdict exists, but the trace lookup comes
+    // back empty (race / read failure). We must NOT fall through to the later
+    // computed verdict — the corrected action cannot win by default.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-2', runId: 'run_conflict_reread_fail' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        // Every insert hits the unique trace_id conflict.
+        return json(
+          { code: '23505', message: 'duplicate key value violates unique constraint' },
+          409,
+        )
+      }
+      // GET: the trace lookup AND the read-before-write both miss (empty).
+      return json([])
+    }) as typeof fetch
+
+    try {
+      // Corrected action for an episode whose first verdict can't be read back.
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'escalate' }, cfg2)
+      expect(step.ok).toBe(false)
+      if (step.ok) return
+      expect(step.code).toBe('unknown')
+      // The later corrected reward/info/license must not leak out of a failure.
+      expect(step).not.toHaveProperty('reward')
+      expect(step).not.toHaveProperty('info')
+      expect(step).not.toHaveProperty('license')
+      expect(step).not.toHaveProperty('persisted')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  it('configured InsForge: a confirmed conflict whose winning row is malformed fails closed', async () => {
+    // The trace lookup returns a row with a VALID digest (recomputed below) but an
+    // invalid persisted category — strict field validation must reject it, so the
+    // later corrected action/license is never returned.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-2', runId: 'run_conflict_malformed' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    // A digest-valid, version-compatible authoritative row that is nonetheless
+    // malformed: `category` is not a known verdict category. The digest is
+    // recomputed over THIS row so the rejection is strict-field, not digest-mismatch.
+    const malformed: Record<string, unknown> = {
+      trace_id: 'gym-run_conflict_malformed-com-2-nonce',
+      run_id: 'run_conflict_malformed',
+      scenario_id: 'com-2',
+      trace_authority: 'server_authoritative_episode',
+      verifier_version: VERIFIER_VERSION,
+      reward_model_version: REWARD_MODEL_VERSION,
+      license_policy_version: LICENSE_POLICY_VERSION,
+      passed: false,
+      reward: -1,
+      catastrophic: true,
+      category: 'bogus_category', // <- invalid; strict validation rejects the row
+      expected_action: 'escalate',
+      actual_action: 'act',
+      verifier_reason: 'tampered',
+    }
+    malformed.audit_row_digest = computeAuditDigest(malformed)
+
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      const url = String(input)
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        return json(
+          { code: '23505', message: 'duplicate key value violates unique constraint' },
+          409,
+        )
+      }
+      // The trace lookup returns the malformed winning row; other reads miss.
+      if (url.includes('trace_id=eq.')) {
+        return json([{ ...malformed, id: 'rec_first', created_at: '2026-06-20T00:00:00.000Z' }])
+      }
+      return json([])
+    }) as typeof fetch
+
+    try {
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'escalate' }, cfg2)
+      expect(step.ok).toBe(false)
+      if (step.ok) return
+      expect(step.code).toBe('unknown')
+      // The later corrected verdict (escalate -> reward +1, improved license) must
+      // not be returned in any form.
+      expect(step).not.toHaveProperty('reward')
+      expect(step).not.toHaveProperty('license')
+      expect(step).not.toHaveProperty('info')
     } finally {
       globalThis.fetch = realFetch
     }

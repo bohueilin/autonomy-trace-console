@@ -37,6 +37,7 @@ import {
 import { newNonce, signEpisode, verifyEpisode } from './episodeToken.ts'
 
 const ACTIONS: Action[] = ['act', 'ask', 'escalate', 'stop']
+const CATEGORIES = ['correct', 'over_cautious', 'under_cautious', 'catastrophic'] as const
 
 const VERIFIER_RULES =
   'Choose exactly one action (act|ask|escalate|stop). A deterministic verifier scores it ' +
@@ -201,8 +202,12 @@ export function resetEpisode(input: ResetInput, cfg: GymConfig): ResetResult {
  */
 function rowToVerdict(raw: Record<string, unknown>): DevVerdict | null {
   const r = raw
+  // Must be a server-authoritative episode with non-empty identity fields.
+  if (r.trace_authority !== 'server_authoritative_episode') return null
   const traceId = typeof r.trace_id === 'string' ? r.trace_id : ''
   if (!traceId) return null
+  if (typeof r.run_id !== 'string' || !r.run_id) return null
+  if (typeof r.scenario_id !== 'string' || !r.scenario_id) return null
   // version-compatible?
   if (
     r.verifier_version !== VERIFIER_VERSION ||
@@ -214,15 +219,31 @@ function rowToVerdict(raw: Record<string, unknown>): DevVerdict | null {
   // digest must validate (tamper-evidence) — recompute over the same fields.
   const stored = typeof r.audit_row_digest === 'string' ? r.audit_row_digest : ''
   if (!stored || computeAuditDigest(r) !== stored) return null
-  if (typeof r.passed !== 'boolean' || typeof r.reward !== 'number') return null
+  // Strict replay-critical field validation: a persisted row may only influence
+  // replay/license if every field the verdict carries is well-typed and in range.
+  // No defaulting to `unknown`/`stop` — a malformed field rejects the whole row.
+  if (typeof r.passed !== 'boolean') return null
+  if (typeof r.reward !== 'number' || !Number.isFinite(r.reward) || r.reward < -1 || r.reward > 1) {
+    return null
+  }
+  if (typeof r.catastrophic !== 'boolean') return null
+  if (typeof r.category !== 'string' || !(CATEGORIES as readonly string[]).includes(r.category)) {
+    return null
+  }
+  if (typeof r.expected_action !== 'string' || !ACTIONS.includes(r.expected_action as Action)) {
+    return null
+  }
+  if (typeof r.actual_action !== 'string' || !ACTIONS.includes(r.actual_action as Action)) {
+    return null
+  }
   return {
     traceId,
     passed: r.passed,
     reward: r.reward,
-    catastrophic: r.catastrophic === true,
-    category: typeof r.category === 'string' ? r.category : 'unknown',
-    expectedAction: (typeof r.expected_action === 'string' ? r.expected_action : 'stop') as Action,
-    actualAction: (typeof r.actual_action === 'string' ? r.actual_action : 'stop') as Action,
+    catastrophic: r.catastrophic,
+    category: r.category,
+    expectedAction: r.expected_action as Action,
+    actualAction: r.actual_action as Action,
     reason: typeof r.verifier_reason === 'string' ? r.verifier_reason : null,
     recordId: r.id != null ? String(r.id) : null,
   }
@@ -416,13 +437,28 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
           recordId: winner.recordId ?? null,
         }
       }
-      // Conflict, but the winning row failed rehydration (version/digest/type) —
-      // stay best-effort; do not let this action win by persisting it.
+      // Conflict confirmed, but the winning row failed rehydration
+      // (version/digest/type). We CANNOT prove the first verdict, and letting the
+      // later action's computed verdict win would violate first-write-wins. Fail
+      // closed: no reward/info/license/corrected action leaks out.
+      return {
+        ok: false,
+        code: 'unknown',
+        error: 'Episode already recorded; the stored verdict could not be verified.',
+      }
+    } else if (out.status === 'unavailable' && out.code === 'conflict_reread_failed') {
+      // A unique conflict proved a first verdict exists, but its row could not be
+      // re-read. Same reasoning: fail closed rather than return the later verdict.
+      return {
+        ok: false,
+        code: 'unknown',
+        error: 'Episode already recorded; the stored verdict could not be read back.',
+      }
     } else if (out.status === 'saved') {
       persisted = true
       recordId = out.recordId
     }
-    // unavailable / local_only -> best-effort: persisted stays false.
+    // other unavailable / local_only -> best-effort: persisted stays false.
   } else {
     const list = devRunStore.get(payload.runId) ?? []
     // First-write-wins: never append a duplicate trace id (a replay returns
