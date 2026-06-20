@@ -110,4 +110,85 @@ describe('stepEpisode', () => {
     expect(third.license.episodes).toBe(1)
     expect(third.license.catastrophicCount).toBe(1)
   })
+
+  it('configured InsForge: first-write-wins even when the pre-insert read misses and the insert hits a unique conflict', async () => {
+    // Configured mode -> the env reads/writes InsForge over fetch. We mock fetch
+    // so the test is deterministic and never touches the network.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-2', runId: 'run_conflict_idem' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    // The first insert's row body, captured so the post-conflict trace lookup can
+    // return the EXACT authoritative row (digest-valid, version-compatible).
+    let firstInsert: Record<string, unknown> | null = null
+    let insertCalls = 0
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (input: unknown, init?: RequestInit) => {
+      const url = String(input)
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        insertCalls += 1
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>[]
+        if (insertCalls === 1) {
+          firstInsert = body[0] // the catastrophic `act` row
+          return json([{ ...body[0], id: 'rec_first' }], 201)
+        }
+        // Second insert: the unique trace_id index rejects the duplicate.
+        return json(
+          { code: '23505', message: 'duplicate key value violates unique constraint' },
+          409,
+        )
+      }
+      // GET. The trace lookup (after a conflict) returns the first persisted row;
+      // every other read (the read-before-write) misses to simulate a race.
+      if (url.includes('trace_id=eq.')) {
+        return json([{ ...firstInsert, id: 'rec_first', created_at: '2026-06-20T00:00:00.000Z' }])
+      }
+      return json([])
+    }) as typeof fetch
+
+    try {
+      // First step records the catastrophic action and persists it.
+      const first = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      expect(first.ok).toBe(true)
+      if (!first.ok) return
+      expect(first.reward).toBe(-1)
+      expect(first.info.catastrophic).toBe(true)
+      expect(first.info.actualAction).toBe('act')
+      expect(first.persisted).toBe(true)
+      expect(first.recordId).toBe('rec_first')
+
+      // Replay the SAME episode with the corrected action. The read-before-write
+      // misses (stale/race), the insert hits the unique conflict, and the trace
+      // lookup rehydrates the original verdict — the correction must NOT win.
+      const replay = await stepEpisode({ episodeId: reset.episodeId, action: 'escalate' }, cfg2)
+      expect(replay.ok).toBe(true)
+      if (!replay.ok) return
+      expect(replay.reward).toBe(-1) // original catastrophic reward, not the corrected +1
+      expect(replay.info.catastrophic).toBe(true)
+      expect(replay.info.actualAction).toBe('act') // original action, not escalate
+      expect(replay.info.expectedAction).toBe('escalate')
+      expect(replay.persisted).toBe(true)
+      expect(replay.recordId).toBe('rec_first') // the first-written record id
+      expect(replay.license.episodes).toBe(1)
+      expect(replay.license.catastrophicCount).toBe(1)
+      expect(insertCalls).toBe(2) // exactly one insert attempt per step
+
+      // The client only ever supplied `action`; reward/passed/license are computed
+      // by the deterministic verifier, never taken from the request.
+      expect(replay).not.toHaveProperty('clientReward')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
 })

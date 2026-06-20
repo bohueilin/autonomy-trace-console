@@ -31,7 +31,7 @@ import {
 import {
   fetchRecentEvidence,
   insforgeConfigured,
-  persistEpisode,
+  persistEpisodeOnce,
   type InsforgeConfig,
 } from '../insforgeStore.ts'
 import { newNonce, signEpisode, verifyEpisode } from './episodeToken.ts'
@@ -194,6 +194,40 @@ export function resetEpisode(input: ResetInput, cfg: GymConfig): ResetResult {
   }
 }
 
+/**
+ * Rehydrate a persisted InsForge row into a replayable verdict, or null if the
+ * row is not a version-compatible, digest-valid, well-typed authoritative episode.
+ * All extracted fields live inside the validated digest, so they are tamper-checked.
+ */
+function rowToVerdict(raw: Record<string, unknown>): DevVerdict | null {
+  const r = raw
+  const traceId = typeof r.trace_id === 'string' ? r.trace_id : ''
+  if (!traceId) return null
+  // version-compatible?
+  if (
+    r.verifier_version !== VERIFIER_VERSION ||
+    r.reward_model_version !== REWARD_MODEL_VERSION ||
+    r.license_policy_version !== LICENSE_POLICY_VERSION
+  ) {
+    return null
+  }
+  // digest must validate (tamper-evidence) — recompute over the same fields.
+  const stored = typeof r.audit_row_digest === 'string' ? r.audit_row_digest : ''
+  if (!stored || computeAuditDigest(r) !== stored) return null
+  if (typeof r.passed !== 'boolean' || typeof r.reward !== 'number') return null
+  return {
+    traceId,
+    passed: r.passed,
+    reward: r.reward,
+    catastrophic: r.catastrophic === true,
+    category: typeof r.category === 'string' ? r.category : 'unknown',
+    expectedAction: (typeof r.expected_action === 'string' ? r.expected_action : 'stop') as Action,
+    actualAction: (typeof r.actual_action === 'string' ? r.actual_action : 'stop') as Action,
+    reason: typeof r.verifier_reason === 'string' ? r.verifier_reason : null,
+    recordId: r.id != null ? String(r.id) : null,
+  }
+}
+
 /** Recompute this run's trusted verdicts from persisted InsForge rows. */
 async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<DevVerdict[]> {
   if (!insforgeConfigured(cfg.insforge)) {
@@ -219,37 +253,11 @@ async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<DevVerdic
   const out: DevVerdict[] = []
   const seen = new Set<string>()
   for (const raw of rows) {
-    const r = raw as Record<string, unknown>
-    const traceId = typeof r.trace_id === 'string' ? r.trace_id : ''
-    if (!traceId || seen.has(traceId)) continue
-    // version-compatible?
-    if (
-      r.verifier_version !== VERIFIER_VERSION ||
-      r.reward_model_version !== REWARD_MODEL_VERSION ||
-      r.license_policy_version !== LICENSE_POLICY_VERSION
-    ) {
-      continue
-    }
-    // digest must validate (tamper-evidence) — recompute over the same fields.
-    const stored = typeof r.audit_row_digest === 'string' ? r.audit_row_digest : ''
-    if (!stored || computeAuditDigest(r) !== stored) continue
-    if (typeof r.passed !== 'boolean' || typeof r.reward !== 'number') continue
-    seen.add(traceId)
-    // Reconstruct the replayable verdict from persisted evidence fields. These
-    // are all inside the validated digest above, so they are tamper-checked.
-    out.push({
-      traceId,
-      passed: r.passed,
-      reward: r.reward,
-      catastrophic: r.catastrophic === true,
-      category: typeof r.category === 'string' ? r.category : 'unknown',
-      expectedAction: (typeof r.expected_action === 'string'
-        ? r.expected_action
-        : 'stop') as Action,
-      actualAction: (typeof r.actual_action === 'string' ? r.actual_action : 'stop') as Action,
-      reason: typeof r.verifier_reason === 'string' ? r.verifier_reason : null,
-      recordId: r.id != null ? String(r.id) : null,
-    })
+    const verdict = rowToVerdict(raw as Record<string, unknown>)
+    // First-write-wins dedup: skip malformed rows and any trace id already kept.
+    if (!verdict || seen.has(verdict.traceId)) continue
+    seen.add(verdict.traceId)
+    out.push(verdict)
   }
   return out
 }
@@ -380,9 +388,41 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
   let persisted = false
   let recordId: string | null = null
   if (insforgeConfigured(cfg.insforge)) {
-    const out = await persistEpisode(auditRow, cfg.insforge)
-    persisted = out.status === 'saved'
-    recordId = out.status === 'saved' ? out.recordId : null
+    const out = await persistEpisodeOnce(auditRow, cfg.insforge)
+    if (out.status === 'existing') {
+      // Storage-level first-write-wins: the pre-insert read missed an existing
+      // row and our insert hit the unique trace_id index. Rehydrate the WINNING
+      // row and replay it — the later action must not improve the response.
+      const winner = rowToVerdict(out.row)
+      if (winner) {
+        const verdicts = [...prior, winner].map(toLicenseVerdict)
+        return {
+          ok: true,
+          episodeId: input.episodeId!,
+          runId: payload.runId,
+          agentId: payload.agentId,
+          reward: winner.reward,
+          done: true,
+          info: {
+            passed: winner.passed,
+            category: winner.category,
+            catastrophic: winner.catastrophic,
+            expectedAction: winner.expectedAction,
+            actualAction: winner.actualAction,
+            reason: winner.reason,
+          },
+          license: toLicense(verdicts),
+          persisted: true,
+          recordId: winner.recordId ?? null,
+        }
+      }
+      // Conflict, but the winning row failed rehydration (version/digest/type) —
+      // stay best-effort; do not let this action win by persisting it.
+    } else if (out.status === 'saved') {
+      persisted = true
+      recordId = out.recordId
+    }
+    // unavailable / local_only -> best-effort: persisted stays false.
   } else {
     const list = devRunStore.get(payload.runId) ?? []
     // First-write-wins: never append a duplicate trace id (a replay returns

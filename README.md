@@ -360,6 +360,19 @@ Suggested columns (or use a single JSON column + a few scalars — the hackathon
 build sends the flat row below). Records are inserted via
 `POST {INSFORGE_BASE_URL}/api/database/records/eval_episodes`.
 
+**Idempotency invariant:** authoritative gym evidence requires a **unique
+`trace_id`** — one row per signed episode (first-write-wins). Apply the migration
+in [`migrations/`](migrations/) that adds the partial unique index on
+`eval_episodes(trace_id)` for `trace_authority = 'server_authoritative_episode'`:
+
+```bash
+npx @insforge/cli db migrations up --all
+```
+
+With the index in place, a race (two concurrent steps whose pre-insert reads both
+miss) cannot persist two authoritative rows: the second insert hits the unique
+conflict and the server replays the first verdict instead.
+
 **Without these vars the app still works** — episodes run server-side and the
 Evidence panel shows **Local only**.
 

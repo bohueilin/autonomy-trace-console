@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { computeAuditDigest, parseEvidenceRow } from './runEpisodeHandler.ts'
 import {
+  ENVIRONMENT_NAME,
   LICENSE_POLICY_VERSION,
   REWARD_MODEL_VERSION,
+  ROW_SCHEMA_VERSION,
+  SCENARIO_REGISTRY_VERSION,
   VERIFIER_VERSION,
+  getEvalVersions,
 } from './evalVersions.ts'
+import { toModelView } from '../src/agent.ts'
+import { SCENARIO_VERSION, seedScenarios } from '../src/seedScenarios.ts'
 
 // A minimal but valid, current-schema, server-authoritative evidence row. The
 // gym /v1 path persists rows with `external` provenance; the unified evidence
@@ -76,5 +82,75 @@ describe('parseEvidenceRow — unified evidence schema', () => {
   it('rejects unknown provenance values', () => {
     expect(parseEvidenceRow({ ...baseRow, requested_policy_mode: 'wat' })).toBeNull()
     expect(parseEvidenceRow({ ...baseRow, actual_policy_source: 'rogue' })).toBeNull()
+  })
+
+  it('accepts a real gym-produced external row (full stepEpisode field shape)', () => {
+    // Build a row with the exact field set stepEpisode persists for a gym /v1
+    // episode — not the legacy row with provenance flipped, but the real shape
+    // (scenario_snapshot, actual_policy_input, external provenance, model_name).
+    const scenario = seedScenarios.find((s) => s.id === 'com-1')!
+    const view = toModelView(scenario)
+    const versions = getEvalVersions()
+    const gymRow: Record<string, unknown> = {
+      trace_id: 'gym-run_abc-com-1-nonce123',
+      run_id: 'run_abc',
+      episode_index: 1,
+      run_sequence: 1,
+      trace_authority: 'server_authoritative_episode',
+      environment_name: ENVIRONMENT_NAME,
+      scenario_registry_version: SCENARIO_REGISTRY_VERSION,
+      verifier_version: VERIFIER_VERSION,
+      reward_model_version: REWARD_MODEL_VERSION,
+      license_policy_version: LICENSE_POLICY_VERSION,
+      app_commit: versions.appCommit,
+      row_schema_version: ROW_SCHEMA_VERSION,
+      scenario_id: scenario.id,
+      scenario_version: SCENARIO_VERSION,
+      scenario_title: scenario.title,
+      domain: scenario.domain,
+      scenario_snapshot: scenario,
+      requested_policy_mode: 'external',
+      actual_policy_source: 'external',
+      fallback: false,
+      fallback_code: null,
+      attempted_model_input: null,
+      actual_policy_input: view,
+      model_name: 'external-agent/trainer-7',
+      action: 'act',
+      rationale: 'visible signals are within policy',
+      requested_info: '',
+      confidence: 0.8,
+      passed: true,
+      reward: 1,
+      category: 'correct',
+      catastrophic: false,
+      expected_action: 'act',
+      actual_action: 'act',
+      verifier_reason: null,
+      verifier_checks: [],
+      license_level: 'L4',
+      license_summary: {
+        level: 'L4',
+        name: 'Autonomous',
+        passRate: 1,
+        avgReward: 1,
+        catastrophicCount: 0,
+        episodes: 1,
+      },
+      created_at: '2026-06-20T00:00:00.000Z',
+    }
+
+    const item = parseEvidenceRow(digested(gymRow))
+    expect(item).not.toBeNull()
+    // digest-valid (tamper-evident) ...
+    expect(item?.digestStatus).toBe('valid')
+    expect(item?.digestPresent).toBe(true)
+    // ... version-compatible (so: trusted evidence AND license-eligible) ...
+    expect(item?.versionMismatch).toBe(false)
+    // ... carrying the real external provenance.
+    expect(item?.requestedPolicyMode).toBe('external')
+    expect(item?.actualPolicySource).toBe('external')
+    expect(item?.reward).toBe(1)
+    expect(item?.passed).toBe(true)
   })
 })

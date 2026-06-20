@@ -1,24 +1,53 @@
-## Review — Round 1 Vitest Suite
+## Review
 
-Verdict: **ACCEPT**.
+Verdict: ACCEPT for this round’s schema-unification change.
 
-The round added a real `npm test` gate and focused Vitest coverage for the core deterministic pieces without changing verifier, license, digest, token, or gym runtime behavior. Gates are green: `.agentloop/gates.log:2` build PASS, `.agentloop/gates.log:3` lint PASS, `.agentloop/gates.log:4` `verify:evidence` PASS, and `.agentloop/gates.log:5`-`.agentloop/gates.log:6` show 5 test files / 25 tests passing. The new scripts in `package.json:12`-`package.json:14` correctly make `verify:evidence`, `test`, and `gates` first-class commands.
+P0: None.
 
-### P0 Findings
+P1: Scope breach: the design explicitly said not to touch gym replay/idempotency logic, but this commit changed `server/env/gym.ts` and `server/env/gym.test.ts`. See [.agentloop/design.md](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/design.md:13) and [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:272). The change looks directionally correct, but it violates the two-agent protocol’s small-diff boundary. Recommendation: next round should either fully validate the gym idempotency work or revert it intentionally.
 
-- **P0 — Existing gym replay/idempotency hole remains untested and must be fixed next.** `server/env/gym.ts:226` derives `traceId` from the reusable token nonce, and `server/env/gym.ts:232`-`server/env/gym.ts:235` filters prior verdicts with that same trace id before adding the current verdict. That means a valid `episodeId` can be stepped once with a catastrophic action and then stepped again with a better action, effectively replacing the episode's contribution to the returned license. Round 1's token tests cover malformed/tampered tokens (`server/env/episodeToken.test.ts:16`-`server/env/episodeToken.test.ts:39`) and gym tests cover a tampered token (`server/env/gym.test.ts:63`-`server/env/gym.test.ts:68`), but there is no valid-token replay test. Recommendation: next round must make stepping first-write-wins / idempotent and add a regression test proving a later different action cannot overwrite a first reward.
+P1: `/v1` first-write-wins is still not atomic with configured InsForge. `stepEpisode` loads prior verdicts, checks `existing`, then later writes, so two concurrent steps for the same signed episode can both miss the row and both persist conflicting rows. See [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:275) and [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:382). Recommendation: enforce uniqueness at the storage boundary on `trace_id` or an explicit idempotency key, use insert-conflict handling, then re-read and return the winning verdict.
 
-- **P0 — Existing evidence schema split still rejects gym-created evidence in the shared status path.** The gym writes `requested_policy_mode: 'external'` and `actual_policy_source: 'external'` in `server/env/gym.ts:274`-`server/env/gym.ts:275`, while the shared parser only allows `mock | nebius` via `POLICY_MODES` in `server/runEpisodeHandler.ts:355` and rejects anything else in `server/runEpisodeHandler.ts:412`-`server/runEpisodeHandler.ts:414`. The Round 1 tests validate gym reset/step happy paths (`server/env/gym.test.ts:35`-`server/env/gym.test.ts:50`), but do not prove gym rows rehydrate through `/api/evidence/status`. Recommendation: unify the authoritative evidence parser/types around `mock | nebius | external`, and add a test that an external gym row is digest-valid/trusted in the evidence status path.
+P1: Trust boundary remains DB-write-authenticated, not digest-authenticated. `parseEvidenceRow` accepts any row with allowed provenance and a recomputed plain SHA digest, and license status includes any compatible non-mismatched row. See [server/runEpisodeHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.ts:417), [server/runEpisodeHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.ts:444), and [server/runEpisodeHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.ts:617). This is acceptable for the current service-key-only prototype, but not production hardening. Recommendation: pair InsForge RLS/service-only writes with either server-only write isolation or an HMAC/signature if untrusted writers may ever reach the table.
 
-### P1 Findings
+P2: The new external evidence tests use a synthetic legacy-shaped row, not an actual `/v1` row produced by `stepEpisode`. See [scripts/verifyServerEvidence.mjs](/Users/bohueilin/hackathons/0619/autonomy-trace-console/scripts/verifyServerEvidence.mjs:349) and [server/runEpisodeHandler.test.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/runEpisodeHandler.test.ts:52). Recommendation: add a focused mocked-persistence test that steps the gym, captures the persisted audit row, and proves `parseEvidenceRow` and `/api/evidence/status` include it as trusted external evidence.
 
-- **P1 — The tests are honest but still mostly unit-level; they do not pin cross-path evidence behavior.** The verifier suite covers correct, catastrophic, over-cautious, and under-cautious scoring (`src/verifier.test.ts:17`-`src/verifier.test.ts:51`). The license suite covers threshold levels and catastrophic capping (`src/license.test.ts:12`-`src/license.test.ts:57`). The digest suite covers stable canonicalization, allow-listed sensitivity, and excluded metadata (`server/evidence/digest.test.ts:4`-`server/evidence/digest.test.ts:56`). These are meaningful invariants, not tautologies. The missing high-value layer is integration: reset -> step -> persisted/digest row -> parser/status/license recomputation, especially for external gym evidence.
+P2: The previous design file has stray trailing text after the gates fence at [.agentloop/design.md](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/design.md:65). Recommendation: overwrite cleanly in the next design.
 
-- **P1 — InsForge read failure can silently reset gym license history and is not covered.** `server/env/gym.ts:182`-`server/env/gym.ts:183` treats any non-OK read-back as an empty prior verdict set. That may be acceptable for local dev, but with InsForge configured it can undercount prior failures and overstate the current license. Recommendation: once replay/schema are fixed, return an explicit degraded/failed status for configured InsForge read failures instead of silently computing from only the current step.
+Acceptance criteria: Met. `EvidencePolicySource` keeps `AgentSource` narrow, `parseEvidenceRow` accepts `external`, unknown provenance is rejected, compact rows type-check, and digest checks still pass. Gates are green per [.agentloop/gates.log](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/gates.log:87).
 
-### P2 Findings
+## Next design
 
-- **P2 — `.agentloop/implementation.md` is stale relative to the committed state.** It still says `STATUS: BLOCKED` and claims `npm run build` failed because Vitest was missing, while `.agentloop/gates.log:2`-`.agentloop/gates.log:7` and the committed `package-lock.json` show the install landed and gates passed. This does not invalidate the code/test round, but the blackboard should be consistent because the loop depends on it for low-human operation. Recommendation: future implementation reports should be updated after any human/manual unblock before commit.
+Objective: Make gym `/v1` evidence idempotency production-shaped and prove real gym external rows flow into trusted evidence.
 
-- **P2 — Good first test suite, but a few edge cases remain worth adding after P0.** Episode tokens do not test missing/non-number `iat`, empty `nonce`, or token expiry because expiry does not exist yet (`server/env/episodeToken.ts:14`-`server/env/episodeToken.ts:21`). Gym reset does not test caller-supplied `runId` / `agentId` trimming or bounds. Digest tests use a minimal row (`server/evidence/digest.test.ts:18`-`server/evidence/digest.test.ts:25`), so they do not pin all audit fields. These are lower priority than replay/idempotency and evidence schema unification.
+Scope:
+- `server/env/gym.ts`
+- `server/env/gym.test.ts`
+- `server/insforgeStore.ts`
+- `server/runEpisodeHandler.test.ts`
+- `scripts/verifyServerEvidence.mjs`
+- Optional migration/docs stub only if needed to express the unique `trace_id` requirement.
 
+Steps:
+1. Add an explicit storage-level idempotency plan for gym rows: `trace_id` must be unique for authoritative evidence.
+2. Update `persistEpisode` or add a gym-specific persistence helper so duplicate `trace_id` writes do not create conflicting authoritative rows.
+3. On duplicate/conflict, re-read the existing row and return the original verdict, reward, info, license, and record id.
+4. Keep the dev fallback behavior first-write-wins, but add a test for configured-persistence replay/concurrent duplicate behavior using mocked fetch.
+5. Add a test that runs `resetEpisode` + `stepEpisode`, captures the actual persisted `/v1` audit row, parses it with `parseEvidenceRow`, and proves it is trusted/license-eligible.
+6. Do not change verifier or license scoring semantics.
+
+Acceptance criteria:
+- Replaying the same episode cannot overwrite or improve the first verdict in dev fallback or configured persistence mode.
+- Duplicate/concurrent same-episode writes produce at most one authoritative row per `trace_id`.
+- The response for a replay returns the original action/result, not the later submitted action.
+- A real gym-produced `external` row is accepted by evidence parsing and included in trusted evidence.
+- No client-supplied reward/pass/license/scenario fields are trusted.
+
+Gates:
+```bash
+npm run build
+npm run lint
+npm run verify:evidence
+npm test
+npm run gates
+```

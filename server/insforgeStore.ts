@@ -24,6 +24,16 @@ export type PersistOutcome =
   | { status: 'local_only' } // InsForge not configured
   | { status: 'unavailable'; code: string }
 
+// Conflict-aware persistence outcome. `existing` means the unique index rejected
+// this insert because an authoritative row for the same trace_id already exists;
+// the existing row was re-read and is returned so the caller can replay it
+// (first-write-wins) instead of letting the later action win.
+export type PersistOnceOutcome =
+  | { status: 'saved'; recordId: string | null }
+  | { status: 'existing'; recordId: string | null; row: Record<string, unknown> }
+  | { status: 'local_only' } // InsForge not configured
+  | { status: 'unavailable'; code: string }
+
 export type ReadOutcome =
   | { status: 'ok'; rows: Record<string, unknown>[] }
   | { status: 'local_only' } // InsForge not configured
@@ -93,6 +103,162 @@ export async function persistEpisode(
     const aborted = (err as { name?: string } | undefined)?.name === 'AbortError'
     console.error('[insforge] insert failed:', aborted ? 'timeout' : err)
     return { status: 'unavailable', code: aborted ? 'timeout' : 'unreachable' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * True when a non-2xx insert response indicates a unique-constraint conflict.
+ * HTTP 409 is the canonical signal; some InsForge/Postgres stacks instead surface
+ * the unique violation as a 4xx carrying SQLSTATE 23505 or a "duplicate key" /
+ * "unique constraint" message. We only inspect the body for those conflict
+ * markers — we never log it, and a DB error body never contains our API key.
+ */
+function isUniqueConflict(status: number, bodyText: string): boolean {
+  if (status === 409) return true
+  const t = bodyText.toLowerCase()
+  return (
+    t.includes('23505') ||
+    t.includes('duplicate key') ||
+    t.includes('unique constraint') ||
+    t.includes('already exists')
+  )
+}
+
+/**
+ * Conflict-aware persist for gym episode idempotency. Inserts the row (array body,
+ * as the data API requires). On a unique conflict — the storage boundary added in
+ * migration 20260620080000 — it re-reads the existing authoritative row by
+ * trace_id and returns it as `existing`, so the caller can replay the first
+ * verdict instead of letting a later action win. Non-conflict failures stay
+ * `unavailable`. Never throws, never surfaces the key.
+ */
+export async function persistEpisodeOnce(
+  row: Record<string, unknown>,
+  cfg: InsforgeConfig,
+): Promise<PersistOnceOutcome> {
+  if (!insforgeConfigured(cfg)) {
+    return { status: 'local_only' }
+  }
+
+  const base = cfg.baseUrl!.replace(/\/+$/, '')
+  const url = `${base}/api/database/records/${INSFORGE_TABLE}`
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs ?? 8000)
+
+  // Same insert hygiene as persistEpisode: InsForge auto-manages id/created_at/
+  // updated_at and rejects inserts that include them. created_at is excluded from
+  // the digest, so dropping it here is safe.
+  const insertRow: Record<string, unknown> = { ...row }
+  delete insertRow.id
+  delete insertRow.created_at
+  delete insertRow.updated_at
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${cfg.apiKey}`,
+        prefer: 'return=representation',
+      },
+      body: JSON.stringify([insertRow]), // body must be an array, even for one record
+      signal: controller.signal,
+    })
+
+    if (resp.ok) {
+      let recordId: string | null = null
+      try {
+        const data = (await resp.json()) as unknown
+        if (Array.isArray(data)) {
+          recordId = (data[0] as { id?: string } | undefined)?.id ?? null
+        } else if (data && typeof data === 'object') {
+          recordId = (data as { id?: string }).id ?? null
+        }
+      } catch {
+        // saved, but response wasn't parseable — leave recordId null.
+      }
+      return { status: 'saved', recordId }
+    }
+
+    // Non-2xx: read the body (text, never logged) only to classify a conflict.
+    let bodyText = ''
+    try {
+      bodyText = await resp.text()
+    } catch {
+      // ignore — treat as no conflict markers.
+    }
+    if (isUniqueConflict(resp.status, bodyText)) {
+      // The unique index won the race: an authoritative row for this trace_id
+      // already exists. Re-read it so the caller replays the first verdict.
+      const traceId = typeof row.trace_id === 'string' ? row.trace_id : ''
+      const read = traceId
+        ? await fetchEvidenceByTraceId(cfg, traceId)
+        : ({ status: 'unavailable' } as ReadOutcome)
+      if (read.status === 'ok' && read.rows.length > 0) {
+        const existing = read.rows[0]
+        const recordId = existing.id != null ? String(existing.id) : null
+        return { status: 'existing', recordId, row: existing }
+      }
+      // Conflict confirmed but the re-read failed — stay best-effort.
+      console.error('[insforge] insert conflict; existing-row re-read failed')
+      return { status: 'unavailable', code: 'conflict_reread_failed' }
+    }
+
+    console.error(`[insforge] insert ${resp.status} ${resp.statusText}`)
+    return { status: 'unavailable', code: `http_${resp.status}` }
+  } catch (err) {
+    const aborted = (err as { name?: string } | undefined)?.name === 'AbortError'
+    console.error('[insforge] insert failed:', aborted ? 'timeout' : err)
+    return { status: 'unavailable', code: aborted ? 'timeout' : 'unreachable' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Look up a single authoritative evidence row by trace_id. Best-effort and
+ * read-only, same guarantees as fetchRecentEvidence (never throws, never surfaces
+ * the key / raw errors / base URL). Used to rehydrate the winning row after a
+ * unique-conflict insert.
+ */
+export async function fetchEvidenceByTraceId(
+  cfg: InsforgeConfig,
+  traceId: string,
+): Promise<ReadOutcome> {
+  if (!insforgeConfigured(cfg)) {
+    return { status: 'local_only' }
+  }
+
+  const base = cfg.baseUrl!.replace(/\/+$/, '')
+  const url =
+    `${base}/api/database/records/${INSFORGE_TABLE}` +
+    `?trace_authority=eq.server_authoritative_episode` +
+    `&trace_id=eq.${encodeURIComponent(traceId)}&limit=1`
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs ?? 8000)
+
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { authorization: `Bearer ${cfg.apiKey}` },
+      signal: controller.signal,
+    })
+    if (!resp.ok) {
+      console.error(`[insforge] trace lookup ${resp.status} ${resp.statusText}`)
+      return { status: 'unavailable' }
+    }
+    const data = (await resp.json()) as unknown
+    if (!Array.isArray(data)) {
+      console.error('[insforge] trace lookup: unexpected response shape')
+      return { status: 'error' }
+    }
+    return { status: 'ok', rows: data as Record<string, unknown>[] }
+  } catch (err) {
+    const aborted = (err as { name?: string } | undefined)?.name === 'AbortError'
+    console.error('[insforge] trace lookup failed:', aborted ? 'timeout' : err)
+    return { status: 'unavailable' }
   } finally {
     clearTimeout(timer)
   }
