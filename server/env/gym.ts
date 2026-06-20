@@ -478,8 +478,18 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
     } else if (out.status === 'saved') {
       persisted = true
       recordId = out.recordId
+    } else if (out.status === 'unavailable') {
+      // The verdict was scored but NOT durably saved (e.g. http_500/timeout/
+      // unreachable). Returning a reward/license here would grant autonomy on
+      // un-persisted evidence, violating "Gym is canonical". Fail closed: emit no
+      // reward/info/license/persistence. (`conflict_reread_failed` is handled
+      // above; `local_only` cannot occur inside this configured branch.)
+      return {
+        ok: false,
+        code: 'unknown',
+        error: 'Episode could not be persisted; refusing to grant a license without durable evidence.',
+      }
     }
-    // other unavailable / local_only -> best-effort: persisted stays false.
   } else {
     const list = devRunStore.get(payload.runId) ?? []
     // First-write-wins: never append a duplicate trace id (a replay returns

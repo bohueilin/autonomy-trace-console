@@ -407,4 +407,91 @@ describe('stepEpisode', () => {
       globalThis.fetch = realFetch
     }
   })
+
+  it('configured InsForge: an insert failure (HTTP 500) after scoring fails closed', async () => {
+    // History reads `[]` (trusted-but-empty), the verifier scores, but the insert
+    // errors out. The verdict was NOT durably saved, so we MUST NOT return a
+    // reward/license computed from un-persisted evidence.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-1', runId: 'run_insert_500' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        // Insert errors with a non-conflict HTTP 500 -> unavailable/http_500.
+        return json({ message: 'internal error' }, 500)
+      }
+      // Run-history GET succeeds with an empty trusted history.
+      return json([])
+    }) as typeof fetch
+
+    try {
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      expect(step.ok).toBe(false)
+      if (step.ok) return
+      expect(step.code).toBe('unknown')
+      // No reward/license leaks from a verdict that was never persisted.
+      expect(step).not.toHaveProperty('reward')
+      expect(step).not.toHaveProperty('info')
+      expect(step).not.toHaveProperty('license')
+      expect(step).not.toHaveProperty('persisted')
+      expect(step).not.toHaveProperty('recordId')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  it('configured InsForge: an insert that throws (unreachable) after scoring fails closed', async () => {
+    // History reads `[]`, the verifier scores, but the insert POST rejects (network
+    // failure) -> unavailable/unreachable. Same fail-closed contract: no reward.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-1', runId: 'run_insert_unreachable' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        // Simulate an unreachable host: the insert POST rejects.
+        throw new TypeError('fetch failed')
+      }
+      return json([])
+    }) as typeof fetch
+
+    try {
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      expect(step.ok).toBe(false)
+      if (step.ok) return
+      expect(step.code).toBe('unknown')
+      expect(step).not.toHaveProperty('reward')
+      expect(step).not.toHaveProperty('info')
+      expect(step).not.toHaveProperty('license')
+      expect(step).not.toHaveProperty('persisted')
+      expect(step).not.toHaveProperty('recordId')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
 })
