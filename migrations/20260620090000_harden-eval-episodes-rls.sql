@@ -11,68 +11,15 @@
 --
 -- This migration does NOT touch the existing first-write-wins partial unique index
 -- (`20260620080000_harden-eval-episode-idempotency.sql`); that invariant stays in
--- its own file. Schema creation here is idempotent so applying it after a table
--- already exists is safe.
+-- its own file. The table and all of its columns are created by the baseline
+-- migration (`20260620000000_create-eval-episodes-baseline.sql`), which sorts
+-- first — so this migration only adds constraints and RLS to a table that already
+-- exists with the full audit-row schema.
 
--- 1. Migration-managed schema: the flat audit row the server writes. Columns use
---    IF NOT EXISTS so this is a no-op on projects where the table predates it.
-CREATE TABLE IF NOT EXISTS public.eval_episodes (
-  -- InsForge-managed / storage
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  -- identity / order
-  trace_id text,
-  run_id text,
-  episode_index integer,
-  run_sequence integer,
-  trace_authority text,
-  -- attribution versions
-  environment_name text,
-  scenario_registry_version text,
-  verifier_version text,
-  reward_model_version text,
-  license_policy_version text,
-  app_commit text,
-  row_schema_version text,
-  -- scenario
-  scenario_id text,
-  scenario_version text,
-  scenario_title text,
-  domain text,
-  scenario_snapshot jsonb,
-  -- policy provenance / input
-  requested_policy_mode text,
-  actual_policy_source text,
-  fallback boolean,
-  fallback_code text,
-  attempted_model_input jsonb,
-  actual_policy_input jsonb,
-  model_name text,
-  -- decision
-  action text,
-  rationale text,
-  requested_info text,
-  confidence double precision,
-  -- deterministic verifier / license result
-  passed boolean,
-  reward double precision,
-  category text,
-  catastrophic boolean,
-  expected_action text,
-  actual_action text,
-  verifier_reason text,
-  verifier_checks jsonb,
-  license_level text,
-  license_summary jsonb,
-  -- integrity
-  audit_row_digest text
-);
-
--- 2. Evidence invariants enforced at the storage boundary (best-effort: only
+-- 1. Evidence invariants enforced at the storage boundary (best-effort: only
 --    constraints that are always true for authoritative rows the server writes).
---    NOT VALID-free adds via DO blocks so re-running is safe and a pre-existing
---    table is not blocked on legacy data.
+--    Each constraint is added as NOT VALID and guarded by a pg_constraint check,
+--    so re-running is safe and a pre-existing table is not blocked on legacy data.
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'eval_episodes_trace_authority_chk') THEN
@@ -130,17 +77,17 @@ BEGIN
   END IF;
 END $$;
 
--- 3. Enable Row-Level Security. With RLS on and NO permissive policies for the
+-- 2. Enable Row-Level Security. With RLS on and NO permissive policies for the
 --    client roles, `anon`/`authenticated` cannot read or write any row.
 ALTER TABLE public.eval_episodes ENABLE ROW LEVEL SECURITY;
 
--- 4. Revoke direct table access from runtime client roles. The server uses its
+-- 3. Revoke direct table access from runtime client roles. The server uses its
 --    admin/service credentials (which bypass RLS) — clients must never touch the
 --    table directly. We intentionally add NO `anon`/`authenticated` SELECT/INSERT/
 --    UPDATE/DELETE policy and NO permissive always-true policy.
 REVOKE ALL ON TABLE public.eval_episodes FROM anon, authenticated;
 
--- 5. Document the table + RLS posture for future operators.
+-- 4. Document the table + RLS posture for future operators.
 COMMENT ON TABLE public.eval_episodes IS
   'Tamper-evident gym evidence. Written/read ONLY by the standalone server using server-side admin credentials; public clients use the /v1 and /api server routes. RLS is enabled and anon/authenticated have no policies and no direct privileges. The deterministic verifier/license code is the source of truth; InsForge preserves the audit row.';
 
