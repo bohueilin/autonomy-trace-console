@@ -1,42 +1,68 @@
 ## Review
 
-**P0 (must-fix): none.**
+**Verdict: ACCEPT for this round's change.** The narrow design was implemented: configured `/v1` insert failures now fail closed without returning reward/info/license/persistence fields, and gates are green.
 
-**P1 (architecture): configured `/v1` still grants a license when evidence persistence fails after scoring.**  
-`server/env/gym.ts:432` calls `persistEpisodeOnce`, but only handles `existing`, `conflict_reread_failed`, and `saved`; every other configured persistence failure falls through as “best-effort” at `server/env/gym.ts:482`, then returns `ok: true` with `reward`, `info`, and `license` at `server/env/gym.ts:493`. The store explicitly returns `unavailable` for non-conflict insert HTTP errors/timeouts at `server/insforgeStore.ts:209` and `server/insforgeStore.ts:214`. That means a configured production gym can award autonomy without durable tamper-evident evidence. Recommendation: in configured mode, fail closed on any `persistEpisodeOnce(...).status === "unavailable"` unless it was already rehydrated as `existing`; return `ok:false, code:"unknown"` with no reward/info/license.
+### P0 (Must-Fix)
 
-**P2 (quality): current round is correctly implemented and tested.**  
-The design required configured history read failures to fail closed before replay/verify/license/persist at `.agentloop/design.md:23` and `.agentloop/design.md:29`. The implementation now returns a typed load result at `server/env/gym.ts:256`, maps non-`ok` InsForge reads to unavailable at `server/env/gym.ts:266`, and exits before verifier/license/persistence at `server/env/gym.ts:317`. Tests cover HTTP 500 and parse-error history reads with no POST and no reward/info/license leakage at `server/env/gym.test.ts:320` and `server/env/gym.test.ts:366`. Gates are honest for this scope: build/lint/evidence/tests ran and ended `GATES: PASS` at `.agentloop/gates.log:6`, `.agentloop/gates.log:19`, `.agentloop/gates.log:23`, `.agentloop/gates.log:69`, and `.agentloop/gates.log:96`.
+None for this round.
 
-**Verdict: ACCEPT** for this round’s change. The requested acceptance criteria were met; the P1 above is the next trust-boundary gap, not a regression in this patch.
+### P1 (Architecture)
+
+- `server/runEpisodeHandler.ts:298-314` and `server/main.ts:83-89` — The legacy `/api/run-episode` path still computes and returns `trace`, `license`, and persistence status even when `persistEpisode()` returns `unavailable`. That keeps a fail-open reward/license path alive outside canonical `/v1`, violating the thesis that evidence must be durably saved or safely replayed before autonomy is granted. Recommendation: next round should either route the UI/reference flows through `/v1` or make this legacy handler fail closed on configured InsForge persistence failure before returning any reward/license.
+
+- `vite.config.ts:3-4`, `vite.config.ts:25-29`, and `server/runEpisodePlugin.ts:39-113` — Vite middleware backends are still installed, so the Definition of Done item “standalone server is the ONLY backend” remains unmet. Recommendation: remove Vite API plugins and configure Vite dev proxy to the standalone Hono server.
+
+### P2 (Quality)
+
+- `server/env/gym.test.ts:411-492` covers HTTP 500 and thrown fetch, but not the timeout branch that `persistEpisodeOnce()` maps at `server/insforgeStore.ts:211-214`. The implementation branch is generic enough to catch timeout, so this is not blocking. Recommendation: add a focused timeout/AbortError test when touching this area again.
+
+### Acceptance Check
+
+- `server/env/gym.ts:481-491` now catches all remaining configured `out.status === 'unavailable'` outcomes and returns only `{ ok: false, code: 'unknown', error }`.
+- `server/env/gym.test.ts:411-454` verifies configured insert HTTP 500 does not leak `reward`, `info`, `license`, `persisted`, or `recordId`.
+- `server/env/gym.test.ts:456-496` verifies configured insert throw/unreachable does not leak those fields.
+- Existing saved/conflict/fail-closed paths remain intact at `server/env/gym.ts:433-480`.
+- `gates.log` reports `GATES: PASS`; build, lint, evidence verification, and 37 vitest tests passed.
 
 ## Next Design
 
-**Objective**  
-Fail closed on configured InsForge persistence failures so `/v1` never returns a reward or autonomy license unless the verdict is either durably saved or safely replayed from a verified first-written row.
+### Objective
 
-**Scope**  
-Change only `server/env/gym.ts` and `server/env/gym.test.ts`. Do not change verifier, reward, license semantics, InsForge store APIs, migrations, legacy `/api/run-episode`, UI, or scenarios.
+Eliminate the remaining fail-open legacy reward/license path by making `/api/run-episode` use the canonical `/v1` environment semantics, or fail closed under configured InsForge when persistence is unavailable.
 
-**Steps**  
-1. In `stepEpisode`, after `persistEpisodeOnce`, handle every configured `out.status === "unavailable"` as a non-success response.  
-2. Keep the existing special message for `conflict_reread_failed`, but make non-conflict failures such as `http_500`, `timeout`, and `unreachable` also return `{ ok:false, code:"unknown", error: ... }`.  
-3. Ensure these failures return no `reward`, `info`, `license`, `persisted`, or `recordId`.  
-4. Preserve unconfigured dev fallback behavior.  
-5. Add tests for configured InsForge where history read succeeds empty, then insert returns HTTP 500. Assert failure, no reward/info/license, and no optimistic persisted flag.  
-6. Add a second configured test where insert throws or rejects to simulate timeout/unreachable. Assert the same fail-closed behavior.  
-7. Confirm existing saved, replay, valid-conflict, malformed-conflict, and history-read-failure tests still pass.
+### Scope
 
-**Acceptance Criteria**  
-- Configured `/v1` cannot award a license from a verdict that was neither persisted nor verified as an existing first-written row.  
-- Non-conflict persistence failure does not leak reward, verifier info, license, persisted, or recordId.  
-- Valid saves and valid conflict rehydration still return successful deterministic results.  
-- Local unconfigured dev fallback remains unchanged.  
-- No verifier/reward/license scoring semantics change.
+Change only the legacy server path and tests:
 
-**Gates**  
-`npm run build`  
-`npm run lint`  
-`npm run verify:evidence`  
-`npm test`  
-`npm run gates`
+- `server/runEpisodeHandler.ts`
+- `server/runEpisodeHandler.test.ts`
+- `scripts/verifyServerEvidence.mjs` only if evidence expectations need updating
+
+Do not touch verifier/license semantics, scenario data, UI styling, migrations, or `/v1` behavior.
+
+### Steps
+
+1. In `handleRunEpisode`, keep current client spoofing protections and deterministic policy/verifier logic unchanged.
+2. When InsForge is configured and `persistEpisode(auditRow, cfg.insforge)` returns `unavailable`, return `{ ok: false, code: 'unknown', error: ... }`.
+3. Ensure that failure response does not include `trace`, `license`, `auditRow`, `runId`, reward, verifier info, or persistence DTO.
+4. Preserve unconfigured local dev fallback behavior.
+5. Add a test where configured InsForge insert returns HTTP 500 and assert `/api` handler fails closed without reward/license/trace.
+6. Add a test where configured InsForge insert throws and assert the same.
+7. Re-run evidence verification and adjust only if it was depending on fail-open behavior.
+
+### Acceptance Criteria
+
+- Configured `/api/run-episode` cannot return a reward, trace, or license when InsForge persistence fails.
+- Unconfigured dev mode still returns normal demo output.
+- Existing client-spoofing, digest, read-back, and malformed-row protections still pass.
+- No deterministic verifier/reward/license semantics change.
+
+### Gates
+
+```bash
+npm run build
+npm run lint
+npm run verify:evidence
+npm test
+npm run gates
+```

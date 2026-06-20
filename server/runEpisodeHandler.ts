@@ -296,6 +296,24 @@ export async function handleRunEpisode(
   auditRow.audit_row_digest = computeAuditDigest(auditRow)
 
   const persist = await persistEpisode(auditRow, cfg.insforge)
+
+  // Fail closed when InsForge is CONFIGURED but the durable write was unavailable.
+  // The trust boundary requires that a configured episode cannot return a trace,
+  // reward-bearing verifier result, license, run id, persistence DTO, or audit row
+  // without persisted evidence behind it. Roll the in-memory record back so the
+  // failed episode can never influence later legacy license computation; keep
+  // runSequence monotonic (do not decrement). Unconfigured (local_only) demo runs
+  // are unaffected — they intentionally return the in-memory response.
+  if (insforgeConfigured(cfg.insforge) && persist.status === 'unavailable') {
+    const idx = serverRecords.indexOf(record)
+    if (idx !== -1) serverRecords.splice(idx, 1)
+    return {
+      ok: false,
+      code: 'unknown',
+      error: 'Persistence unavailable; episode not recorded.',
+    }
+  }
+
   if (persist.status === 'saved') record.persistedId = persist.recordId
 
   return {

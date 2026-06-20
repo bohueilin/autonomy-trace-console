@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { computeAuditDigest, parseEvidenceRow } from './runEpisodeHandler.ts'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { computeAuditDigest, handleRunEpisode, parseEvidenceRow } from './runEpisodeHandler.ts'
 import {
   ENVIRONMENT_NAME,
   LICENSE_POLICY_VERSION,
@@ -152,5 +152,61 @@ describe('parseEvidenceRow — unified evidence schema', () => {
     expect(item?.actualPolicySource).toBe('external')
     expect(item?.reward).toBe(1)
     expect(item?.passed).toBe(true)
+  })
+})
+
+describe('handleRunEpisode — configured InsForge fail-closed', () => {
+  // A configured InsForge config so handleRunEpisode takes the persistence path
+  // (insforgeConfigured requires both baseUrl and apiKey).
+  const cfgWithInsforge = {
+    nebius: {},
+    insforge: { baseUrl: 'https://insforge.test', apiKey: 'ins_test_key' },
+  }
+  const cfgLocalOnly = { nebius: {}, insforge: {} }
+
+  // The fields that grant authority — none may leak on a fail-closed response.
+  const AUTHORITY_FIELDS = ['trace', 'license', 'persistence', 'runId', 'auditRow']
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('fails closed when the configured InsForge insert returns HTTP 500', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('upstream error', { status: 500, statusText: 'Internal Server Error' }),
+    )
+
+    const res = await handleRunEpisode({ scenarioId: 'com-1', policyMode: 'mock' }, cfgWithInsforge)
+
+    expect(res.ok).toBe(false)
+    if (res.ok) throw new Error('expected fail-closed result')
+    expect(res.code).toBe('unknown')
+    for (const k of AUTHORITY_FIELDS) {
+      expect(res).not.toHaveProperty(k)
+    }
+  })
+
+  it('fails closed when the configured InsForge insert throws/rejects', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('fetch failed'))
+
+    const res = await handleRunEpisode({ scenarioId: 'com-1', policyMode: 'mock' }, cfgWithInsforge)
+
+    expect(res.ok).toBe(false)
+    if (res.ok) throw new Error('expected fail-closed result')
+    expect(res.code).toBe('unknown')
+    for (const k of AUTHORITY_FIELDS) {
+      expect(res).not.toHaveProperty(k)
+    }
+  })
+
+  it('still returns the demo response when InsForge is unconfigured', async () => {
+    const res = await handleRunEpisode({ scenarioId: 'com-1', policyMode: 'mock' }, cfgLocalOnly)
+
+    expect(res.ok).toBe(true)
+    if (!res.ok) throw new Error('expected ok demo result')
+    expect(res.trace).toBeTruthy()
+    expect(res.license).toBeTruthy()
+    expect(res.persistence.status).toBe('local_only')
+    expect(typeof res.runId).toBe('string')
   })
 })
