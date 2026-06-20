@@ -1,28 +1,26 @@
-All gates pass. Implementation report below.
-
----
+All changes in place. Implementation complete.
 
 ## Implementation report
 
-**Plan assessment:** Sound and correctly scoped — fail-closed on configured persistence failure in the legacy `/api/run-episode` path, satisfying the GOAL's "One evidence schema" trust boundary. Implemented as specified.
+Made the standalone Hono server the only dev backend, per `design.md`.
 
 ### Files changed
-- **`server/runEpisodeHandler.ts`** — After `persistEpisode`, added a configured-mode fail-closed branch: if `insforgeConfigured(cfg.insforge)` and `persist.status === 'unavailable'`, roll back the in-memory record and return `{ ok: false, code: 'unknown', error: ... }` — with no `trace`/`license`/`persistence`/`runId`/`auditRow`. Everything upstream (validation, scenario lookup, policy, verifier, trace, audit row, digest) is unchanged.
-- **`server/runEpisodeHandler.test.ts`** — Added a `describe` block with three cases: HTTP 500 insert, thrown `TypeError("fetch failed")`, and the unconfigured-demo regression. Imports now include `handleRunEpisode`, `afterEach`, `vi`.
+- **`vite.config.ts`** — Removed `loadEnv` import and the two plugin imports; dropped all server-side env loading and the `nebius`/`insforge` config construction (Vite no longer reads secrets). `react()` is now the only plugin. Added a dev-server proxy: `/api` and `/v1` → backend origin, `changeOrigin: true`, default `http://localhost:8787`, overridable via `VITE_BACKEND_ORIGIN` (falls back to `BACKEND_ORIGIN`). Preserved the existing `allowedHosts` list and the `PORT` handling.
+- **`package.json`** — Added `"dev:client": "vite"` alias. Kept `server` and `dev` unchanged. No new dependencies.
+- **`server/nebiusPlugin.ts`**, **`server/runEpisodePlugin.ts`** — Deleted (`git rm`). Their route logic already lives in `server/main.ts`; nothing moved or duplicated.
+- **`.env.example`** — Clarified secrets are read by `server/main.ts`/`server/config.ts` (not Vite), documented the two-process dev flow, kept `PORT=8787`, and documented the optional non-secret `VITE_BACKEND_ORIGIN` proxy override.
+- **`README.md`** — Updated the "no separate server" / "API lives as Vite middleware" claims to the two-command flow (`npm run server` + `npm run dev`, Vite proxies `/api` + `/v1`); removed the "why middleware" rationale block; corrected the `loadEnv` secret-handling paragraph; replaced the deleted plugin rows in the project-layout table with a `server/main.ts` row; updated the two smoke-check `npm run dev` lines to include `npm run server`.
 
 ### Key decisions
-- **Rollback by reference, not `pop()`.** The plan said "ensure the failed record does not remain in `serverRecords`." Because there's an `await persistEpisode` between the `push` and the rollback, a concurrent episode could push another record in between. I remove the exact record via `indexOf`/`splice(idx, 1)` rather than `pop()`, so I never evict a different (possibly successful) episode. `runSequence` is left untouched (monotonic, never decremented), as required.
-- **`record.persistedId` / license:** the popped record never re-enters license computation; `computeLicense` was already called before persist but only mutated the (now-removed) record's `licenseLevel`, so no lingering state.
-- **`verifyServerEvidence.mjs` untouched.** Its `cfg` is unconfigured (`insforge: {}`), so every call routes through `local_only` and never hits the new branch — the plan's "only if" condition wasn't met, so no evidence assertion changed.
-- **Authority-field leak check in tests** asserts `not.toHaveProperty` for all five fields, matching the acceptance criteria directly.
+- Used `process.env` (not `loadEnv`) for the proxy origin since it's a non-secret build-time setting and the design says Vite should no longer read env via `loadEnv`.
+- Updated two smoke-checklist `npm run dev` references for accuracy (the backend is now a separate process) — these are within the README scope of the plan.
 
 ### Gate results — all pass
-- `npm run build` — ✅ tsc + vite build clean
-- `npm run lint` — ✅ no eslint errors
-- `npm run verify:evidence` — ✅ ALL CHECKS PASSED (40/40)
-- `npm test` — ✅ 6 files, 40 tests passed
-- `npm run gates` — ✅ green
+- `npm run build` ✅ (tsc -b + vite build, 222 kB bundle)
+- `npm run lint` ✅ (clean)
+- `npm run verify:evidence` ✅ (40/40 checks)
+- `npm test` ✅ (6 files, 40 tests)
 
-### Deferred / open questions for Codex
-- **`persistEpisodeOnce` / gym `/v1` path** has the same best-effort-on-`unavailable` posture but was out of scope (plan said don't touch `/v1`). If the trust boundary should be uniform, a follow-up round could apply the same fail-closed contract there — flagging as adjacent work, not done.
-- **`persist.status === 'existing'`** is not reachable via `persistEpisode` (only `persistEpisodeOnce` returns it), so the legacy path's outcomes remain `saved | local_only | unavailable` — no handling needed.
+### Open questions for Codex
+- `server/nebiusHandler.ts:5` has a stale comment cross-referencing `server/nebiusPlugin.ts` ("see server/nebiusPlugin.ts"). It's a comment only (no code dependency), and that file is in the design's "Do NOT touch" list, so I left it. Worth a one-line comment fix in a future round.
+- The frontend uses same-origin relative paths (`/api/...`, `/v1/...`) so the proxy covers dev. For `vite preview`/production-static hosting there's no proxy — the standalone server is the intended prod backend, consistent with the GOAL's deployability item (a later round).

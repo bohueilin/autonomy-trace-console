@@ -1,68 +1,48 @@
 ## Review
 
-**Verdict: ACCEPT for this round's change.** The narrow design was implemented: configured `/v1` insert failures now fail closed without returning reward/info/license/persistence fields, and gates are green.
+**P0 (must-fix): none.**
 
-### P0 (Must-Fix)
+**P1 (architecture): still not a single backend, and Vite middleware remains an active API server.**  
+The GOAL requires the standalone server to be the only backend and Vite middleware to be removed (`.agentloop/GOAL.md:24-27`). This repo still imports and installs Vite API plugins in `vite.config.ts:3-4` and `vite.config.ts:25-29`, while `server/runEpisodePlugin.ts:39-112` and `server/nebiusPlugin.ts:55-75` still register live `/api/*` middleware. Recommendation: next round should remove those middleware plugins and make Vite proxy `/api` and `/v1` to the Hono server in `server/main.ts`.
 
-None for this round.
+**P1 (architecture): legacy `/api/run-episode` still uses module-global mutable license history.**  
+The GOAL explicitly says one evidence schema should avoid module-global mutable state in the request path (`.agentloop/GOAL.md:30-32`). The legacy handler still keeps `serverRecords` as process-global state at `server/runEpisodeHandler.ts:119-122`, derives episode identity from it at `server/runEpisodeHandler.ts:205`, pushes before persistence at `server/runEpisodeHandler.ts:229`, and computes license from it at `server/runEpisodeHandler.ts:231`. This round correctly rolls failed configured writes back at `server/runEpisodeHandler.ts:307-314`, so this is not a regression, but it remains the next trust-boundary debt. Recommendation: after single-backend proxying, drive UI/reference flows through `/v1` or document/contain legacy as dev-only.
 
-### P1 (Architecture)
+**P2 (quality): rollback behavior is implemented but not directly asserted.**  
+The design required failed configured episodes not to remain in `serverRecords` (`.agentloop/design.md:35-38` and `.agentloop/design.md:58-60`). The code removes the exact record by reference at `server/runEpisodeHandler.ts:307-309`, which is the right concurrency-safe choice for this narrow handler. The new tests assert fail-closed shape for HTTP 500 and thrown fetch at `server/runEpisodeHandler.test.ts:174-200`, but they do not call `getRecentRuns` or a subsequent successful episode to prove the failed record did not pollute history. Recommendation: add a focused assertion in a later cleanup if this legacy path remains long enough to matter.
 
-- `server/runEpisodeHandler.ts:298-314` and `server/main.ts:83-89` — The legacy `/api/run-episode` path still computes and returns `trace`, `license`, and persistence status even when `persistEpisode()` returns `unavailable`. That keeps a fail-open reward/license path alive outside canonical `/v1`, violating the thesis that evidence must be durably saved or safely replayed before autonomy is granted. Recommendation: next round should either route the UI/reference flows through `/v1` or make this legacy handler fail closed on configured InsForge persistence failure before returning any reward/license.
+**P2 (gates/tests): gates are honest for this scope.**  
+The requested gates ran through `npm run gates` at `.agentloop/gates.log:2-3`; build completed at `.agentloop/gates.log:6-17`, evidence verification passed all 40 checks at `.agentloop/gates.log:23-67`, and Vitest passed 6 files / 40 tests at `.agentloop/gates.log:119-124`. The new fail-closed tests are visible in the test log at `.agentloop/gates.log:90-95`.
 
-- `vite.config.ts:3-4`, `vite.config.ts:25-29`, and `server/runEpisodePlugin.ts:39-113` — Vite middleware backends are still installed, so the Definition of Done item “standalone server is the ONLY backend” remains unmet. Recommendation: remove Vite API plugins and configure Vite dev proxy to the standalone Hono server.
+**Verdict: ACCEPT** for this round’s change. The last `design.md` acceptance criteria were met: configured legacy persistence failures return no trace/license/persistence/runId/auditRow, local-only behavior still works, and verifier/reward/license semantics were not changed.
 
-### P2 (Quality)
+## Next design
 
-- `server/env/gym.test.ts:411-492` covers HTTP 500 and thrown fetch, but not the timeout branch that `persistEpisodeOnce()` maps at `server/insforgeStore.ts:211-214`. The implementation branch is generic enough to catch timeout, so this is not blocking. Recommendation: add a focused timeout/AbortError test when touching this area again.
+**Objective**  
+Make the standalone Hono server the only backend during development by removing Vite-owned API middleware and proxying frontend `/api` plus `/v1` traffic to `server/main.ts`.
 
-### Acceptance Check
+**Scope**  
+Change only `vite.config.ts`, `package.json` if needed for scripts, and tests/config references directly broken by removing Vite middleware imports. Do not change verifier, reward, license semantics, `/v1` gym behavior, InsForge store APIs, UI behavior, scenario data, or evidence parsing.
 
-- `server/env/gym.ts:481-491` now catches all remaining configured `out.status === 'unavailable'` outcomes and returns only `{ ok: false, code: 'unknown', error }`.
-- `server/env/gym.test.ts:411-454` verifies configured insert HTTP 500 does not leak `reward`, `info`, `license`, `persisted`, or `recordId`.
-- `server/env/gym.test.ts:456-496` verifies configured insert throw/unreachable does not leak those fields.
-- Existing saved/conflict/fail-closed paths remain intact at `server/env/gym.ts:433-480`.
-- `gates.log` reports `GATES: PASS`; build, lint, evidence verification, and 37 vitest tests passed.
+**Steps**  
+1. Remove `nebiusApiPlugin` and `runEpisodeApiPlugin` imports and plugin registration from `vite.config.ts`.
+2. Add Vite dev-server proxy entries for `/api` and `/v1` targeting the standalone server, defaulting to `http://localhost:8787` or the existing server port config if already centralized.
+3. Keep `react()` as the only Vite plugin unless another non-backend plugin already exists.
+4. Ensure `server/main.ts` remains the implementation of `/health`, `/api/run-episode`, `/api/runs/recent`, `/api/evidence/status`, `/api/nebius-action`, `/api/vapi/tools`, and `/v1/*`.
+5. Do not delete handler modules yet if `server/main.ts`, tests, or verification scripts still import them. Remove only Vite middleware wiring this round.
+6. Add or update a minimal test/static check only if existing tests do not catch accidental Vite middleware reintroduction.
+7. Run the full gates.
 
-## Next Design
+**Acceptance criteria**  
+- `vite.config.ts` no longer imports or registers `server/runEpisodePlugin.ts` or `server/nebiusPlugin.ts`.
+- Vite dev frontend reaches `/api` and `/v1` through proxy config to the standalone Hono server.
+- `server/main.ts` is the only runtime owner of backend routes.
+- No verifier, reward, license, persistence, digest, scenario, or UI response semantics change.
+- Existing evidence, fail-closed, and gym tests remain green.
 
-### Objective
-
-Eliminate the remaining fail-open legacy reward/license path by making `/api/run-episode` use the canonical `/v1` environment semantics, or fail closed under configured InsForge when persistence is unavailable.
-
-### Scope
-
-Change only the legacy server path and tests:
-
-- `server/runEpisodeHandler.ts`
-- `server/runEpisodeHandler.test.ts`
-- `scripts/verifyServerEvidence.mjs` only if evidence expectations need updating
-
-Do not touch verifier/license semantics, scenario data, UI styling, migrations, or `/v1` behavior.
-
-### Steps
-
-1. In `handleRunEpisode`, keep current client spoofing protections and deterministic policy/verifier logic unchanged.
-2. When InsForge is configured and `persistEpisode(auditRow, cfg.insforge)` returns `unavailable`, return `{ ok: false, code: 'unknown', error: ... }`.
-3. Ensure that failure response does not include `trace`, `license`, `auditRow`, `runId`, reward, verifier info, or persistence DTO.
-4. Preserve unconfigured local dev fallback behavior.
-5. Add a test where configured InsForge insert returns HTTP 500 and assert `/api` handler fails closed without reward/license/trace.
-6. Add a test where configured InsForge insert throws and assert the same.
-7. Re-run evidence verification and adjust only if it was depending on fail-open behavior.
-
-### Acceptance Criteria
-
-- Configured `/api/run-episode` cannot return a reward, trace, or license when InsForge persistence fails.
-- Unconfigured dev mode still returns normal demo output.
-- Existing client-spoofing, digest, read-back, and malformed-row protections still pass.
-- No deterministic verifier/reward/license semantics change.
-
-### Gates
-
-```bash
-npm run build
-npm run lint
-npm run verify:evidence
-npm test
-npm run gates
-```
+**Gates**  
+`npm run build`  
+`npm run lint`  
+`npm run verify:evidence`  
+`npm test`  
+`npm run gates`

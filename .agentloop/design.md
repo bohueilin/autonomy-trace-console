@@ -1,68 +1,82 @@
 ## Objective
-
-Fail closed on configured InsForge persistence failure in the legacy `/api/run-episode` path, satisfying the GOAL’s “One evidence schema” trust boundary while the UI still depends on `/api`.
+Make the standalone Hono server the only development backend, satisfying the GOAL “Single backend” checkbox by removing Vite-owned `/api/*` middleware and proxying frontend traffic to `server/main.ts`.
 
 ## Scope
-
 Change only:
-
-- `server/runEpisodeHandler.ts`
-- `server/runEpisodeHandler.test.ts`
-- `scripts/verifyServerEvidence.mjs` only if an existing evidence assertion explicitly depends on fail-open legacy behavior
+- `vite.config.ts`
+- `package.json`
+- `README.md`
+- `.env.example`
+- Delete `server/nebiusPlugin.ts`
+- Delete `server/runEpisodePlugin.ts`
 
 Do NOT touch:
-
-- `server/env/gym.ts` or `/v1` behavior
-- verifier, reward, or license semantics
-- scenario data
-- Vite middleware/proxy configuration
-- UI files
+- `server/main.ts` route behavior
+- `server/runEpisodeHandler.ts`
+- `server/nebiusHandler.ts`
+- `server/env/gym.ts`
+- verifier, reward, license, digest, scenario, persistence, or UI semantics
 - migrations or InsForge store APIs
 
 ## Steps
+1. In `vite.config.ts`, remove all imports and registration of:
+   - `nebiusApiPlugin`
+   - `runEpisodeApiPlugin`
 
-1. In `handleRunEpisode`, keep the current request validation, canonical scenario lookup, policy execution, verifier scoring, trace construction, audit-row construction, and digest calculation unchanged.
+2. Remove the now-unneeded Vite-side env loading and config object construction from `vite.config.ts`; secrets should no longer be read by Vite at all.
 
-2. After `const persist = await persistEpisode(auditRow, cfg.insforge)`, add configured-mode fail-closed handling:
-   - If `insforgeConfigured(cfg.insforge)` is `true` and `persist.status === "unavailable"`, return `{ ok: false, code: "unknown", error: ... }`.
-   - Do this before returning any success response.
-   - The failure response must not include `trace`, `license`, `persistence`, `runId`, or `auditRow`.
+3. Keep `react()` as the only Vite plugin.
 
-3. Preserve existing behavior when InsForge is unconfigured:
-   - `persist.status === "local_only"` should still allow the local demo response.
-   - Existing in-memory server record behavior should remain intact.
+4. Add Vite dev-server proxy config:
+   - `/api` targets the standalone server.
+   - `/v1` targets the standalone server.
+   - Default target is `http://localhost:8787`.
+   - Allow override with a non-secret env var such as `VITE_BACKEND_ORIGIN` or `BACKEND_ORIGIN`.
+   - Use `changeOrigin: true`.
 
-4. Prevent failed configured episodes from polluting in-memory license history:
-   - Because `serverRecords.push(record)` currently happens before persistence, ensure a configured `unavailable` persistence result does not leave the failed record in `serverRecords`.
-   - Keep `runSequence` monotonic; do not try to decrement it.
-   - Do not change successful saved behavior.
+5. Preserve the existing `server.allowedHosts` list in `vite.config.ts`.
 
-5. Add `server/runEpisodeHandler.test.ts` coverage for configured InsForge insert HTTP 500:
-   - Mock `globalThis.fetch` so the InsForge POST returns HTTP 500.
-   - Call `handleRunEpisode({ scenarioId: "com-1", policyMode: "mock" }, cfgWithInsforge)`.
-   - Assert `ok === false`, `code === "unknown"`.
-   - Assert the response does not have `trace`, `license`, `persistence`, `runId`, or `auditRow`.
+6. Update `package.json` scripts so local development is explicit:
+   - Keep `server`: `node server/main.ts`.
+   - Keep `dev`: `vite`.
+   - Add a clear client alias if useful, e.g. `dev:client`: `vite`.
+   - Do not add new dependencies just to run two processes.
 
-6. Add a second `server/runEpisodeHandler.test.ts` case for configured InsForge insert throwing/rejecting:
-   - Mock the InsForge POST to throw `TypeError("fetch failed")`.
-   - Assert the same fail-closed response shape and no leaked authority fields.
+7. Delete `server/nebiusPlugin.ts` and `server/runEpisodePlugin.ts`. Their route logic already exists in `server/main.ts`; do not move or duplicate code.
 
-7. Add a regression assertion that an unconfigured InsForge config still returns normal legacy demo output:
-   - `ok === true`
-   - has `trace`, `license`, `persistence.status === "local_only"`, and `runId`
+8. Update `.env.example` comments:
+   - Say server-side secrets are read by `server/main.ts` / `server/config.ts`, not Vite middleware.
+   - Keep `PORT=8787` as the standalone server default.
+   - Document optional frontend proxy override if added.
 
-8. Re-run `scripts/verifyServerEvidence.mjs`. If it fails because it assumes configured persistence failures are success responses, update only that assertion to the new fail-closed contract.
+9. Update only the README sections that currently claim:
+   - “There is no separate server to start.”
+   - APIs live as Vite middleware.
+   - `server/nebiusPlugin.ts` and `server/runEpisodePlugin.ts` are active architecture.
+
+   Replace with:
+   - Start backend with `npm run server`.
+   - Start frontend with `npm run dev`.
+   - Vite proxies `/api` and `/v1` to the standalone server.
+   - `server/main.ts` is the only backend route owner.
+
+10. Run a repo search to confirm no active references remain to:
+   - `nebiusApiPlugin`
+   - `runEpisodeApiPlugin`
+   - `server/nebiusPlugin`
+   - `server/runEpisodePlugin`
+   - “Vite middleware” claims in current architecture docs, except historical notes if clearly marked obsolete.
 
 ## Acceptance criteria
-
-- Configured `/api/run-episode` cannot return a trace, reward-bearing verifier result, license, run id, persistence DTO, or audit row when persistence is unavailable.
-- Failed configured legacy episodes do not remain in `serverRecords` and therefore cannot influence later legacy license computation.
-- Unconfigured local dev behavior remains usable and returns the existing demo response shape.
-- Existing spoofing, digest, read-back, and evidence checks still pass.
-- No verifier, reward, license, scenario, `/v1`, or InsForge store semantics change.
+- `vite.config.ts` no longer imports, constructs config for, or registers backend middleware plugins.
+- `server/nebiusPlugin.ts` and `server/runEpisodePlugin.ts` are gone.
+- Vite dev proxies both `/api/*` and `/v1/*` to the standalone Hono server at port `8787` by default.
+- `server/main.ts` remains the only runtime owner of `/health`, `/api/*`, and `/v1/*`.
+- No verifier, reward, license, digest, persistence, scenario, or UI response semantics change.
+- README and `.env.example` no longer instruct users that Vite middleware is the backend.
+- Existing evidence, fail-closed, and gym tests remain green.
 
 ## Gates
-
 ```bash
 npm run build
 npm run lint

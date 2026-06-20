@@ -27,7 +27,8 @@ no matter how good the average looks.
 - **The local loop works by default with zero external dependencies.** A
   self-contained React + TypeScript dashboard: nine seeded scenarios, a mock
   agent policy, a deterministic verifier, a reward model, a trace viewer, and a
-  license ladder. Run it with `npm run dev` and nothing else is required.
+  license ladder. Start the backend with `npm run server` and the frontend with
+  `npm run dev`; no external services are required.
 - **An optional Nebius model-under-test** can be swapped in for *single-episode*
   evaluation. Nebius **proposes an action only** — the same deterministic verifier
   still scores it. The API key is server-side only (details below).
@@ -95,15 +96,21 @@ Requirements: Node 18+ and npm.
 
 ```bash
 npm install
-npm run dev      # start the Vite dev server (default http://localhost:5173)
+npm run server   # start the standalone Hono backend (default http://localhost:8787)
+npm run dev      # in another terminal: start the Vite frontend (default http://localhost:5173)
 ```
+
+`server/main.ts` is the only backend route owner (`/health`, `/api/*`, `/v1/*`).
+The Vite dev server proxies `/api` and `/v1` to it (default origin
+`http://localhost:8787`, override with `VITE_BACKEND_ORIGIN`).
 
 Other scripts:
 
 ```bash
-npm run build    # type-check (tsc -b) + production build
-npm run lint     # eslint
-npm run preview  # preview the production build
+npm run dev:client  # alias for `npm run dev` (frontend only)
+npm run build       # type-check (tsc -b) + production build
+npm run lint        # eslint
+npm run preview     # preview the production build
 ```
 
 The app runs fully **without any Nebius configuration** — Mock Policy is the
@@ -137,26 +144,24 @@ NEBIUS_MODEL=meta-llama/Meta-Llama-3.1-70B-Instruct     # server-side only
   on the client.
 
 Do **not** prefix any of these with `VITE_` — that would inline them into the
-browser bundle. They are read in `vite.config.ts` via `loadEnv` and handed to
-Node-only middleware in `server/`; the key never reaches the client. `.env.local`
-is gitignored.
+browser bundle. They are read only by the standalone server (`server/main.ts` via
+`server/config.ts`); Vite never reads them, so the key never reaches the client.
+`.env.local` is gitignored.
 
 ### Run
 
-There is **no separate server to start**. The API lives as Vite dev middleware,
-so the single command runs both the frontend and the `POST /api/nebius-action`
-endpoint on the same origin:
+Start the standalone backend and the frontend in two terminals:
 
 ```bash
-npm run dev
+npm run server   # standalone Hono server — owns /health, /api/*, /v1/*
+npm run dev      # Vite frontend — proxies /api and /v1 to the server
 ```
 
-> **Why middleware instead of a standalone server?** It is the simplest reliable
-> boundary for the demo: one process, one command, same origin (no CORS, no extra
-> dependencies). The tradeoff is that the endpoint exists under `npm run dev`
-> only — not in a static `vite preview`/production build. A standalone server
-> under `server/` is the production path; the handler (`server/nebiusHandler.ts`)
-> is already written to lift out cleanly.
+The Vite dev server proxies `/api` and `/v1` to the standalone server (default
+`http://localhost:8787`, override with `VITE_BACKEND_ORIGIN`), so the frontend
+reaches `POST /api/nebius-action` and the rest of the backend through one origin.
+`server/main.ts` is the only runtime owner of those routes; `server/nebiusHandler.ts`
+holds the Nebius logic it calls.
 
 ### Two policy views
 
@@ -237,8 +242,8 @@ only once the request is proven valid.
 A quick manual check — no secrets are hard-coded anywhere; everything below is
 configured via `.env.local`.
 
-1. With `NEBIUS_API_KEY` + `NEBIUS_MODEL` set, run `npm run dev`, switch to
-   **Nebius Policy**, click **Run 1 Nebius Episode**.
+1. With `NEBIUS_API_KEY` + `NEBIUS_MODEL` set, run `npm run server` and `npm run dev`,
+   switch to **Nebius Policy**, click **Run 1 Nebius Episode**.
 2. Confirm the agent card shows: **source = Nebius Token Factory**, the **model
    name**, the chosen **action**, the **rationale**, and **confidence**.
 3. Confirm the **deterministic verifier still scores** that action (PASS/FAIL,
@@ -581,7 +586,7 @@ Quick manual checks once credentials are available (everything degrades safely
 without them). No secrets are hard-coded — all via `.env.local`.
 
 **Nebius**
-1. Set `NEBIUS_API_KEY`, `NEBIUS_MODEL` (optional `NEBIUS_BASE_URL`); `npm run dev`.
+1. Set `NEBIUS_API_KEY`, `NEBIUS_MODEL` (optional `NEBIUS_BASE_URL`); `npm run server` + `npm run dev`.
 2. Switch to **Nebius Policy** → **Run 1 Nebius Episode**.
 3. Confirm the agent card shows Nebius source, model name, action, rationale, confidence.
 4. Remove/disable the key (or base URL) and re-run.
@@ -651,10 +656,9 @@ shown and how the environment scored it.
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
 | `src/components/*` | Scenario, agent-action, verifier, trace, license, and evidence UI. |
 | [`src/serverEpisodeClient.ts`](src/serverEpisodeClient.ts) | Frontend client for `/api/run-episode` + `/api/runs/recent`. |
+| [`server/main.ts`](server/main.ts) | Standalone Hono server — the only backend route owner (`/health`, `/api/*`, `/v1/*`). Vite proxies to it. |
 | [`server/nebiusHandler.ts`](server/nebiusHandler.ts) | Server-only: builds the request from visible context, calls Nebius, normalizes. |
-| [`server/nebiusPlugin.ts`](server/nebiusPlugin.ts) | Vite middleware exposing `POST /api/nebius-action`. |
 | [`server/runEpisodeHandler.ts`](server/runEpisodeHandler.ts) | Server-owned episode: canonical scenario → policy → verifier → reward → license → replayable audit row → persist. |
-| [`server/runEpisodePlugin.ts`](server/runEpisodePlugin.ts) | Vite middleware: `POST /api/run-episode`, `GET /api/runs/recent`, `GET /api/evidence/status`. |
 | [`server/insforgeStore.ts`](server/insforgeStore.ts) | Server-only best-effort InsForge persistence (`eval_episodes`). |
 | [`server/evalVersions.ts`](server/evalVersions.ts) | Attribution versions (environment / scenario registry / verifier / reward / license). |
 | [`scripts/verifyServerEvidence.mjs`](scripts/verifyServerEvidence.mjs) | In-process checks of the replayable audit semantics (`npm run verify:evidence`). |
