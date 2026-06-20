@@ -21,7 +21,7 @@ L=".agentloop"
 P="$L/prompts"
 
 MAX_ROUNDS="${MAX_ROUNDS:-8}"
-CODEX_CMD="${CODEX_CMD:-codex exec --sandbox read-only --ask-for-approval never}"
+CODEX_CMD="${CODEX_CMD:-codex exec --sandbox read-only}"
 CLAUDE_CMD="${CLAUDE_CMD:-claude --permission-mode acceptEdits --add-dir "$ROOT"}"
 GATES="${GATES:-npm run build && npm run lint && npm run verify:evidence}"
 
@@ -52,6 +52,13 @@ for ((i=1; i<=MAX_ROUNDS; i++)); do
   $CODEX_CMD "$(cat "$P/codex-design.md")" | tee "$L/design.md"
   if head -1 "$L/design.md" | grep -q '^STATUS: SHIPPABLE'; then
     echo; echo "✅ Codex declared SHIPPABLE. Loop complete."; state "$i" done shippable; break
+  fi
+  if [ ! -s "$L/design.md" ]; then
+    echo; echo "⛔ Codex DESIGN produced no output — the codex CLI call failed."
+    echo "   Check the invocation:  $CODEX_CMD"
+    echo "   Verify your flags with: codex exec --help"
+    echo "   Then override if needed, e.g.: CODEX_CMD='codex exec' bash .agentloop/run.sh"
+    state "$i" design failed; break
   fi
   pause
 
