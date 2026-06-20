@@ -23,3 +23,11 @@ Implemented the InsForge hardening round exactly per `design.md`: `eval_episodes
 ### Deferred / open questions for Codex
 - The migration's `NOT VALID` checks are not `VALIDATE`d (intentional, to avoid failing on any pre-existing legacy rows). If a future round wants them enforced retroactively, that needs a separate `VALIDATE CONSTRAINT` migration after a data audit — flagging as adjacent, not done.
 - No live DB was exercised (no test DB in repo); RLS/privilege behavior is verified only at the SQL-text level, consistent with the plan's "focused text-level migration tests."
+
+---
+## Post-review manual fix (outside the loop)
+The round-15 review's two P0s (migration ordering + missing ADD COLUMN upgrade) are
+RESOLVED in commit 47e5565: added baseline migration 20260620000000 (sorts first,
+creates table + ADD COLUMN IF NOT EXISTS for all columns), slimmed the RLS migration
+to constraints+RLS only, and replaced the shallow SQL-grep test with an ordering +
+upgrade-path + RLS test. Gates green (10 files, 89 tests). Ready for re-review.
