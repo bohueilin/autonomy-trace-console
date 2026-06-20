@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import { decide, toMockView, toModelView } from './agent'
+import { decide, toMockView } from './agent'
 import { fetchNebiusAction } from './nebiusClient'
-import { fetchEvidenceStatus, runServerEpisode as postServerEpisode } from './serverEpisodeClient'
+import { fetchEvidenceStatus } from './serverEpisodeClient'
+import { buildGymTrace, observationToModelView, resetGymEpisode, stepGymEpisode } from './gymClient'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
 import { verify } from './verifier'
 import type {
   AgentDecision,
   AgentSource,
+  EvidencePolicySource,
   EvidenceStatus,
   PersistenceStatus,
   Scenario,
   Trace,
+  TraceProvenance,
 } from './types'
 import { ScenarioCard } from './components/ScenarioCard'
 import { AgentActionCard } from './components/AgentActionCard'
@@ -77,58 +80,56 @@ function App() {
     }
   }
 
-  async function decideFor(
-    scenario: Scenario,
-  ): Promise<{ decision: AgentDecision; fellBack: boolean }> {
-    if (mode === 'nebius') {
-      try {
-        return { decision: await fetchNebiusAction(toModelView(scenario)), fellBack: false }
-      } catch {
-        return { decision: decide(toMockView(scenario)), fellBack: true }
-      }
-    }
-    return { decision: decide(toMockView(scenario)), fellBack: false }
-  }
-
-  // Local/demo single episode (client-authored trace).
-  async function runEpisode() {
-    if (running) return
-    setRunning(true)
-    setNotice(null)
-    try {
-      const index = cursor % seedScenarios.length
-      const scenario = seedScenarios[index]
-      const { decision, fellBack } = await decideFor(scenario)
-      setTraces((prev) => [...prev, buildTrace(scenario, prev.length + 1, decision)])
-      setCursor((c) => c + 1)
-      if (fellBack) setNotice(FALLBACK_MSG)
-    } catch {
-      setNotice('Could not run that episode. The loop was left unchanged — try again.')
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  // Server-owned episode: the server loads the canonical scenario, runs the
-  // policy + deterministic verifier, computes license, and persists evidence.
-  // The client only sends { scenarioId, policyMode } and renders the result.
-  async function runServerEpisode() {
+  // Canonical single-episode path: drive the `/v1` gym env. The reference agent
+  // (mock or Nebius) only PROPOSES an action from the returned observation; the
+  // ENVIRONMENT verifies it, scores it, and computes the license. The browser
+  // runs no verifier/license math for this path — it renders what `/v1` returns.
+  async function runGymEpisode() {
     if (running) return
     setRunning(true)
     setNotice(null)
     setPersistenceStatus('saving')
     try {
       const scenario = seedScenarios[cursor % seedScenarios.length]
-      const res = await postServerEpisode(scenario.id, mode)
-      // Preserve the server-authoritative trace identity (id, episode, versions,
-      // provenance). Only add a UI-only displayIndex for the mixed client list.
-      setTraces((prev) => [...prev, { ...res.trace, displayIndex: prev.length + 1 }])
+      const agentId = mode === 'nebius' ? 'nebius-reference' : 'mock-reference'
+      const reset = await resetGymEpisode(scenario.id, agentId)
+
+      // Reference agent proposes an action from the observation only.
+      let decision: AgentDecision
+      let actualSource: EvidencePolicySource = 'mock'
+      let fellBack = false
+      if (mode === 'nebius') {
+        try {
+          decision = await fetchNebiusAction(observationToModelView(reset.observation))
+          actualSource = 'nebius'
+        } catch {
+          decision = decide(toMockView(scenario))
+          fellBack = true
+        }
+      } else {
+        decision = decide(toMockView(scenario))
+      }
+
+      // The environment is the verifier/license authority — send only the action.
+      const step = await stepGymEpisode(reset.episodeId, decision.action)
+
+      const provenance: TraceProvenance = {
+        requestedPolicyMode: mode,
+        actualPolicySource: actualSource,
+        fallback: fellBack,
+        fallbackCode: fellBack ? 'nebius_unavailable' : null,
+      }
+      setTraces((prev) => [
+        ...prev,
+        { ...buildGymTrace(scenario, decision, step, provenance), displayIndex: prev.length + 1 },
+      ])
       setCursor((c) => c + 1)
-      setPersistenceStatus(res.persistence.status)
+      setPersistenceStatus(step.persisted ? 'saved' : 'local_only')
+      if (fellBack) setNotice(FALLBACK_MSG)
       refreshEvidence()
     } catch {
       setPersistenceStatus('unavailable')
-      setNotice('Server episode unavailable — the local demo still works. Try again.')
+      setNotice('Gym episode unavailable — check the server and try again.')
     } finally {
       setRunning(false)
     }
@@ -159,8 +160,8 @@ function App() {
       ? 'Running Nebius…'
       : 'Running…'
     : mode === 'nebius'
-      ? 'Run 1 Nebius Episode'
-      : 'Run Episode'
+      ? 'Run 1 Nebius Gym Episode'
+      : 'Run Gym Episode'
 
   const mutValue =
     mode === 'nebius' ? nebiusModel ?? 'Nebius Token Factory' : 'Mock Policy (local)'
@@ -217,20 +218,16 @@ function App() {
           <div className="controls">
             <button
               className="btn primary"
-              onClick={runEpisode}
+              onClick={runGymEpisode}
               disabled={running}
-              aria-label={mode === 'nebius' ? 'Run one Nebius episode' : 'Run a single episode'}
+              aria-label={
+                mode === 'nebius'
+                  ? 'Run one Nebius gym episode through the /v1 environment'
+                  : 'Run a single gym episode through the /v1 environment'
+              }
             >
               <span aria-hidden="true">▶</span> {primaryLabel}
-            </button>
-            <button
-              className="btn"
-              onClick={runServerEpisode}
-              disabled={running}
-              aria-label="Run a server-owned episode and persist the evidence"
-            >
-              <span aria-hidden="true">🗄</span> Run Server Episode
-              <span className="server-tag">evidence</span>
+              <span className="server-tag">/v1 · evidence</span>
             </button>
             <button
               className="btn"

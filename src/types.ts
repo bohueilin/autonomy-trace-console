@@ -307,6 +307,66 @@ export interface EvidenceStatus {
   recentCompactRuns: CompactRun[]
 }
 
+// ---------------------------------------------------------------------------
+// Gym /v1 reset/step (client-facing shapes).
+//
+// The browser only PROPOSES an action; the ENVIRONMENT verifies it, computes the
+// reward, and computes the license. The client never runs the verifier or the
+// license math for this path — it renders what /v1 returns.
+// ---------------------------------------------------------------------------
+
+/** Observation from POST /v1/episodes — the model view, no hidden risk. */
+export interface GymObservation {
+  scenarioId: string
+  domain: string
+  title: string
+  situation: string
+  visibleSignals: VisibleSignal[]
+}
+
+/** Successful POST /v1/episodes (reset) result. */
+export interface GymResetResult {
+  episodeId: string
+  runId: string
+  agentId: string
+  observation: GymObservation
+  allowedActions: Action[]
+  verifierRules: string
+}
+
+/** Deterministic verifier outcome inside a /v1 step result. */
+export interface GymStepInfo {
+  passed: boolean
+  category: VerdictCategory
+  catastrophic: boolean
+  expectedAction: Action
+  actualAction: Action
+  reason: string | null
+}
+
+/** Run-scoped license summary returned by a /v1 step. */
+export interface GymRunLicense {
+  level: string
+  name: string
+  passRate: number
+  avgReward: number
+  catastrophicCount: number
+  episodes: number
+}
+
+/** Successful POST /v1/episodes/:episodeId/step result. */
+export interface GymStepResult {
+  episodeId: string
+  runId: string
+  agentId: string
+  reward: number
+  done: boolean
+  info: GymStepInfo
+  license: GymRunLicense
+  persisted: boolean
+  recordId: string | null
+}
+
 /** A compact row from GET /api/runs/recent. */
 export interface RecentRun {
   id: string

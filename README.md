@@ -34,19 +34,23 @@ no matter how good the average looks.
   still scores it. The API key is server-side only (details below).
 - **Run 9-Episode Eval stays mock-only** so the headline demo is instant and
   deterministic.
-- **A server-owned episode path with InsForge evidence persistence is implemented.**
-  `POST /api/run-episode` computes the authoritative trace server-side and writes
-  a replayable audit row to InsForge (best-effort). The deterministic verifier
-  remains the source of truth.
+- **The canonical episode path is the `/v1` gym env.** `POST /v1/episodes` (reset)
+  returns an observation; the reference agent (mock or Nebius) proposes an action;
+  `POST /v1/episodes/:episodeId/step` submits **only** that action, and the
+  environment runs the deterministic verifier, computes the license, and persists a
+  replayable audit row to InsForge (best-effort). The legacy `POST /api/run-episode`
+  remains for backward compatibility but is no longer the primary path. The
+  deterministic verifier remains the source of truth in both.
 
 The mock pieces are mocked on purpose; everything load-bearing (the verifier and
 the license gate) is deterministic and lives in plain, readable code.
 
-**Implemented external integrations:** Nebius model-under-test (server-side), and
-the **InsForge evidence write path**. **Still deferred:** InsForge read-back /
-rehydration (durable history across server restarts — the next milestone) and an
-optional Vapi operator. No auth, no real payments, no robotics simulation, no RL
-training, no scenario generation.
+**Implemented external integrations:** Nebius model-under-test (server-side), the
+**InsForge evidence write path**, and **InsForge read-back / rehydration** (durable
+authoritative history that survives a server restart when configured). The
+canonical episode path is the **`/v1` gym env** (reset/step); `/api/run-episode` is
+retained only as legacy compatibility. No auth, no real payments, no robotics
+simulation, no RL training, no scenario generation.
 
 ---
 
@@ -235,8 +239,11 @@ only once the request is proven valid.
 
 - **Agent mode toggle** (Mock Policy / Nebius Policy) and a **model-under-test**
   badge sit next to the run buttons.
-- **Run Episode** uses the selected mode. In Nebius mode it becomes
-  **Run 1 Nebius Episode** — a single real model call.
+- **Run Gym Episode** (the primary button) drives the canonical `/v1` gym env:
+  reset → the reference agent proposes an action → step. In Nebius mode it becomes
+  **Run 1 Nebius Gym Episode** — a single real model call for the proposed action,
+  still scored by the environment's deterministic verifier. The browser sends only
+  `{ scenarioId, agentId }` on reset and only `{ action }` on step.
 - **Run 9-Episode Eval is mock-only by design**, kept instant and deterministic
   for the headline demo. (Tagged `mock` in the UI.)
 - If Nebius is unreachable (no key, timeout, upstream error, missing endpoint),
@@ -297,12 +304,14 @@ right to act" is the entire point.
    the one-line reason aloud. Open a catastrophic episode and show the **hidden
    risk**, which stays locked until after scoring — the agent never saw it.
 3. **(1:50) Swap the policy under test.** Flip the toggle to **Nebius Policy** and
-   click **Run 1 Nebius Episode**. The agent card now shows source **Nebius Token
-   Factory** and the model name. "Same scenario, same verifier, same license gate
-   — only the policy proposing the action changed."
-4. **(2:25) Server-owned evidence.** Click **Run Server Episode**. The client sent
-   only `{ scenarioId, policyMode }`; the *server* loaded the canonical scenario,
-   ran the verifier, and persisted the trace. Point at the **Evidence store**
+   click **Run 1 Nebius Gym Episode**. The agent card now shows source **Nebius
+   Token Factory** and the model name. "Same scenario, same `/v1` environment, same
+   verifier, same license gate — only the reference agent proposing the action
+   changed."
+4. **(2:25) The environment owns the verdict.** Every primary **Run Gym Episode**
+   already went through `/v1`: the browser sent only `{ scenarioId, agentId }` on
+   reset, then only `{ action }` on step — the *environment* ran the verifier,
+   computed the license, and persisted the trace. Point at the **Evidence store**
    panel: trace authority `server_authoritative_episode`, the saved record id (or
    *Local only* if InsForge isn't configured), and the server license. Reload the
    page — the server episode count persists.
@@ -325,7 +334,16 @@ traces are **local/demo state**, never authoritative. Milestone 3 adds a
 **server-owned episode path** that computes the authoritative result on the
 server and persists it to InsForge as evidence.
 
-### The server-owned flow (`POST /api/run-episode`)
+> **The canonical episode path is the `/v1` gym env (reset/step).** The primary UI
+> button drives it: the browser POSTs `/v1/episodes` with only `{ scenarioId,
+> agentId }`, a reference agent proposes an action, and the browser POSTs
+> `/v1/episodes/:episodeId/step` with only `{ action }`. The environment runs the
+> deterministic verifier, computes the license, and persists the same kind of
+> tamper-evident audit row described below. `POST /api/run-episode` (documented in
+> this section) computes the same authoritative trace in a **single** call and is
+> retained only for backward compatibility — it is **not** the canonical gym path.
+
+### The legacy server-owned flow (`POST /api/run-episode`)
 
 The client sends **only** `{ scenarioId, policyMode }`. Everything authoritative
 happens on the server:
@@ -662,7 +680,8 @@ shown and how the environment scored it.
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
 | `src/components/*` | Scenario, agent-action, verifier, trace, license, and evidence UI. |
-| [`src/serverEpisodeClient.ts`](src/serverEpisodeClient.ts) | Frontend client for `/api/run-episode` + `/api/runs/recent`. |
+| [`src/gymClient.ts`](src/gymClient.ts) | Frontend client for the canonical `/v1` reset/step env (reset sends only `{ scenarioId, agentId }`, step only `{ action }`) + the step→Trace mapper. |
+| [`src/serverEpisodeClient.ts`](src/serverEpisodeClient.ts) | Frontend client for the legacy `/api/run-episode` + `/api/runs/recent` + `/api/evidence/status`. |
 | [`server/main.ts`](server/main.ts) | Standalone Hono server — the only backend route owner (`/health`, `/api/*`, `/v1/*`). Vite proxies to it. |
 | [`server/nebiusHandler.ts`](server/nebiusHandler.ts) | Server-only: builds the request from visible context, calls Nebius, normalizes. |
 | [`server/runEpisodeHandler.ts`](server/runEpisodeHandler.ts) | Server-owned episode: canonical scenario → policy → verifier → reward → license → replayable audit row → persist. |

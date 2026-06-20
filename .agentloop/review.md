@@ -1,36 +1,44 @@
 ## Review
 
-**P1 — proxy override is documented in `.env.example`, but Vite no longer loads `.env.local`.**  
-[vite.config.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/vite.config.ts:12) reads `process.env.VITE_BACKEND_ORIGIN || process.env.BACKEND_ORIGIN`, while [.env.example](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.env.example:9) tells users to put `VITE_BACKEND_ORIGIN` in the copied env file. Since this round intentionally removed `loadEnv`, that override will only work if exported in the shell, not if placed in `.env.local`. Recommendation: either document the override as a shell env only, or explicitly load only non-secret Vite proxy env. Given the design goal, prefer docs-only: remove it from `.env.example` and show `VITE_BACKEND_ORIGIN=http://... npm run dev` in README.
+**P0 (must-fix): none.**
 
-**P2 — stale current-architecture comments still reference deleted Vite middleware/plugin files.**  
-[server/nebiusHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/nebiusHandler.ts:4) still says it is wired as Vite dev middleware and references deleted `server/nebiusPlugin.ts` at line 5. [server/insforgeStore.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/insforgeStore.ts:4) still says “Vite middleware.” This misses the design’s repo-search cleanup intent, even though runtime behavior is fine. Recommendation: update comments to say these modules are called only by the standalone Hono server.
+**P1 (architecture): Gym is still not canonical; the UI/reference flow still centers legacy `/api` and client-local traces.**  
+The round met its docs/comment scope, but against the GOAL this remains the next major blocker. `server/main.ts:12-14` still labels `/api/run-episode` and related routes as “Legacy (current UI + reference flows)”. The primary UI button calls `runEpisode` at `src/App.tsx:217-224`, which builds a client-authored trace via local `verify` and local `computeLicense` (`src/App.tsx:38`, `src/App.tsx:61-78`, `src/App.tsx:93-103`). The “server-owned” path still posts to `/api/run-episode`, not `/v1`, at `src/serverEpisodeClient.ts:12-20`. Recommendation: next round should introduce a frontend `/v1` gym client and make reset/step the path for reference-agent episodes, leaving `/api` only for compatibility/status while migrating.
 
-**No P0 findings.** The runtime change satisfies the main acceptance criteria: Vite has only `react()` plus `/api` and `/v1` proxies at [vite.config.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/vite.config.ts:16), deleted middleware plugins are gone, and `server/main.ts` owns `/health`, `/api/*`, and `/v1/*` at [server/main.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/main.ts:60). Gates are honestly green per `.agentloop/gates.log`: build, lint, evidence verification, and 40 vitest tests passed.
+**P1 (architecture/trust boundary): legacy `/api/run-episode` still bakes policies into the server and uses module-global run state.**  
+The GOAL wants “Mock and Nebius are reference agents that call the env, not policies baked into the server” and “No module-global mutable state in the request path.” `handleRunEpisode` runs mock/Nebius policy inside the server at `server/runEpisodeHandler.ts:142-199`, then computes trace/license from module globals at `server/runEpisodeHandler.ts:119-136` and `server/runEpisodeHandler.ts:205-232`. This is not a regression from this docs-only round, and the client cannot forge reward/license through this path, but it is still not the intended RL-environment boundary. Recommendation: route reference agents through `/v1/episodes` + `/v1/.../step` and then retire or demote `/api/run-episode`.
 
-**Verdict: NEEDS-FIX** for the proxy override documentation mismatch and stale architecture comments.
+**P2 (docs quality): README still says InsForge read-back/rehydration is deferred, which now contradicts the gates and code.**  
+`README.md:45-48` says “Still deferred: InsForge read-back / rehydration,” but `.agentloop/gates.log:30` verifies read-back parsing and `.agentloop/gates.log:44-65` verifies read-back gating, digest validity, tamper exclusion, and external gym rows. Recommendation: update that README summary so demo docs do not understate the tamper-evident evidence story.
 
-## Next Design
+**P2 (gates/tests): gates are green and honest for this round’s narrow scope.**  
+The full gate command ran at `.agentloop/gates.log:2-3`; build passed at `.agentloop/gates.log:6-17`, lint produced no errors at `.agentloop/gates.log:19-20`, evidence verification passed all 40 checks at `.agentloop/gates.log:23-67`, and Vitest passed 6 files / 40 tests at `.agentloop/gates.log:69-124`. Since the change is docs/comments only, no new test was required.
+
+**Verdict: ACCEPT.**  
+The last `design.md` acceptance criteria were met: `.env.example` no longer contains `VITE_BACKEND_ORIGIN`, README documents the Vite proxy override as shell env only, deleted Vite middleware/plugin references are gone, and no runtime behavior changed.
+
+## Next design
 
 **Objective**  
-Clean up the single-backend transition fallout without changing runtime semantics: make proxy override instructions true, and remove stale Vite middleware references.
+Make `/v1` reset/step the canonical frontend/reference-agent path for single episodes, reducing dependence on legacy `/api/run-episode`.
 
 **Scope**  
-Change only `README.md`, `.env.example`, `server/nebiusHandler.ts`, and `server/insforgeStore.ts`.
+Change only the frontend episode client/UI wiring and minimal shared types needed for `/v1`. Do not change verifier, reward, license semantics, scenario data, digest format, InsForge persistence, or server `/v1` behavior.
 
 **Steps**  
-1. Remove `VITE_BACKEND_ORIGIN` from `.env.example`, or clearly mark that `.env.local` is not read by Vite config. Prefer removal.
-2. In README, document proxy override as a shell env when launching Vite, e.g. `VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev`.
-3. Update stale comments in `server/nebiusHandler.ts` and `server/insforgeStore.ts` to reference the standalone Hono server, not Vite middleware or deleted plugin files.
-4. Run `rg` for `server/nebiusPlugin`, `server/runEpisodePlugin`, `Vite middleware`, and `VITE_BACKEND_ORIGIN` to confirm remaining references are accurate.
-5. Do not touch verifier, license, reward, persistence logic, route handlers, proxy config, or tests unless lint requires comment formatting.
+1. Add a small frontend gym client for `POST /v1/episodes` and `POST /v1/episodes/:episodeId/step`.
+2. For single “Run Episode”, call `/v1` reset, let the selected reference agent propose an action from the returned observation, then submit only `{ action }` to `/v1/.../step`.
+3. Keep the server-authoritative result from `/v1` as the displayed trace/license source; do not recompute license from client traces for that path.
+4. Leave legacy `/api/run-episode` reachable for now, but rename/demote the UI affordance if retained so `/v1` is visibly primary.
+5. Update README wording that says read-back is deferred.
+6. Add focused tests or a static check if any new client mapping logic is non-trivial.
 
-**Acceptance Criteria**  
-- No current-architecture comment references deleted plugin files.
-- README proxy override instructions work with the current `vite.config.ts`.
-- `.env.example` does not imply Vite reads `.env.local`.
-- No runtime behavior changes.
-- Gates remain green.
+**Acceptance criteria**  
+- The primary single-episode UI path uses `/v1/episodes` + `/v1/.../step`.
+- The client sends only an action to step; it never sends reward, verifier result, scenario answer, license, or catastrophic flags.
+- `/api/run-episode` is no longer presented as the canonical episode path.
+- Existing evidence/digest/fail-closed tests remain green.
+- README no longer claims InsForge read-back is deferred.
 
 **Gates**  
 `npm run build`  
