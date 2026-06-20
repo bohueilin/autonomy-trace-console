@@ -3,7 +3,14 @@ import './App.css'
 import { decide, toMockView } from './agent'
 import { fetchNebiusAction } from './nebiusClient'
 import { fetchEvidenceStatus } from './serverEpisodeClient'
-import { buildGymTrace, observationToModelView, resetGymEpisode, stepGymEpisode } from './gymClient'
+import {
+  buildGymTrace,
+  gymLicenseToState,
+  observationToMockView,
+  observationToModelView,
+  resetGymEpisode,
+  stepGymEpisode,
+} from './gymClient'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
 import { verify } from './verifier'
@@ -12,6 +19,7 @@ import type {
   AgentSource,
   EvidencePolicySource,
   EvidenceStatus,
+  LicenseState,
   PersistenceStatus,
   Scenario,
   Trace,
@@ -37,8 +45,12 @@ function App() {
   const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus>('idle')
   const [evidence, setEvidence] = useState<EvidenceStatus | null>(null)
   const [backendReached, setBackendReached] = useState(false)
+  // Latest authoritative license returned by a `/v1` gym step. When present it is
+  // the headline license; the demo-only 9-episode eval clears it.
+  const [gymLicense, setGymLicense] = useState<LicenseState | null>(null)
 
-  const license = useMemo(() => computeLicense(traces), [traces])
+  const traceLicense = useMemo(() => computeLicense(traces), [traces])
+  const license = gymLicense ?? traceLicense
   const active = traces.length > 0 ? traces[traces.length - 1] : null
 
   const nebiusModel = useMemo(
@@ -91,8 +103,11 @@ function App() {
     setPersistenceStatus('saving')
     try {
       const scenario = seedScenarios[cursor % seedScenarios.length]
-      const agentId = mode === 'nebius' ? 'nebius-reference' : 'mock-reference'
-      const reset = await resetGymEpisode(scenario.id, agentId)
+      // Open the episode for the requested reference agent.
+      let reset = await resetGymEpisode(
+        scenario.id,
+        mode === 'nebius' ? 'nebius-reference' : 'mock-reference',
+      )
 
       // Reference agent proposes an action from the observation only.
       let decision: AgentDecision
@@ -103,11 +118,16 @@ function App() {
           decision = await fetchNebiusAction(observationToModelView(reset.observation))
           actualSource = 'nebius'
         } catch {
-          decision = decide(toMockView(scenario))
+          // Nebius failed to propose. Do NOT step the nebius-reference episode —
+          // stepping it would persist durable evidence claiming Nebius decided.
+          // Open a fresh mock-reference episode for the same scenario and step
+          // only that one, so provenance honestly reads mock.
           fellBack = true
+          reset = await resetGymEpisode(scenario.id, 'mock-reference')
+          decision = decide(observationToMockView(reset.observation))
         }
       } else {
-        decision = decide(toMockView(scenario))
+        decision = decide(observationToMockView(reset.observation))
       }
 
       // The environment is the verifier/license authority — send only the action.
@@ -123,6 +143,8 @@ function App() {
         ...prev,
         { ...buildGymTrace(scenario, decision, step, provenance), displayIndex: prev.length + 1 },
       ])
+      // The `/v1` step license is authoritative — make it the headline license.
+      setGymLicense(gymLicenseToState(step.license))
       setCursor((c) => c + 1)
       setPersistenceStatus(step.persisted ? 'saved' : 'local_only')
       if (fellBack) setNotice(FALLBACK_MSG)
@@ -136,12 +158,15 @@ function App() {
   }
 
   // Full 9-episode eval — intentionally MOCK-ONLY and client-side for reliability.
+  // Clears the authoritative gym license so this demo-only view never masquerades
+  // as the environment-returned `/v1` license.
   function runFullEval() {
     if (running) return
     setNotice(null)
     try {
       const fresh = seedScenarios.map((s, i) => buildTrace(s, i + 1, decide(toMockView(s))))
       setTraces(fresh)
+      setGymLicense(null)
       setCursor(seedScenarios.length)
     } catch {
       setNotice('Could not run the eval. The loop was left unchanged — try again.')
@@ -151,6 +176,7 @@ function App() {
   function reset() {
     if (running) return
     setTraces([])
+    setGymLicense(null)
     setCursor(0)
     setNotice(null)
   }

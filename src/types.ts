@@ -315,13 +315,15 @@ export interface EvidenceStatus {
 // license math for this path — it renders what /v1 returns.
 // ---------------------------------------------------------------------------
 
-/** Observation from POST /v1/episodes — the model view, no hidden risk. */
+/** Observation from POST /v1/episodes — the visible view, no hidden risk. */
 export interface GymObservation {
   scenarioId: string
   domain: string
   title: string
   situation: string
   visibleSignals: VisibleSignal[]
+  /** Mock-only explainability signal (0..1). Never a hidden answer field. */
+  visibleRiskScore: number
 }
 
 /** Successful POST /v1/episodes (reset) result. */

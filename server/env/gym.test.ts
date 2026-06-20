@@ -25,8 +25,14 @@ describe('resetEpisode', () => {
     // Observation exposes only the visible fields; never the hidden answer.
     expect(reset.observation.scenarioId).toBe('com-1')
     expect(reset.observation.visibleSignals.length).toBeGreaterThan(0)
+    // The non-hidden mock feature is present...
+    expect(typeof reset.observation.visibleRiskScore).toBe('number')
+    expect(reset.observation.visibleRiskScore).toBeGreaterThanOrEqual(0)
+    expect(reset.observation.visibleRiskScore).toBeLessThanOrEqual(1)
+    // ...but the hidden answer fields never are.
     expect(reset.observation).not.toHaveProperty('correctAction')
     expect(reset.observation).not.toHaveProperty('hiddenRisk')
+    expect(reset.observation).not.toHaveProperty('rationale')
   })
 
   it('rejects an unknown scenarioId', () => {
@@ -493,5 +499,69 @@ describe('stepEpisode', () => {
     } finally {
       globalThis.fetch = realFetch
     }
+  })
+
+  // Provenance is derived from the SIGNED reset agentId — the reference agents
+  // keep concrete attribution instead of a generic `external`. The insert body is
+  // captured so we can assert what was durably persisted.
+  async function persistedRowFor(agentId: string): Promise<Record<string, unknown>> {
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-1', runId: `run_prov_${agentId}`, agentId }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) throw new Error('reset failed')
+
+    let inserted: Record<string, unknown> | null = null
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } })
+
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>[]
+        inserted = body[0]
+        return json([{ ...body[0], id: 'rec_prov' }], 201)
+      }
+      // Run-history GET: empty trusted history so this single episode persists.
+      return json([])
+    }) as typeof fetch
+
+    try {
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      expect(step.ok).toBe(true)
+      if (!step.ok) throw new Error('step failed')
+      expect(step.persisted).toBe(true)
+    } finally {
+      globalThis.fetch = realFetch
+    }
+    if (!inserted) throw new Error('no row inserted')
+    return inserted
+  }
+
+  it('configured InsForge: a mock-reference reset persists mock/mock provenance', async () => {
+    const row = await persistedRowFor('mock-reference')
+    expect(row.requested_policy_mode).toBe('mock')
+    expect(row.actual_policy_source).toBe('mock')
+    expect(row.model_name).toBe('mock-reference')
+    expect(row.fallback).toBe(false)
+    expect(row.fallback_code).toBeNull()
+  })
+
+  it('configured InsForge: a nebius-reference reset persists nebius/nebius provenance', async () => {
+    const row = await persistedRowFor('nebius-reference')
+    expect(row.requested_policy_mode).toBe('nebius')
+    expect(row.actual_policy_source).toBe('nebius')
+    expect(row.model_name).toBe('nebius-reference')
+    expect(row.fallback).toBe(false)
+    expect(row.fallback_code).toBeNull()
+  })
+
+  it('configured InsForge: an unknown external agentId persists external/external provenance', async () => {
+    const row = await persistedRowFor('rl-trainer-7')
+    expect(row.requested_policy_mode).toBe('external')
+    expect(row.actual_policy_source).toBe('external')
   })
 })

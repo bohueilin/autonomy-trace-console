@@ -1,10 +1,15 @@
+import { LICENSE_LEVELS } from './license'
 import type {
   Action,
   AgentDecision,
   Domain,
   GymObservation,
   GymResetResult,
+  GymRunLicense,
   GymStepResult,
+  LicenseLevelId,
+  LicenseState,
+  MockPolicyView,
   ModelPolicyView,
   Scenario,
   Trace,
@@ -94,6 +99,46 @@ export function observationToModelView(obs: GymObservation): ModelPolicyView {
     title: obs.title,
     situation: obs.situation,
     visibleSignals: obs.visibleSignals,
+  }
+}
+
+/**
+ * Map a gym observation to the mock policy view. Built ONLY from reset
+ * observation fields (including the mock-only `visibleRiskScore`) so the mock
+ * reference agent decides from what the env returned, not the local registry.
+ */
+export function observationToMockView(obs: GymObservation): MockPolicyView {
+  return {
+    id: obs.scenarioId,
+    domain: obs.domain as Domain,
+    title: obs.title,
+    situation: obs.situation,
+    visibleSignals: obs.visibleSignals,
+    visibleRiskScore: obs.visibleRiskScore,
+  }
+}
+
+/**
+ * Pure adapter from the run-scoped `/v1` step license to the UI `LicenseState`.
+ * The level + stats come straight from the environment; the browser does no
+ * license math for the gym path — it renders what `/v1` returned.
+ */
+export function gymLicenseToState(license: GymRunLicense): LicenseState {
+  const level = LICENSE_LEVELS[license.level as LicenseLevelId] ?? LICENSE_LEVELS.L0
+  const passes = Math.round(license.passRate * license.episodes)
+  return {
+    level,
+    episodes: license.episodes,
+    passes,
+    passRate: license.passRate,
+    avgReward: license.avgReward,
+    totalReward: license.avgReward * license.episodes,
+    catastrophicCount: license.catastrophicCount,
+    reason:
+      `Environment-returned license over ${license.episodes} ` +
+      `/v1 gym episode(s): ${level.id} ${level.name}, pass rate ` +
+      `${(license.passRate * 100).toFixed(0)}%, avg reward ${license.avgReward.toFixed(2)}` +
+      `${license.catastrophicCount > 0 ? `, ${license.catastrophicCount} catastrophic` : ''}.`,
   }
 }
 

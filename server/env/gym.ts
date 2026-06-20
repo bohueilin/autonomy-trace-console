@@ -16,7 +16,7 @@ import { randomUUID } from 'node:crypto'
 import { toModelView } from '../../src/agent.ts'
 import { computeLicenseFromVerdicts, type LicenseVerdict } from '../../src/license.ts'
 import { SCENARIO_VERSION, seedScenarios } from '../../src/seedScenarios.ts'
-import type { Action, AgentDecision, Scenario } from '../../src/types'
+import type { Action, AgentDecision, EvidencePolicySource, Scenario } from '../../src/types'
 import { verify } from '../../src/verifier.ts'
 import { computeAuditDigest } from '../evidence/digest.ts'
 import {
@@ -55,6 +55,8 @@ export interface Observation {
   title: string
   situation: string
   visibleSignals: { label: string; value: string }[]
+  /** Mock-only explainability signal (0..1). Never a hidden answer field. */
+  visibleRiskScore: number
 }
 
 export interface ResetInput {
@@ -142,6 +144,20 @@ function sampleScenario(): Scenario {
   return seedScenarios[Math.floor(Math.random() * seedScenarios.length)]
 }
 
+/**
+ * Durable provenance for a gym row, derived from the SIGNED reset agentId (never
+ * a client step field). The reference agents that drive the env get concrete
+ * `mock` / `nebius` attribution; any other external agent stays `external`.
+ */
+function provenanceForAgent(agentId: string): {
+  requested: EvidencePolicySource
+  actual: EvidencePolicySource
+} {
+  if (agentId === 'mock-reference') return { requested: 'mock', actual: 'mock' }
+  if (agentId === 'nebius-reference') return { requested: 'nebius', actual: 'nebius' }
+  return { requested: 'external', actual: 'external' }
+}
+
 function clamp01(n: unknown): number {
   const x = Number(n)
   if (!Number.isFinite(x)) return 0.5
@@ -189,6 +205,9 @@ export function resetEpisode(input: ResetInput, cfg: GymConfig): ResetResult {
       title: view.title,
       situation: view.situation,
       visibleSignals: view.visibleSignals,
+      // Non-hidden mock feature; hidden fields (hiddenRisk/correctAction/rationale)
+      // stay excluded because the observation is built only from these fields.
+      visibleRiskScore: scenario.visibleRiskScore,
     },
     allowedActions: ACTIONS,
     verifierRules: VERIFIER_RULES,
@@ -370,8 +389,10 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
   const verdicts: LicenseVerdict[] = [...prior, thisVerdict].map(toLicenseVerdict)
   const license = toLicense(verdicts)
 
-  // Build the tamper-evident audit row (external-agent provenance).
+  // Build the tamper-evident audit row. Provenance is derived from the signed
+  // reset agentId (mock/nebius reference agents keep concrete attribution).
   const createdAt = new Date().toISOString()
+  const provenance = provenanceForAgent(payload.agentId)
   const versions = getEvalVersions()
   const view = toModelView(scenario)
   const episodeIndex = prior.length + 1
@@ -401,8 +422,8 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
     scenario_title: scenario.title,
     domain: scenario.domain,
     scenario_snapshot: scenario,
-    requested_policy_mode: 'external',
-    actual_policy_source: 'external',
+    requested_policy_mode: provenance.requested,
+    actual_policy_source: provenance.actual,
     fallback: false,
     fallback_code: null,
     attempted_model_input: null,

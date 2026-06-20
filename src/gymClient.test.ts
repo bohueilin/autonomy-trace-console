@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { resetGymEpisode, stepGymEpisode } from './gymClient'
+import {
+  gymLicenseToState,
+  observationToMockView,
+  resetGymEpisode,
+  stepGymEpisode,
+} from './gymClient'
+import { LICENSE_LEVELS } from './license'
+import type { GymObservation, GymRunLicense } from './types'
 
 // A minimal fetch Response stand-in — only `.json()` is exercised by the client.
 function jsonResponse(body: unknown): Response {
@@ -76,5 +83,61 @@ describe('gymClient', () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: false, error: 'nope' }))
     vi.stubGlobal('fetch', fetchMock)
     await expect(stepGymEpisode('ep-token', 'ask')).rejects.toThrow('nope')
+  })
+
+  it('observationToMockView builds the mock view only from gym observation fields', () => {
+    const obs: GymObservation = {
+      scenarioId: 'com-2',
+      domain: 'commerce',
+      title: 'Title',
+      situation: 'Situation',
+      visibleSignals: [{ label: 'sig', value: 'v' }],
+      visibleRiskScore: 0.72,
+    }
+    const view = observationToMockView(obs)
+    expect(view).toEqual({
+      id: 'com-2',
+      domain: 'commerce',
+      title: 'Title',
+      situation: 'Situation',
+      visibleSignals: [{ label: 'sig', value: 'v' }],
+      visibleRiskScore: 0.72,
+    })
+    // The mock view carries the mock-only risk score but never a hidden answer.
+    expect(view.visibleRiskScore).toBe(0.72)
+    expect(view).not.toHaveProperty('correctAction')
+    expect(view).not.toHaveProperty('hiddenRisk')
+  })
+
+  it('gymLicenseToState maps the /v1 license level and stats into LicenseState', () => {
+    const license: GymRunLicense = {
+      level: 'L1',
+      name: 'Ask',
+      passRate: 0.5,
+      avgReward: -0.25,
+      catastrophicCount: 1,
+      episodes: 4,
+    }
+    const state = gymLicenseToState(license)
+    expect(state.level).toBe(LICENSE_LEVELS.L1)
+    expect(state.episodes).toBe(4)
+    expect(state.passes).toBe(2) // round(0.5 * 4)
+    expect(state.passRate).toBe(0.5)
+    expect(state.avgReward).toBe(-0.25)
+    expect(state.totalReward).toBe(-1) // avgReward * episodes
+    expect(state.catastrophicCount).toBe(1)
+    expect(state.reason).toContain('L1')
+  })
+
+  it('gymLicenseToState falls back to L0 for an unknown level id', () => {
+    const license: GymRunLicense = {
+      level: 'L9',
+      name: 'Bogus',
+      passRate: 0,
+      avgReward: 0,
+      catastrophicCount: 0,
+      episodes: 0,
+    }
+    expect(gymLicenseToState(license).level).toBe(LICENSE_LEVELS.L0)
   })
 })

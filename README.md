@@ -367,13 +367,26 @@ above.
 
 | | Authority | Persisted? | License |
 | --- | --- | --- | --- |
-| **Run Server Episode** | `server_authoritative_episode` | yes (InsForge, best-effort) | server-computed over server run history |
-| **Run Episode / Run 9-Episode Eval** | `demo_client_trace` | no | client session view only |
+| **Run Gym Episode** (`/v1`, mock or Nebius) | `server_authoritative_episode` | yes (InsForge, best-effort) | environment-returned `/v1` step license |
+| **Run 9-Episode Eval** (mock-only demo) | `demo_client_trace` | no | client session view only (demo-only) |
 
-The header **license chip** reflects the local *client session* (the visible
-trace list). The **Evidence store** panel reflects the **server's own
-authoritative run history** and may differ — that's expected; the panel is the
-authoritative one. Traces are tagged `server` / `demo` in the trace list.
+After a **Run Gym Episode**, the header **license chip** and the **license
+summary** show the **environment-returned `/v1` step license** — the authoritative
+license the env computed over that run. **Run 9-Episode Eval** is a mock-only,
+client-side demo: it **clears** the gym license so its client-session license is
+clearly **demo-only** and never masquerades as the authoritative `/v1` license.
+The **Evidence store** panel always reflects the **server's own authoritative run
+history** and may differ — that's expected; the panel is the authoritative one.
+Traces are tagged `server` / `demo` in the trace list.
+
+On a **Nebius fallback** (the model could not propose), the UI does **not** step
+the `nebius-reference` episode — that would persist durable evidence claiming
+Nebius decided. Instead it opens and steps a **fresh `mock-reference` gym
+episode** for the same scenario, so the persisted provenance honestly reads
+`mock` and a banner notes the fallback. Gym rows derive `requested_policy_mode` /
+`actual_policy_source` from the signed reset `agentId`: `mock-reference` →
+`mock`/`mock`, `nebius-reference` → `nebius`/`nebius`, any other external agent →
+`external`/`external`.
 
 ### Configure InsForge
 
