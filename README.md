@@ -313,9 +313,11 @@ right to act" is the entire point.
    verifier, same license gate — only the reference agent proposing the action
    changed."
 4. **(2:25) The environment owns the verdict.** Every primary **Run Gym Episode**
-   already went through `/v1`: the browser sent only `{ scenarioId, agentId }` on
-   reset, then only `{ action }` on step — the *environment* ran the verifier,
-   computed the license, and persisted the trace. Point at the **Evidence store**
+   already went through `/v1`: the browser POSTed only `{ scenarioId, mode }` to the
+   server-owned `POST /v1/reference-episodes` — the *environment* reset, ran the
+   reference agent, ran the verifier, computed the license, and persisted the trace.
+   (External agents drive the public `/v1/episodes` reset/step boundary themselves.)
+   Point at the **Evidence store**
    panel: trace authority `server_authoritative_episode`, the saved record id (or
    *Local only* if InsForge isn't configured), and the server license. Reload the
    page — the server episode count persists.
@@ -339,11 +341,13 @@ traces are **local/demo state**, never authoritative. Milestone 3 adds a
 server and persists it to InsForge as evidence.
 
 > **The canonical episode path is the `/v1` gym env (reset/step).** The primary UI
-> button drives it: the browser POSTs `/v1/episodes` with only `{ scenarioId,
-> agentId }`, a reference agent proposes an action, and the browser POSTs
-> `/v1/episodes/:episodeId/step` with only `{ action }`. The environment runs the
-> deterministic verifier, computes the license, and persists the same kind of
-> tamper-evident audit row described below. `POST /api/run-episode` (documented in
+> button drives it through the **server-owned** `POST /v1/reference-episodes`,
+> sending only `{ scenarioId, mode }`: the server resets, a reference agent proposes
+> an action, and the server steps. External agents instead drive the public
+> `/v1/episodes` reset/step boundary directly (`{ scenarioId, agentId }` on reset,
+> then `{ action }` on step). Either way the environment runs the deterministic
+> verifier, computes the license, and persists the same kind of tamper-evident audit
+> row described below. `POST /api/run-episode` (documented in
 > this section) computes the same authoritative trace in a **single** call and is
 > retained only for backward compatibility — it is **not** the canonical gym path.
 
@@ -505,9 +509,10 @@ carries `versions` and `provenance` for the same attribution.
 npm run verify:evidence   # in-process checks; no running server or creds needed
 ```
 
-Confirms: unknown scenarios are rejected; only `{ scenarioId, policyMode }` is
-accepted; client-spoofed reward/pass/license are ignored; the trace carries
-authority + identity + versions; the Nebius no-key fallback records
+Confirms (legacy `/api/run-episode` path): unknown scenarios are rejected; only
+`{ scenarioId, policyMode }` is accepted; client-spoofed reward/pass/license are
+ignored; the trace carries authority + identity + versions; the Nebius no-key
+fallback records
 `requested_policy_mode: nebius` / `actual_policy_source: mock` / `fallback: true` /
 `fallback_code: no_key` with both inputs; and the row contains the replay fields.
 

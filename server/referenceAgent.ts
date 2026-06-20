@@ -68,7 +68,7 @@ function modelViewFromObs(o: Observation): ModelPolicyView {
 
 /** Open a trusted mock episode, decide from its observation, and step it. */
 async function runMockEpisode(
-  scenarioId: string | undefined,
+  scenarioId: string,
   cfg: ReferenceConfig,
   requestedPolicyMode: EvidencePolicySource,
   fallbackCode: string | null,
@@ -95,19 +95,18 @@ async function runMockEpisode(
 }
 
 /**
- * Run one reference-agent episode end-to-end through the gym env. `scenarioId`
- * and `mode` are validated here; everything trust-bearing is computed by
- * stepEpisode against the server-loaded scenario.
+ * Run one reference-agent episode end-to-end through the gym env. The caller (the
+ * `/v1/reference-episodes` route) has already validated `scenarioId` as a
+ * non-empty string and `mode` as a `ReferenceMode`, so the trusted runner takes
+ * the stricter boundary type directly. Unknown scenario ids still fail closed via
+ * `resetReferenceEpisode`. Everything trust-bearing is computed by stepEpisode
+ * against the server-loaded scenario.
  */
 export async function runReferenceEpisode(
-  input: { scenarioId?: unknown; mode?: unknown },
+  input: { scenarioId: string; mode: ReferenceMode },
   cfg: ReferenceConfig,
 ): Promise<ReferenceResult> {
-  const mode = input.mode
-  if (mode !== 'mock' && mode !== 'nebius') {
-    return { ok: false, code: 'bad_request', error: 'mode must be "mock" or "nebius".' }
-  }
-  const scenarioId = typeof input.scenarioId === 'string' ? input.scenarioId : undefined
+  const { scenarioId, mode } = input
 
   if (mode === 'mock') {
     return runMockEpisode(scenarioId, cfg, 'mock', null)

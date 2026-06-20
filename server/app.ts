@@ -52,6 +52,34 @@ async function jsonBody(c: { req: { json: () => Promise<unknown> } }): Promise<R
   }
 }
 
+// Strict body parser for `/v1` routes: a malformed, non-object, or array body must
+// be rejected (not silently coerced to `{}`), so a trusted episode can never be
+// minted from a request the server could not actually understand.
+type StrictBody =
+  | { ok: true; body: Record<string, unknown> }
+  | { ok: false; error: string }
+
+async function strictJsonObject(c: { req: { json: () => Promise<unknown> } }): Promise<StrictBody> {
+  let raw: unknown
+  try {
+    raw = await c.req.json()
+  } catch {
+    return { ok: false, error: 'Request body must be valid JSON.' }
+  }
+  if (Array.isArray(raw)) {
+    return { ok: false, error: 'Request body must be a JSON object, not an array.' }
+  }
+  if (raw === null || typeof raw !== 'object') {
+    return { ok: false, error: 'Request body must be a JSON object.' }
+  }
+  return { ok: true, body: raw as Record<string, unknown> }
+}
+
+const badRequest = (
+  c: { json: (v: unknown, s: ContentfulStatusCode) => Response },
+  error: string,
+): Response => c.json({ ok: false, code: 'bad_request', error }, 400)
+
 /** Keys present in `body` that are not in the allow-list. */
 function extraKeys(body: Record<string, unknown>, allowed: string[]): string[] {
   return Object.keys(body).filter((k) => !allowed.includes(k))
@@ -72,8 +100,23 @@ export function createApp(config: AppConfig): Hono {
   )
 
   // ---- Gym env (external policy) -----------------------------------------
+  // PUBLIC reset for external agents. `scenarioId` may be omitted (random external
+  // scenario), but a PRESENT field must be the right type — a mistyped or blank
+  // value is a client error, never silently coerced.
   app.post('/v1/episodes', async (c) => {
-    const r = resetEpisode(await jsonBody(c), gymCfg)
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
+    if ('scenarioId' in body && (typeof body.scenarioId !== 'string' || body.scenarioId.trim() === '')) {
+      return badRequest(c, 'scenarioId must be a non-empty string when provided.')
+    }
+    if ('agentId' in body && typeof body.agentId !== 'string') {
+      return badRequest(c, 'agentId must be a string when provided.')
+    }
+    const r = resetEpisode(
+      { scenarioId: body.scenarioId as string | undefined, agentId: body.agentId as string | undefined },
+      gymCfg,
+    )
     return c.json(r, r.ok ? 200 : 400)
   })
 
@@ -81,35 +124,36 @@ export function createApp(config: AppConfig): Hono {
   // (confidence, rationale, reward, license, passed, episodeId, …) is rejected so
   // a client can never write a digest-covered field through `/v1`.
   app.post('/v1/episodes/:episodeId/step', async (c) => {
-    const body = await jsonBody(c)
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
     const extra = extraKeys(body, ['action'])
     if (extra.length) {
-      return c.json(
-        { ok: false, code: 'bad_request', error: `Unexpected field(s): ${extra.join(', ')}. Send only { action }.` },
-        400,
-      )
+      return badRequest(c, `Unexpected field(s): ${extra.join(', ')}. Send only { action }.`)
     }
-    const r = await stepEpisode(
-      { episodeId: c.req.param('episodeId'), action: body.action as string | undefined },
-      gymCfg,
-    )
+    if (typeof body.action !== 'string' || body.action.trim() === '') {
+      return badRequest(c, 'action must be a non-empty string.')
+    }
+    const r = await stepEpisode({ episodeId: c.req.param('episodeId'), action: body.action }, gymCfg)
     return c.json(r, stepStatus(r))
   })
 
   // The body-form step is enforced as EXACTLY { episodeId, action }.
   app.post('/v1/step', async (c) => {
-    const body = await jsonBody(c)
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
     const extra = extraKeys(body, ['episodeId', 'action'])
     if (extra.length) {
-      return c.json(
-        { ok: false, code: 'bad_request', error: `Unexpected field(s): ${extra.join(', ')}. Send only { episodeId, action }.` },
-        400,
-      )
+      return badRequest(c, `Unexpected field(s): ${extra.join(', ')}. Send only { episodeId, action }.`)
     }
-    const r = await stepEpisode(
-      { episodeId: body.episodeId as string | undefined, action: body.action as string | undefined },
-      gymCfg,
-    )
+    if (typeof body.episodeId !== 'string' || body.episodeId.trim() === '') {
+      return badRequest(c, 'episodeId must be a non-empty string.')
+    }
+    if (typeof body.action !== 'string' || body.action.trim() === '') {
+      return badRequest(c, 'action must be a non-empty string.')
+    }
+    const r = await stepEpisode({ episodeId: body.episodeId, action: body.action }, gymCfg)
     return c.json(r, stepStatus(r))
   })
 
@@ -117,13 +161,18 @@ export function createApp(config: AppConfig): Hono {
   // The ONLY path that can mint trusted mock/nebius provenance — and only after
   // the server actually runs that reference agent against the gym env.
   app.post('/v1/reference-episodes', async (c) => {
-    const body = await jsonBody(c)
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
     const extra = extraKeys(body, ['scenarioId', 'mode'])
     if (extra.length) {
-      return c.json(
-        { ok: false, code: 'bad_request', error: `Unexpected field(s): ${extra.join(', ')}. Send only { scenarioId, mode }.` },
-        400,
-      )
+      return badRequest(c, `Unexpected field(s): ${extra.join(', ')}. Send only { scenarioId, mode }.`)
+    }
+    if (typeof body.scenarioId !== 'string' || body.scenarioId.trim() === '') {
+      return badRequest(c, 'scenarioId must be a non-empty string.')
+    }
+    if (body.mode !== 'mock' && body.mode !== 'nebius') {
+      return badRequest(c, 'mode must be "mock" or "nebius".')
     }
     const r = await runReferenceEpisode(
       { scenarioId: body.scenarioId, mode: body.mode },

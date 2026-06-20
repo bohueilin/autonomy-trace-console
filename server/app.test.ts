@@ -25,6 +25,15 @@ async function post(path: string, body: unknown): Promise<Response> {
   })
 }
 
+/** Post a raw (possibly malformed) body string, bypassing JSON.stringify. */
+async function postRaw(path: string, raw: string): Promise<Response> {
+  return app.request(path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: raw,
+  })
+}
+
 describe('createApp /v1 trust boundary', () => {
   it('PUBLIC reset rejects reserved reference-agent ids', async () => {
     for (const agentId of ['mock-reference', 'nebius-reference']) {
@@ -33,6 +42,33 @@ describe('createApp /v1 trust boundary', () => {
       const body = (await resp.json()) as { ok: boolean }
       expect(body.ok).toBe(false)
     }
+  })
+
+  it('PUBLIC reset accepts an omitted scenarioId (random external scenario)', async () => {
+    const resp = await post('/v1/episodes', { agentId: 'rl-trainer-7' })
+    expect(resp.status).toBe(200)
+    const body = (await resp.json()) as { ok: boolean; episodeId: string }
+    expect(body.ok).toBe(true)
+    expect(body.episodeId.length).toBeGreaterThan(0)
+  })
+
+  it('PUBLIC reset rejects a non-string or blank scenarioId', async () => {
+    for (const scenarioId of [123, true, null, '', '   ']) {
+      const resp = await post('/v1/episodes', { scenarioId })
+      expect(resp.status).toBe(400)
+      expect(((await resp.json()) as { ok: boolean }).ok).toBe(false)
+    }
+  })
+
+  it('PUBLIC reset rejects a non-string agentId, an array body, and malformed JSON', async () => {
+    const nonString = await post('/v1/episodes', { scenarioId: 'com-1', agentId: 42 })
+    expect(nonString.status).toBe(400)
+
+    const array = await postRaw('/v1/episodes', JSON.stringify([{ scenarioId: 'com-1' }]))
+    expect(array.status).toBe(400)
+
+    const malformed = await postRaw('/v1/episodes', '{ not json')
+    expect(malformed.status).toBe(400)
   })
 
   it('PUBLIC reset accepts a normal external agentId', async () => {
@@ -85,6 +121,28 @@ describe('createApp /v1 trust boundary', () => {
     const ok = await post('/v1/step', { episodeId: reset.episodeId, action: 'act' })
     expect(ok.status).toBe(200)
     expect(((await ok.json()) as { ok: boolean }).ok).toBe(true)
+  })
+
+  it('step routes reject non-string/blank action and malformed bodies', async () => {
+    const reset = (await (
+      await post('/v1/episodes', { scenarioId: 'com-1', agentId: 'rl-trainer-7' })
+    ).json()) as { episodeId: string }
+
+    for (const action of [123, true, null, '', '   ']) {
+      const path = await post(`/v1/episodes/${reset.episodeId}/step`, { action })
+      expect(path.status).toBe(400)
+      expect(((await path.json()) as { code: string }).code).toBe('bad_request')
+
+      const bodyForm = await post('/v1/step', { episodeId: reset.episodeId, action })
+      expect(bodyForm.status).toBe(400)
+      expect(((await bodyForm.json()) as { code: string }).code).toBe('bad_request')
+    }
+
+    // Array body and malformed JSON are rejected before reaching the env.
+    const array = await postRaw(`/v1/episodes/${reset.episodeId}/step`, JSON.stringify(['act']))
+    expect(array.status).toBe(400)
+    const malformed = await postRaw('/v1/step', '{ not json')
+    expect(malformed.status).toBe(400)
   })
 })
 
@@ -140,5 +198,31 @@ describe('createApp /v1/reference-episodes (server-owned reference agents)', () 
     const resp = await post('/v1/reference-episodes', { scenarioId: 'nope', mode: 'mock' })
     expect(resp.status).toBe(400)
     expect(((await resp.json()) as { ok: boolean }).ok).toBe(false)
+  })
+
+  it('rejects a missing scenarioId (no random reference scenario)', async () => {
+    const resp = await post('/v1/reference-episodes', { mode: 'mock' })
+    expect(resp.status).toBe(400)
+    expect(((await resp.json()) as { code: string }).code).toBe('bad_request')
+  })
+
+  it('rejects a non-string or blank scenarioId', async () => {
+    for (const scenarioId of [123, true, null, '', '   ']) {
+      const resp = await post('/v1/reference-episodes', { scenarioId, mode: 'mock' })
+      expect(resp.status).toBe(400)
+      expect(((await resp.json()) as { code: string }).code).toBe('bad_request')
+    }
+  })
+
+  it('rejects an array body', async () => {
+    const resp = await postRaw('/v1/reference-episodes', JSON.stringify([{ scenarioId: 'com-1', mode: 'mock' }]))
+    expect(resp.status).toBe(400)
+    expect(((await resp.json()) as { code: string }).code).toBe('bad_request')
+  })
+
+  it('rejects malformed JSON', async () => {
+    const resp = await postRaw('/v1/reference-episodes', '{ scenarioId: com-1 ')
+    expect(resp.status).toBe(400)
+    expect(((await resp.json()) as { code: string }).code).toBe('bad_request')
   })
 })
