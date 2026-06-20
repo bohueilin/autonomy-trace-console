@@ -1,23 +1,25 @@
-## Implementation Report
+All gates pass.
 
-**Plan evaluation:** Sound, minimal, and in scope. The plan adds CI via a single workflow file. Verified `npm run gates` exists in `package.json` (`build && lint && verify:evidence && test`), so the workflow runs exactly the same referee gates locally and in CI. No correctness/security/scope concerns. Implemented as specified.
+## Implementation report
 
-**Files changed:**
-- `.github/workflows/gates.yml` (new) — the only file touched.
+Implemented the InsForge hardening round exactly per `design.md`: `eval_episodes` is now migration-managed and RLS-hardened, with server-only admin writes as the sole evidence path.
 
-**Key decisions:**
-- Workflow named `gates`; single job `gates` on `ubuntu-latest`.
-- Triggers: `pull_request` (every PR) and `push` to `main`.
-- Permissions: `contents: read` only.
-- Node 24 via `actions/setup-node@v4` with `cache: npm`; `actions/checkout@v4`.
-- Pinned action major versions (`@v4`) for stability; plan didn't specify versions.
-- Steps: `npm ci` then `npm run gates`. No secrets, env files, or third-party service references — relies entirely on the deterministic local/dev fallbacks the gates already use.
+### Files changed
+- **`migrations/20260620090000_harden-eval-episodes-rls.sql`** (new) — idempotent `CREATE TABLE IF NOT EXISTS public.eval_episodes` with the full flat audit-row schema (Postgres types per spec: `text`/`integer`/`boolean`/`double precision`/`jsonb`, `timestamptz` defaults, `uuid` PK via `gen_random_uuid()`). Adds `NOT VALID` CHECK constraints for the evidence invariants (`trace_authority`, `episode_index>=1`, `run_sequence>=1`, `confidence` 0–1, policy-mode/source enums, action enums), enables RLS, `REVOKE ALL ... FROM anon, authenticated`, and documents posture via `COMMENT ON TABLE`/`COMMENT ON COLUMN`. Adds no client policies and no permissive always-true policy. Leaves the existing idempotency unique-index migration untouched.
+- **`server/evidence/evalEpisodesRlsMigration.test.ts`** (new) — text-level migration assertions: exists/non-empty, manages the table, enables RLS, revokes anon/authenticated, no `CREATE POLICY` / `USING (true)`, includes `audit_row_digest`/`row_schema_version`/`trace_id`, and references no verifier/license/digest source.
+- **`README.md`** — replaced "create the table by hand" guidance (both the InsForge setup section and the demo-prep checklist) with the migration command; documents migration-managed + RLS-denied-CRUD + server/admin evidence path.
+- **`.env.example`** — replaced the manual-table note with the migration command and RLS note; reinforced that `INSFORGE_API_KEY` is server-side only and never `VITE_*`.
 
-**Gate results — PASS:**
-- `npm run gates` → build ✓, lint ✓, `verify:evidence` (ALL CHECKS PASSED, 40/40) ✓, vitest `9 files / 83 tests passed` ✓.
+### Key decisions
+- Used `IF NOT EXISTS` + `NOT VALID` constraints + `DO $$ ... pg_constraint` guards so the migration applies cleanly whether or not the table already exists (existing live projects predate it), without blocking on legacy rows.
+- Reworded one SQL comment to avoid the literal `USING (true)` token, which the posture test (correctly) forbids anywhere in the file — a comment mentioning it was a false positive; meaning preserved as "no permissive always-true policy."
 
-**Scope check:** `git status` shows only `.github/workflows/gates.yml` added; no other files changed.
+### Gate results — all pass
+- `npm run build` ✅
+- `npm run lint` ✅ (clean)
+- `npm run verify:evidence` ✅ (40/40 checks)
+- `npm test` ✅ (90 tests, 10 files)
 
-**Deferred / open questions for Codex:**
-- Action versions are pinned to majors, not SHAs. If supply-chain pinning to commit SHAs is desired, that's a follow-up (out of this round's scope).
-- This satisfies the **CI** Definition-of-Done box. Remaining unchecked DoD items (single backend, RLS hardening, deployability, live smoke, demo/docs) are unaffected and remain for future rounds.
+### Deferred / open questions for Codex
+- The migration's `NOT VALID` checks are not `VALIDATE`d (intentional, to avoid failing on any pre-existing legacy rows). If a future round wants them enforced retroactively, that needs a separate `VALIDATE CONSTRAINT` migration after a data audit — flagging as adjacent, not done.
+- No live DB was exercised (no test DB in repo); RLS/privilege behavior is verified only at the SQL-text level, consistent with the plan's "focused text-level migration tests."

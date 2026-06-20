@@ -453,24 +453,28 @@ INSFORGE_BASE_URL=https://your-app.insforge.app   # no trailing /api
 INSFORGE_API_KEY=ins_...                          # admin/service key, server-side only
 ```
 
-Then create a table named **`eval_episodes`** in your InsForge project (via the
-InsForge CLI / dashboard / agent skill — the data API does not create schemas).
-Suggested columns (or use a single JSON column + a few scalars — the hackathon
-build sends the flat row below). Records are inserted via
-`POST {INSFORGE_BASE_URL}/api/database/records/eval_episodes`.
-
-**Idempotency invariant:** authoritative gym evidence requires a **unique
-`trace_id`** — one row per signed episode (first-write-wins). Apply the migration
-in [`migrations/`](migrations/) that adds the partial unique index on
-`eval_episodes(trace_id)` for `trace_authority = 'server_authoritative_episode'`:
+Then apply the migrations in [`migrations/`](migrations/) to provision the
+**`eval_episodes`** table — it is **migration-managed**, not created by hand:
 
 ```bash
 npx @insforge/cli db migrations up --all
 ```
 
-With the index in place, a race (two concurrent steps whose pre-insert reads both
-miss) cannot persist two authoritative rows: the second insert hits the unique
-conflict and the server replays the first verdict instead.
+The migrations create the table, enforce the audit-row invariants, add the
+first-write-wins unique index, and harden access:
+
+- **Row-Level Security is enabled** on `public.eval_episodes`, and direct
+  `anon`/`authenticated` CRUD is **intentionally denied** (no client policies, no
+  `USING (true)`, direct privileges revoked). Evidence is written and read **only
+  by the standalone server** using its server-side admin credentials; public
+  clients reach evidence through the `/v1` and `/api` server routes. Records are
+  inserted server-side via
+  `POST {INSFORGE_BASE_URL}/api/database/records/eval_episodes`.
+- **Idempotency invariant:** authoritative gym evidence requires a **unique
+  `trace_id`** — one row per signed episode (first-write-wins). With the partial
+  unique index in place, a race (two concurrent steps whose pre-insert reads both
+  miss) cannot persist two authoritative rows: the second insert hits the unique
+  conflict and the server replays the first verdict instead.
 
 **Without these vars the app still works** — episodes run server-side and the
 Evidence panel shows **Local only**.
@@ -688,7 +692,7 @@ without them). No secrets are hard-coded — all via `.env.local`.
 5. Confirm the fallback records requested policy = Nebius, actual source = Mock, and **no raw errors** appear.
 
 **InsForge**
-1. Set `INSFORGE_BASE_URL` + `INSFORGE_API_KEY` (see `.env.example`); create the `eval_episodes` table.
+1. Set `INSFORGE_BASE_URL` + `INSFORGE_API_KEY` (see `.env.example`); apply migrations with `npx @insforge/cli db migrations up --all` (the `eval_episodes` table is migration-managed and RLS-hardened — server/admin writes are the supported evidence path).
 2. Run one **Run Server Episode**; confirm the Evidence panel shows a persisted record id.
 3. Hit `GET /api/evidence/status?refresh=1`; confirm evidence source = InsForge and digest counts are visible.
 4. Confirm **no raw secrets or raw audit rows** appear in the browser.
