@@ -51,11 +51,28 @@ A production-grade "Autonomy Trace Console / gym" that proves the *thesis* but n
 ## TRANSFERABLE assets (reuse, don't rebuild)
 Deterministic-verifier-as-source-of-truth pattern; gym **reset/step** env contract + signed episode tokens; license-gate concept; **tamper-evident evidence** (InsForge) → becomes the rollout/trace store the Signal Extractor reads; **Nebius** model-under-test path; deployable server; vitest + CI + gates discipline; the two-agent `.agentloop/` build loop.
 
-## THE DECISION for the next session (resolve first)
-Pick the hackathon strategy:
-- **A. Build the brief's frozen core** (likely the judged path): symbolic warehouse + BFS oracle + finish/escalate/refuse + hard-gated reward + FAR/FRR + triptych + thin Signal Extractor + one HUD model path — *reusing* our verifier pattern, gym env contract, evidence store, server, tests.
-- **B. Reframe/extend our build** onto the brief's language: map `act/ask/escalate/stop`→`finish/escalate/refuse`, add an oracle + FAR/FRR + triptych + Signal Extractor on top of what exists.
-Recommendation: **A** for judge-fit (the brief is explicit and the triptych/FAR-FRR are "never cut"), salvaging our infra aggressively. Confirm before building.
+## THE PLAN for the next session: EXTEND the console (it is part of the solution)
+The trace-console is **not throwaway and not just "adjacent" — it is the productized
+shell + evidence/UI layer of the Autonomy License product.** Build the brief's frozen
+core as the ENGINE and plug it into the shell we already have.
+
+- **Reuse as the shell (already built):** the deterministic-verifier-as-source-of-truth
+  pattern, the **license gate**, **tamper-evident InsForge evidence** (becomes the
+  rollout/trace store the Signal Extractor reads), the **gym `/v1` reset/step** contract
+  + signed episode tokens, **Nebius** model-under-test + reference agents, the deployable
+  Hono server, the React UI (renders trace → verifier → reward → license, and will render
+  the **triptych**/leaderboard), and the vitest+CI+gates discipline.
+- **Add as the engine (the brief's frozen core, missing today):** symbolic **warehouse**
+  domain + multi-step tools (`observe/scan/move/pick/drop`), **BFS oracle** (ground-truth
+  `finish/escalate/refuse` + optimal path), `reward = outcome × shaped_bonus` hard-gated,
+  **FAR/FRR confusion matrix**, **Signal Extractor**, the **triptych** + blind baselines,
+  and one **HUD** model path.
+- **Vocabulary bridge:** our terminal actions `act/ask/escalate/stop` map to the brief's
+  `finish/escalate/refuse` (collapse/rename in the env layer; keep the verifier pattern).
+
+Net: one product. The console proves the loop and ships the demo surface; the new engine
+makes it the brief's Calibrated Autonomy Gym. **Inspect the existing code paths first and
+reuse aggressively before writing anything new.**
 
 ## Repo facts for the next session
 - Run UI: `npm run dev` (proxies to the server). Run server: `npm run server` (needs `.env.local`).
