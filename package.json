@@ -8,9 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "server": "node server/main.ts",
     "verify:evidence": "node scripts/verifyServerEvidence.mjs"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.5",
+    "hono": "^4.12.26",
     "openai": "^6.44.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
