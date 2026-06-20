@@ -6,6 +6,8 @@ import { buildGymTrace, gymLicenseToState, runReferenceGymEpisode } from './gymC
 import { computeLicense } from './license'
 import { seedScenarios, trainScenarios } from './seedScenarios'
 import { verify } from './verifier'
+import { WAREHOUSE_TOOLS, buildWarehouseDemo, buildWarehouseDemoForTasks } from './warehouse'
+import { buildEnvironmentPlan, type EnvironmentPlan, type EnvironmentRequirement } from './environmentPlan'
 import type {
   AgentDecision,
   AgentSource,
@@ -21,10 +23,29 @@ import { VerifierCard } from './components/VerifierCard'
 import { LicenseSummary } from './components/LicenseSummary'
 import { TraceViewer } from './components/TraceViewer'
 import { EvidencePanel } from './components/EvidencePanel'
+import { Landing } from './components/Landing'
+import { IntakeForm } from './components/IntakeForm'
+import { EnvironmentPreview } from './components/EnvironmentPreview'
+import { LicenseResults } from './components/LicenseResults'
+import { MatrixMini, TriptychCard } from './components/warehouseViz'
+import { actionTrace, pct } from './format'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
 
+type View = 'landing' | 'intake' | 'preview' | 'results' | 'showcase'
+
 function App() {
+  // Phase 1-2 product journey: landing -> intake -> preview -> results, with the
+  // original static warehouse console reachable as the "showcase" sample eval.
+  const [view, setView] = useState<View>('landing')
+  const [plan, setPlan] = useState<EnvironmentPlan | null>(null)
+  const planDemo = useMemo(() => (plan ? buildWarehouseDemoForTasks(plan.tasks) : null), [plan])
+
+  function handleGenerate(req: EnvironmentRequirement) {
+    setPlan(buildEnvironmentPlan(req))
+    setView('preview')
+  }
+
   const [traces, setTraces] = useState<Trace[]>([])
   const [cursor, setCursor] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
@@ -40,6 +61,8 @@ function App() {
   const [gymLicense, setGymLicense] = useState<LicenseState | null>(null)
 
   const traceLicense = useMemo(() => computeLicense(traces), [traces])
+  const warehouseDemo = useMemo(() => buildWarehouseDemo(), [])
+  const oracleBaseline = warehouseDemo.baselines.find((b) => b.name === 'calibrated oracle')!
   const license = gymLicense ?? traceLicense
   const active = traces.length > 0 ? traces[traces.length - 1] : null
 
@@ -153,11 +176,61 @@ function App() {
 
   return (
     <div className="console">
-      <header className="topbar">
+      <nav className="appnav">
+        <button
+          className="appbrand"
+          onClick={() => setView('landing')}
+          aria-label="Autonomy License home"
+        >
+          <span className="appbrand-mark">AL</span>
+          <span className="appbrand-text">
+            <span className="appbrand-name">Autonomy License</span>
+            <span className="appbrand-sub">for Physical AI</span>
+          </span>
+        </button>
+        <div className="appnav-links">
+          <button
+            className={`navlink ${view === 'showcase' ? 'on' : ''}`}
+            onClick={() => setView('showcase')}
+          >
+            Sample eval
+          </button>
+          <button className="btn primary navlink-cta" onClick={() => setView('intake')}>
+            Create eval
+          </button>
+        </div>
+      </nav>
+
+      {view === 'landing' && (
+        <Landing onCreate={() => setView('intake')} onSample={() => setView('showcase')} />
+      )}
+      {view === 'intake' && (
+        <IntakeForm onGenerate={handleGenerate} onBack={() => setView('landing')} />
+      )}
+      {view === 'preview' && plan && (
+        <EnvironmentPreview
+          plan={plan}
+          onRun={() => setView('results')}
+          onBack={() => setView('intake')}
+        />
+      )}
+      {view === 'results' && plan && planDemo && (
+        <LicenseResults
+          plan={plan}
+          demo={planDemo}
+          onRefine={() => setView('preview')}
+          onRestart={() => setView('intake')}
+          onSample={() => setView('showcase')}
+        />
+      )}
+
+      {view === 'showcase' && (
+        <>
+          <header className="topbar">
         <div className="brand">
-          <h1>Autonomy Trace Console</h1>
+          <h1>Autonomy License — sample warehouse eval</h1>
           <p className="tagline">Agents should earn autonomy before they exercise it.</p>
-          <p className="future">warm-up for → Autonomy License Gym</p>
+          <p className="future">prebuilt Calibrated Autonomy Gym demo</p>
         </div>
 
         <div
@@ -237,6 +310,98 @@ function App() {
 
       {notice && <div className="notice">{notice}</div>}
 
+      <section className="warehouse-demo">
+        <div className="warehouse-head">
+          <div>
+            <div className="section-title">Calibrated Autonomy Gym</div>
+            <h2>Warehouse oracle: finish / escalate / refuse</h2>
+            <p>
+              Symbolic grid env, BFS labels, hard-gated reward, FAR/FRR matrix, and
+              Signal Extractor. A capable-but-reckless agent fails. A cautious-but-useless
+              agent fails. Only calibrated behavior earns the license.
+            </p>
+          </div>
+          <div className="warehouse-badges">
+            <span>{warehouseDemo.taskCount} tasks</span>
+            <span>
+              F {warehouseDemo.labelCounts.finish} / E {warehouseDemo.labelCounts.escalate} / R{' '}
+              {warehouseDemo.labelCounts.refuse}
+            </span>
+            <span>{WAREHOUSE_TOOLS.join(', ')}</span>
+            <span>/v1/warehouse ready</span>
+          </div>
+        </div>
+
+        <div className="triptych">
+          {warehouseDemo.triptych.map((item) => (
+            <TriptychCard
+              key={item.slot}
+              slot={item.slot}
+              title={item.title}
+              line={item.line}
+              rollout={item.rollout}
+            />
+          ))}
+        </div>
+
+        <div className="warehouse-grid">
+          <div className="warehouse-panel">
+            <div className="panel-kicker">Headline calibration</div>
+            <div className="baseline-list">
+              {warehouseDemo.baselines.map((b) => (
+                <div className="baseline-row" key={b.name}>
+                  <span>{b.name}</span>
+                  <span>FAR {pct(b.matrix.far)}</span>
+                  <span>FRR {pct(b.matrix.frr)}</span>
+                  <span>avg {b.avgReward.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <MatrixMini matrix={oracleBaseline.matrix} />
+          </div>
+
+          <div className="warehouse-panel">
+            <div className="panel-kicker">Reward-hacking trace</div>
+            <h3>{warehouseDemo.rewardHack.task.title}</h3>
+            <p>
+              A fake terminal finish without pick/drop gets outcome 0, so shaping cannot
+              rescue it: reward {warehouseDemo.rewardHack.reward.toFixed(2)}.
+            </p>
+            <p className="trip-trace">{actionTrace(warehouseDemo.rewardHack.actions)}</p>
+            <div className="trip-stats">
+              <span>{warehouseDemo.rewardHack.category}</span>
+              <span>oracle {warehouseDemo.rewardHack.expected}</span>
+              <span>actual {warehouseDemo.rewardHack.matrixAction}</span>
+            </div>
+          </div>
+
+          <div className="warehouse-panel">
+            <div className="panel-kicker">Signal Extractor</div>
+            <div className="signal-grid">
+              <span>{warehouseDemo.signal.failureTags.length}</span>
+              <span>failure tags</span>
+              <span>{warehouseDemo.signal.preferencePairs.length}</span>
+              <span>preference pairs</span>
+              <span>{warehouseDemo.signal.rewardViews.length}</span>
+              <span>GRPO/RFT reward rows</span>
+            </div>
+            <p className="signal-note">
+              {warehouseDemo.signal.failureTags[0]?.tags.join(', ') ?? 'no failures'} {'->'}{' '}
+              {warehouseDemo.signal.preferencePairs[0]?.reason ?? 'oracle replay clean'}
+            </p>
+          </div>
+
+          <div className="warehouse-panel aiuc-panel">
+            <div className="panel-kicker">AIUC wedge</div>
+            <p>{warehouseDemo.aiucWedge}</p>
+            <p className="signal-note">
+              HUD SDK path is marked VERIFY-LIVE; until then, external agents can drive the
+              deterministic warehouse through /v1/warehouse with no model spend.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <div className="layout">
         <main className="main-col">
           <section className="episode-flow">
@@ -290,6 +455,8 @@ function App() {
           </div>
         </aside>
       </div>
+        </>
+      )}
     </div>
   )
 }

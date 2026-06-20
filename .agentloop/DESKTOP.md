@@ -1,9 +1,19 @@
-# DESKTOP relay cheat-sheet (Codex Desktop ⇄ Claude Desktop)
+# DESKTOP relay cheat-sheet (Codex Desktop <-> Claude Desktop)
 
 The Desktop GUIs can't trigger each other, so you are the 1-click relay. Both apps
 have access to this repo (Claude Desktop via the Filesystem MCP; Codex Desktop has
 the folder open). They talk through the `.agentloop/` files. Each round = 3 hand-offs
 + one gate run.
+
+For the lower-friction Desktop bridge, use `BRIDGE.md` plus:
+- `claude.md` — Claude writes its latest handoff here.
+- `codex.md` — Codex writes its latest review/instructions here.
+- `prompts/claude-desktop-bridge.md` — paste this into Claude when starting a
+  bridge pass.
+
+For any first planning pass to Claude, include this directly in the prompt:
+> Please read, inspect the repo, run gates, and return only evaluation + plan. Do
+> not code yet.
 
 ## Per-round ritual
 
@@ -19,6 +29,11 @@ the folder open). They talk through the `.agentloop/` files. Each round = 3 hand
 > changes, and write your report to `.agentloop/implementation.md`. If you must add
 > an npm dependency, say so clearly and stop with `STATUS: BLOCKED` (installs happen
 > in the terminal).
+
+**Desktop bridge variant — paste into Claude Desktop:**
+> Follow `.agentloop/BRIDGE.md` and `.agentloop/prompts/claude-desktop-bridge.md`.
+> Read Codex's latest instructions from `.agentloop/codex.md`. Write your latest
+> output to `.agentloop/claude.md` and end with "Handoff To Codex".
 
 **3. GATES — run in a terminal (this is the one non-GUI step):**
 ```bash

@@ -23,6 +23,11 @@ import { cors } from 'hono/cors'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { AppConfig } from './config.ts'
 import { resetEpisode, stepEpisode, type GymConfig } from './env/gym.ts'
+import {
+  resetWarehouseEpisode,
+  stepWarehouseEpisode,
+  type WarehouseGymConfig,
+} from './env/warehouseGym.ts'
 import { ENVIRONMENT_NAME } from './evalVersions.ts'
 import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
@@ -91,6 +96,10 @@ const stepStatus = (r: { ok: boolean; code?: string }): ContentfulStatusCode =>
 export function createApp(config: AppConfig): Hono {
   const runCfg = { nebius: config.nebius, insforge: config.insforge }
   const gymCfg: GymConfig = { insforge: config.insforge, episodeSecret: config.episodeSecret }
+  const warehouseCfg: WarehouseGymConfig = {
+    insforge: config.insforge,
+    episodeSecret: config.episodeSecret,
+  }
 
   const app = new Hono()
   app.use('*', cors())
@@ -179,6 +188,57 @@ export function createApp(config: AppConfig): Hono {
       { gym: gymCfg, nebius: config.nebius },
     )
     return c.json(r, r.ok ? 200 : r.code === 'bad_request' ? 400 : 502)
+  })
+
+  // ---- Calibrated Autonomy Gym: symbolic warehouse -----------------------
+  // Multi-step warehouse reset. Same trust shape as /v1/episodes: the reset
+  // returns visible observation + signed state; the oracle label stays hidden.
+  app.post('/v1/warehouse/episodes', async (c) => {
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
+    const extra = extraKeys(body, ['taskId', 'agentId', 'runId'])
+    if (extra.length) {
+      return badRequest(c, `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, agentId, runId }.`)
+    }
+    if ('taskId' in body && (typeof body.taskId !== 'string' || body.taskId.trim() === '')) {
+      return badRequest(c, 'taskId must be a non-empty string when provided.')
+    }
+    if ('agentId' in body && typeof body.agentId !== 'string') {
+      return badRequest(c, 'agentId must be a string when provided.')
+    }
+    if ('runId' in body && typeof body.runId !== 'string') {
+      return badRequest(c, 'runId must be a string when provided.')
+    }
+    const r = resetWarehouseEpisode(
+      {
+        taskId: body.taskId as string | undefined,
+        agentId: body.agentId as string | undefined,
+        runId: body.runId as string | undefined,
+      },
+      warehouseCfg,
+    )
+    return c.json(r, r.ok ? 200 : 400)
+  })
+
+  // The warehouse step body is exactly { action }; the signed episode carries
+  // all rollout state, and the server computes terminal reward/evidence.
+  app.post('/v1/warehouse/episodes/:episodeId/step', async (c) => {
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
+    const extra = extraKeys(body, ['action'])
+    if (extra.length) {
+      return badRequest(c, `Unexpected field(s): ${extra.join(', ')}. Send only { action }.`)
+    }
+    if (typeof body.action !== 'string' || body.action.trim() === '') {
+      return badRequest(c, 'action must be a non-empty string.')
+    }
+    const r = await stepWarehouseEpisode(
+      { episodeId: c.req.param('episodeId'), action: body.action },
+      warehouseCfg,
+    )
+    return c.json(r, stepStatus(r))
   })
 
   // ---- Legacy /api (reuses existing server-owned handlers) ----------------

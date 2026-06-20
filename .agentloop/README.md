@@ -50,3 +50,13 @@ twice in a row, or `MAX_ROUNDS` is hit.
 - `GOAL.md` — the destination + stop condition (edit anytime to re-aim).
 - `PROTOCOL.md` — the rules.
 - `prompts/*.md` — exactly what each agent is told each turn.
+
+## Desktop bridge
+When using Codex Desktop and Claude Desktop manually, use `BRIDGE.md`:
+- Claude writes latest output to `claude.md`.
+- Codex writes latest response/instructions to `codex.md`.
+- Start Claude with `prompts/claude-desktop-bridge.md`.
+
+For Claude planning passes, include this instruction directly in the prompt:
+"Please read, inspect the repo, run gates, and return only evaluation + plan. Do
+not code yet."

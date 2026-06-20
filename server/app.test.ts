@@ -226,3 +226,61 @@ describe('createApp /v1/reference-episodes (server-owned reference agents)', () 
     expect(((await resp.json()) as { code: string }).code).toBe('bad_request')
   })
 })
+
+describe('createApp /v1/warehouse symbolic env', () => {
+  it('resets a warehouse task without leaking the oracle label', async () => {
+    const resp = await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', agentId: 'hud-fallback' })
+    expect(resp.status).toBe(200)
+    const body = (await resp.json()) as {
+      ok: boolean
+      episodeId: string
+      allowedActions: string[]
+      observation: Record<string, unknown>
+    }
+    expect(body.ok).toBe(true)
+    expect(body.episodeId.length).toBeGreaterThan(0)
+    expect(body.allowedActions).toContain('move:north')
+    expect(body.allowedActions).toContain('finish')
+    expect(body.observation).not.toHaveProperty('oracle')
+    expect(body.observation).not.toHaveProperty('label')
+  })
+
+  it('warehouse step accepts exactly { action } and returns signed next state', async () => {
+    const reset = (await (
+      await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', agentId: 'hud-fallback' })
+    ).json()) as { episodeId: string }
+
+    const spoof = await post(`/v1/warehouse/episodes/${reset.episodeId}/step`, {
+      action: 'observe',
+      reward: 1,
+    })
+    expect(spoof.status).toBe(400)
+    expect(((await spoof.json()) as { code: string }).code).toBe('bad_request')
+
+    const ok = await post(`/v1/warehouse/episodes/${reset.episodeId}/step`, { action: 'observe' })
+    expect(ok.status).toBe(200)
+    const body = (await ok.json()) as {
+      ok: boolean
+      done: boolean
+      episodeId: string
+      trace: string[]
+      reward: number
+    }
+    expect(body.ok).toBe(true)
+    expect(body.done).toBe(false)
+    expect(body.episodeId).not.toBe(reset.episodeId)
+    expect(body.trace).toEqual(['observe'])
+    expect(body.reward).toBe(0)
+  })
+
+  it('warehouse reset rejects unknown tasks and malformed bodies', async () => {
+    const unknown = await post('/v1/warehouse/episodes', { taskId: 'missing' })
+    expect(unknown.status).toBe(400)
+
+    const array = await postRaw('/v1/warehouse/episodes', JSON.stringify([{ taskId: 'wh-l1-01' }]))
+    expect(array.status).toBe(400)
+
+    const malformed = await postRaw('/v1/warehouse/episodes', '{ taskId: wh-l1-01 ')
+    expect(malformed.status).toBe(400)
+  })
+})

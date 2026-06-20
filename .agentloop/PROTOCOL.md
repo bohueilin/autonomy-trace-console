@@ -35,6 +35,14 @@ interaction.
 | `review.md` | Codex | findings + next design |
 | `STATE.json` | either | round #, phase, status |
 
+Desktop bridge files (for manual Codex Desktop <-> Claude Desktop relay):
+
+| File | Author | Meaning |
+| --- | --- | --- |
+| `BRIDGE.md` | human/Codex | Desktop bridge protocol |
+| `claude.md` | Claude | latest Claude output for Codex to read |
+| `codex.md` | Codex | latest Codex response/instructions for Claude |
+
 ## Rules
 - **Small diffs.** One coherent change per round; no scope creep beyond `design.md`.
 - **Gates must pass** before a round is considered done. If they fail, say so plainly
