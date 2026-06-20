@@ -316,4 +316,95 @@ describe('stepEpisode', () => {
       globalThis.fetch = realFetch
     }
   })
+
+  it('configured InsForge: a run-history read failure (HTTP 500) fails closed before any insert', async () => {
+    // The trusted history can't be read, so we MUST NOT compute a one-episode
+    // license over partial (empty) evidence, and MUST NOT attempt to persist.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-2', runId: 'run_history_read_500' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    let postCalls = 0
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        postCalls += 1
+        return json([{ id: 'rec_should_not_happen' }], 201)
+      }
+      // Every run-history GET errors out -> read is `unavailable`.
+      return json({ message: 'internal error' }, 500)
+    }) as typeof fetch
+
+    try {
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      expect(step.ok).toBe(false)
+      if (step.ok) return
+      expect(step.code).toBe('unknown')
+      expect(postCalls).toBe(0) // no persistence attempt on a failed history read
+      // No optimistic verdict/license leaks out of the failure.
+      expect(step).not.toHaveProperty('reward')
+      expect(step).not.toHaveProperty('info')
+      expect(step).not.toHaveProperty('license')
+      expect(step).not.toHaveProperty('persisted')
+      expect(step).not.toHaveProperty('recordId')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
+
+  it('configured InsForge: a run-history parse failure (non-array body) fails closed before any insert', async () => {
+    // A 200 with a non-array JSON body makes fetchRecentEvidence return `error`,
+    // not `unavailable` — the same fail-closed path must cover it.
+    const cfg2: GymConfig = {
+      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+      episodeSecret: 'gym-test-secret',
+    }
+    const reset = resetEpisode({ scenarioId: 'com-2', runId: 'run_history_parse_error' }, cfg2)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+
+    let postCalls = 0
+    const realFetch = globalThis.fetch
+    const json = (data: unknown, status = 200) =>
+      new Response(JSON.stringify(data), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+
+    globalThis.fetch = (async (_input: unknown, init?: RequestInit) => {
+      const method = (init?.method ?? 'GET').toUpperCase()
+      if (method === 'POST') {
+        postCalls += 1
+        return json([{ id: 'rec_should_not_happen' }], 201)
+      }
+      // 200 OK but the body is an object, not an array -> parse `error`.
+      return json({ not: 'an array' })
+    }) as typeof fetch
+
+    try {
+      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      expect(step.ok).toBe(false)
+      if (step.ok) return
+      expect(step.code).toBe('unknown')
+      expect(postCalls).toBe(0)
+      expect(step).not.toHaveProperty('reward')
+      expect(step).not.toHaveProperty('info')
+      expect(step).not.toHaveProperty('license')
+      expect(step).not.toHaveProperty('persisted')
+      expect(step).not.toHaveProperty('recordId')
+    } finally {
+      globalThis.fetch = realFetch
+    }
+  })
 })

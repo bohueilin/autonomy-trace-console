@@ -1,44 +1,46 @@
-## Review — P0/P1/P2
+## Review
 
-**P0 — conflict re-read failure lets the later replay win. Verdict: NEEDS-FIX.**  
-`server/insforgeStore.ts:199-206` correctly turns a confirmed duplicate insert plus failed trace lookup into `{ status: 'unavailable', code: 'conflict_reread_failed' }`, but `server/env/gym.ts:390-425` ignores that code and falls through to `server/env/gym.ts:436-453`, returning the newly computed action/reward/license. That violates the round’s first-write-wins acceptance criterion for the exact case where storage already proved an earlier row exists. Recommendation: make `stepEpisode` treat `conflict_reread_failed` as a hard replay uncertainty, not best-effort success: either retry the lookup and replay the winner, or return a non-success error such as `unknown/conflict_reread_failed` without returning the corrected action/license.
+**P0: None.**
 
-**P1 — gym rehydration parser is looser than the evidence parser.**  
-`server/env/gym.ts:202-228` accepts a row if digest/version/pass/reward are present, then defaults malformed `catastrophic`, `category`, `expected_action`, and `actual_action` values. The stricter evidence parser rejects malformed authority/provenance/action/verdict fields at `server/runEpisodeHandler.ts:400-424`. Recommendation: share a strict persisted-row parser or harden `rowToVerdict` to validate `trace_authority`, `run_id`, `scenario_id`, action enums, finite reward bounds, boolean `catastrophic`, and non-empty required identity before it can influence replay/license.
+**P1: Persisted winner identity is not bound to the episode being replayed.**  
+`rowToVerdict` only requires non-empty `trace_id`, `run_id`, and `scenario_id` at [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:207), then the conflict branch trusts that verdict at [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:417). The new malformed-row test exposes this accidentally: it returns a hard-coded `trace_id` ending in `-nonce` at [server/env/gym.test.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.test.ts:265), not the signed episode nonce, and the mock still returns it for any `trace_id=eq.` lookup at [server/env/gym.test.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.test.ts:299). Recommendation: make replay validation compare the persisted row to the expected `{ traceId, runId, scenarioId }`, and add a test where a digest-valid but wrong-identity row fails closed.
 
-**P2 — tests miss the failure mode that breaks the invariant.**  
-`server/env/gym.test.ts:174-185` covers duplicate conflict plus successful trace lookup, but not duplicate conflict plus failed/empty trace lookup. That is the branch that currently returns the later corrected result. Recommendation: add a test where the second insert returns 409 and the trace lookup returns 500 or `[]`; assert the corrected action is not returned and no improved license is emitted.
+**P1: Configured InsForge read failures can still overgrant license on partial history.**  
+`loadRunVerdicts` treats `fetchRecentEvidence` `unavailable`/`error` as an empty run at [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:257). `stepEpisode` then computes a license from only the current verdict at [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:346) and returns it at [server/env/gym.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.ts:472). That violates “license gate decides” from complete trusted evidence when storage is configured. Recommendation: in configured mode, fail closed before scoring/persisting if run-history read is unavailable; keep the in-memory fallback only when InsForge is explicitly unconfigured.
 
-**Gates:** `.agentloop/gates.log:67-87` reports build/lint/evidence/tests all passing, but the test suite is not yet honest for the conflict failure path above.
+**P2: Gates pass, but coverage should be tightened.**  
+The referee shows build, lint, evidence verification, tests, and overall gates passing at [.agentloop/gates.log](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/gates.log:6), [.agentloop/gates.log](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/gates.log:23), [.agentloop/gates.log](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/gates.log:69), and [.agentloop/gates.log](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.agentloop/gates.log:90). The new tests cover the requested conflict failure modes at [server/env/gym.test.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.test.ts:201) and [server/env/gym.test.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/env/gym.test.ts:249), but the malformed-row mock should be made identity-realistic.
 
-**Verdict: NEEDS-FIX for this round’s change.**
+**Verdict: ACCEPT** for this round’s scoped change. It closes the explicit first-write-wins leak from the last design, and gates pass. The P1s should be the next round.
 
-## Next design — the plan for the next round
+## Next Design
 
 **Objective**  
-Close the remaining `/v1` idempotency hole: once InsForge reports a unique conflict, the environment must never return the later action/reward/license unless it can rehydrate the first-written row.
+Close the remaining configured-InsForge trust-boundary gaps: replayed evidence must match the current episode identity exactly, and license computation must not proceed from partial run history when the DB is configured but unreadable.
 
 **Scope**  
-Touch only:
-- `server/env/gym.ts`
-- `server/env/gym.test.ts`
-- optionally `server/insforgeStore.ts` if a distinct conflict outcome type is needed
+Change only `server/env/gym.ts` and `server/env/gym.test.ts`.
 
 **Steps**  
-1. In `stepEpisode`, special-case `out.status === 'unavailable' && out.code === 'conflict_reread_failed'`.
-2. Do not fall through to the newly computed verdict for that case.
-3. Return a deterministic non-success response, or retry lookup once and replay only if the original row is digest-valid.
-4. Harden `rowToVerdict` to reject malformed rows instead of defaulting action/verdict fields.
-5. Add tests for 409 plus failed trace lookup and 409 plus malformed winner row.
+1. Update `rowToVerdict` or its call sites so persisted rows are rejected unless `trace_id`, `run_id`, and `scenario_id` exactly match expected values when replaying one episode.  
+2. Use that exact identity check in the conflict `existing` branch before returning the stored verdict.  
+3. Fix the malformed conflict test to capture the actual attempted insert row or token-derived trace id; stop hard-coding `-nonce`.  
+4. Add a test for a digest-valid, version-compatible winner row with the wrong `trace_id`, `run_id`, or `scenario_id`; assert `ok === false` and no reward/info/license leaks.  
+5. Refactor `loadRunVerdicts` so configured InsForge read failure is distinguishable from an empty successful read.  
+6. In `stepEpisode`, if InsForge is configured and run-history read is unavailable/error, return `{ ok: false, code: "unknown" }` before computing or returning a license. Do not attempt insert in that case.  
+7. Add a test where the run-history GET returns 500/unparseable, assert no POST occurs and no reward/info/license is returned.  
+8. Keep local unconfigured dev fallback behavior unchanged.
 
-**Acceptance criteria**  
-- A duplicate insert conflict can never return the replayed/corrected action.
-- If the winner row cannot be read or validated, the API returns an error/uncertain result, not a forged improved license.
-- Valid conflict rehydration still returns the original reward/action/license and record id.
-- Malformed persisted rows are rejected before they influence replay/license.
+**Acceptance Criteria**  
+- A conflict winner with mismatched identity cannot influence replay or license.  
+- A configured DB read failure cannot produce an optimistic one-episode license.  
+- Valid conflict rehydration still returns the first-written verdict and record id.  
+- Local dev fallback still works without InsForge credentials.  
+- No verifier, reward, or license scoring semantics change.
 
 **Gates**  
 Run:
+
 ```bash
 npm run build
 npm run lint

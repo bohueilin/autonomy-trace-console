@@ -1,37 +1,31 @@
-All gates pass. Implementation complete.
+All gates green.
 
 ## Implementation Report
 
-Implemented `design.md` exactly — closing the `/v1` first-write-wins hole where a confirmed storage conflict could leak the later computed verdict.
+Implemented the plan in `design.md` exactly — fail closed on configured InsForge run-history read failures so a license can never be computed from partial evidence.
 
 ### Files changed
-- `server/env/gym.ts`
-- `server/env/gym.test.ts`
+- **`server/env/gym.ts`**
+  - Added a `LoadVerdictsResult` discriminated union (`{ status: 'ok'; verdicts }` | `{ status: 'unavailable' }`).
+  - Refactored `loadRunVerdicts` to return that type. Unconfigured dev fallback returns `{ status: 'ok', verdicts: devRunStore... }`; a configured InsForge read whose status is not `ok` (i.e. `unavailable` or `error`) returns `{ status: 'unavailable' }` instead of the old `[]`; a successful trusted load returns `{ status: 'ok', verdicts: out }`.
+  - In `stepEpisode`, load history *before* replay/verify/license/persist; on `status !== 'ok'` return `{ ok: false, code: 'unknown', error }` with no `reward`/`info`/`license`/`persisted`/`recordId`.
+- **`server/env/gym.test.ts`** — added two configured-InsForge tests: (1) run-history GET returns HTTP 500 → `unavailable`; (2) GET returns a 200 non-array body → `error`. Both assert `ok === false`, `code === 'unknown'`, zero POST calls, and absence of `reward`/`info`/`license`/`persisted`/`recordId`.
 
 ### Key decisions
-1. **`rowToVerdict` hardened (gym.ts).** Added a `CATEGORIES` constant and rewrote the validator to reject a persisted row unless every replay-critical field is authoritative and well-typed:
-   - `trace_authority === 'server_authoritative_episode'`
-   - non-empty string `trace_id`, `run_id`, `scenario_id`
-   - matching verifier/reward/license versions
-   - present digest equal to `computeAuditDigest(row)`
-   - `passed` boolean; `reward` finite and within `[-1, 1]`; `catastrophic` boolean
-   - `category` ∈ {correct, over_cautious, under_cautious, catastrophic}
-   - `expected_action`/`actual_action` ∈ `ACTIONS`
-   - Removed the old `'unknown'`/`'stop'` defaulting — a malformed field now rejects the whole row instead of silently coercing it.
+- Used a typed result union rather than throwing, matching the existing non-throwing store boundary (`ReadOutcome`).
+- Placed the fail-closed check before the existing replay lookup, so an unreadable history never produces an optimistic replay or a new verdict.
+- Verified against `insforgeStore.ts:296–305`: HTTP 500 → `unavailable`, non-array → `error` — both covered by `read.status !== 'ok'`.
 
-2. **`stepEpisode` fails closed (gym.ts).** In the `out.status === 'existing'` branch, when `rowToVerdict(out.row)` returns `null`, it now returns `{ ok: false, code: 'unknown', error }` instead of falling through to the newly computed verdict. Added an explicit branch for `out.status === 'unavailable' && out.code === 'conflict_reread_failed'` that also fails closed. Other `unavailable`/`local_only` outcomes keep their best-effort behavior. No reward/info/license/persisted/corrected action is returned on these failures.
+### Out of scope (untouched per design)
+Verifier/license semantics, `insforgeStore.ts`, migrations, legacy `/api/run-episode`, UI, scenario content.
 
-3. **Two new tests (gym.test.ts).**
-   - Confirmed conflict + empty trace lookup → `conflict_reread_failed` → asserts `ok === false`, `code === 'unknown'`, and no `reward`/`info`/`license`/`persisted` leak.
-   - Confirmed conflict + malformed winner row (digest recomputed over the row, so rejection comes from strict field validation on an invalid `category`, not a digest mismatch) → asserts `ok === false`, `code === 'unknown'`, no corrected reward/license/info.
-   - Added imports for `computeAuditDigest` and the three version constants.
-
-### Gate results — all PASS
-- `npm run build` ✅ (tsc + vite)
-- `npm run lint` ✅ (fixed one unused-var TS6133 I introduced)
-- `npm run verify:evidence` ✅ (40 checks)
-- `npm test` ✅ (33 passed, was 31 — the two new tests plus the unchanged valid-conflict test all green)
+### Gate results — all pass
+- `npm run build` ✅
+- `npm run lint` ✅ (clean)
+- `npm run verify:evidence` ✅ (40 checks, ALL CHECKS PASSED)
+- `npm test` ✅ (6 files, 35 tests — was 33, +2 new)
 - `npm run gates` ✅
 
-### Deferred / open questions for Codex
-- None deferred within scope. Adjacent item I did **not** touch (per scope): `loadRunVerdicts` silently treats `fetchRecentEvidence` `unavailable`/`error` as an empty run, so a read failure on the *read-before-write* path could still let a fresh verdict compute and persist where a prior row exists but isn't visible. The unique-index conflict path now catches the persist-time collision, but a future round may want to consider whether read-path unavailability should also be more conservative. Flagging only — not implemented.
+### Open questions for Codex
+- The two prior conflict paths (`existing` rehydration, `conflict_reread_failed`) already fail closed and now also benefit from the pre-load guard; no change was needed there. Existing first-write-wins/conflict tests still pass.
+- Adjacent (not done): `loadRunVerdicts` swallows `unavailable` vs `error` into one `status: 'unavailable'`. If a future round wants distinct telemetry/error messages for a parse failure vs a network failure, that distinction is currently collapsed.

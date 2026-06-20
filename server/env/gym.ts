@@ -249,13 +249,22 @@ function rowToVerdict(raw: Record<string, unknown>): DevVerdict | null {
   }
 }
 
+// Result of loading a run's trusted history. In configured mode a non-`ok`
+// InsForge read MUST NOT be flattened to an empty list: computing a license over
+// `[]` would optimistically grant autonomy from partial evidence. Distinguish a
+// trusted load from an unavailable read so the caller can fail closed.
+type LoadVerdictsResult =
+  | { status: 'ok'; verdicts: DevVerdict[] }
+  | { status: 'unavailable' }
+
 /** Recompute this run's trusted verdicts from persisted InsForge rows. */
-async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<DevVerdict[]> {
+async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<LoadVerdictsResult> {
   if (!insforgeConfigured(cfg.insforge)) {
-    return devRunStore.get(runId) ?? []
+    // Unconfigured local dev: the in-memory store is the authoritative history.
+    return { status: 'ok', verdicts: devRunStore.get(runId) ?? [] }
   }
   const read = await fetchRecentEvidence(cfg.insforge, 500, runId)
-  if (read.status !== 'ok') return [] // unavailable/error -> treat as empty this call
+  if (read.status !== 'ok') return { status: 'unavailable' } // unavailable/error -> fail closed
 
   // First-write-wins: keep the EARLIEST row per trace id. fetchRecentEvidence
   // returns created_at.desc; re-sort oldest-first with a stable comparator so a
@@ -280,7 +289,7 @@ async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<DevVerdic
     seen.add(verdict.traceId)
     out.push(verdict)
   }
-  return out
+  return { status: 'ok', verdicts: out }
 }
 
 /** step — score the agent's action with the deterministic verifier. */
@@ -301,7 +310,19 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
   // Trace id is fixed by the episode token (not the action), so re-stepping the
   // same episode lands on the same id. This is the idempotency key.
   const traceId = episodeTraceId(payload.runId, payload.scenarioId, payload.nonce)
-  const runVerdicts = await loadRunVerdicts(payload.runId, cfg)
+  // Load this run's trusted history BEFORE replay/verify/license/persist. A
+  // configured InsForge read that is unavailable or unparseable fails closed: we
+  // cannot compute a license over partial evidence, so emit no reward/info/
+  // license/persistence. (Unconfigured dev fallback always loads `ok`.)
+  const loaded = await loadRunVerdicts(payload.runId, cfg)
+  if (loaded.status !== 'ok') {
+    return {
+      ok: false,
+      code: 'unknown',
+      error: 'Run history could not be read; refusing to compute a license from partial evidence.',
+    }
+  }
+  const runVerdicts = loaded.verdicts
   const existing = runVerdicts.find((v) => v.traceId === traceId)
 
   // REPLAY (first-write-wins): this episode already has a recorded verdict. Echo
