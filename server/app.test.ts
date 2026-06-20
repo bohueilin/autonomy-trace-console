@@ -324,6 +324,9 @@ describe('createApp /v1/warehouse embodiment + reference (Stage A)', () => {
       domain: 'manufacturing',
       embodiment: 'humanoid',
       planId: 'plan_demo',
+      approvedFactsHash: 'facts_demo',
+      inputManifestSummary: '1 workflow video',
+      frozenWorkflowSummary: 'move tote safely',
     })
     expect(resp.status).toBe(200)
     const body = (await resp.json()) as {

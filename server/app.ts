@@ -212,11 +212,14 @@ export function createApp(config: AppConfig): Hono {
       'domain',
       'planId',
       'requirementSummary',
+      'approvedFactsHash',
+      'inputManifestSummary',
+      'frozenWorkflowSummary',
     ])
     if (extra.length) {
       return badRequest(
         c,
-        `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, agentId, runId, embodiment, domain, planId, requirementSummary }.`,
+        `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, agentId, runId, embodiment, domain, planId, requirementSummary, approvedFactsHash, inputManifestSummary, frozenWorkflowSummary }.`,
       )
     }
     if ('taskId' in body && (typeof body.taskId !== 'string' || body.taskId.trim() === '')) {
@@ -241,6 +244,15 @@ export function createApp(config: AppConfig): Hono {
     if ('requirementSummary' in body && typeof body.requirementSummary !== 'string') {
       return badRequest(c, 'requirementSummary must be a string when provided.')
     }
+    if ('approvedFactsHash' in body && typeof body.approvedFactsHash !== 'string') {
+      return badRequest(c, 'approvedFactsHash must be a string when provided.')
+    }
+    if ('inputManifestSummary' in body && typeof body.inputManifestSummary !== 'string') {
+      return badRequest(c, 'inputManifestSummary must be a string when provided.')
+    }
+    if ('frozenWorkflowSummary' in body && typeof body.frozenWorkflowSummary !== 'string') {
+      return badRequest(c, 'frozenWorkflowSummary must be a string when provided.')
+    }
     const r = resetWarehouseEpisode(
       {
         taskId: body.taskId as string | undefined,
@@ -250,6 +262,9 @@ export function createApp(config: AppConfig): Hono {
         domain: body.domain as string | undefined,
         planId: body.planId as string | undefined,
         requirementSummary: body.requirementSummary as string | undefined,
+        approvedFactsHash: body.approvedFactsHash as string | undefined,
+        inputManifestSummary: body.inputManifestSummary as string | undefined,
+        frozenWorkflowSummary: body.frozenWorkflowSummary as string | undefined,
       },
       warehouseCfg,
     )
@@ -283,11 +298,20 @@ export function createApp(config: AppConfig): Hono {
     const parsed = await strictJsonObject(c)
     if (!parsed.ok) return badRequest(c, parsed.error)
     const body = parsed.body
-    const extra = extraKeys(body, ['taskId', 'domain', 'embodiment', 'planId', 'requirementSummary'])
+    const extra = extraKeys(body, [
+      'taskId',
+      'domain',
+      'embodiment',
+      'planId',
+      'requirementSummary',
+      'approvedFactsHash',
+      'inputManifestSummary',
+      'frozenWorkflowSummary',
+    ])
     if (extra.length) {
       return badRequest(
         c,
-        `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, domain, embodiment, planId, requirementSummary }.`,
+        `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, domain, embodiment, planId, requirementSummary, approvedFactsHash, inputManifestSummary, frozenWorkflowSummary }.`,
       )
     }
     if (typeof body.taskId !== 'string' || body.taskId.trim() === '') {
@@ -305,6 +329,15 @@ export function createApp(config: AppConfig): Hono {
     if ('requirementSummary' in body && typeof body.requirementSummary !== 'string') {
       return badRequest(c, 'requirementSummary must be a string when provided.')
     }
+    if ('approvedFactsHash' in body && typeof body.approvedFactsHash !== 'string') {
+      return badRequest(c, 'approvedFactsHash must be a string when provided.')
+    }
+    if ('inputManifestSummary' in body && typeof body.inputManifestSummary !== 'string') {
+      return badRequest(c, 'inputManifestSummary must be a string when provided.')
+    }
+    if ('frozenWorkflowSummary' in body && typeof body.frozenWorkflowSummary !== 'string') {
+      return badRequest(c, 'frozenWorkflowSummary must be a string when provided.')
+    }
     const r = await runWarehouseReferenceEpisode(
       {
         taskId: body.taskId,
@@ -312,6 +345,9 @@ export function createApp(config: AppConfig): Hono {
         embodiment: body.embodiment as string | undefined,
         planId: body.planId as string | undefined,
         requirementSummary: body.requirementSummary as string | undefined,
+        approvedFactsHash: body.approvedFactsHash as string | undefined,
+        inputManifestSummary: body.inputManifestSummary as string | undefined,
+        frozenWorkflowSummary: body.frozenWorkflowSummary as string | undefined,
       },
       warehouseCfg,
     )

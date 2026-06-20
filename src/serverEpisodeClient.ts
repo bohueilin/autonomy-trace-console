@@ -55,6 +55,9 @@ export async function persistWarehouseReference(input: {
   embodiment: string
   planId?: string
   requirementSummary?: string
+  approvedFactsHash?: string
+  inputManifestSummary?: string
+  frozenWorkflowSummary?: string
 }): Promise<WarehouseReferencePersist> {
   const fail: WarehouseReferencePersist = {
     status: 'unavailable',

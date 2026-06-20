@@ -73,6 +73,23 @@ export interface EnvironmentPlan {
   tasks: WarehouseTask[]
   labelCounts: Record<WarehouseTerminal, number>
   oracleAssumptions: string[]
+  workflow?: WorkflowPlanMetadata
+}
+
+export interface WorkflowPlanInput {
+  domain: PhysicalDomain
+  embodiment: RobotEmbodiment
+  selectedTaskIds?: string[]
+  approvedFactsHash?: string
+  inputManifestSummary?: string
+  frozenWorkflowSummary?: string
+}
+
+export interface WorkflowPlanMetadata {
+  approvedFactsHash: string | null
+  inputManifestSummary: string | null
+  frozenWorkflowSummary: string | null
+  selectedTaskIds: string[]
 }
 
 export const PHYSICAL_DOMAINS: PhysicalDomain[] = [
@@ -237,13 +254,23 @@ function applyDomainTheme(task: WarehouseTask, theme: DomainTheme): WarehouseTas
   }
 }
 
-function hashRequirement(req: EnvironmentRequirement): string {
+function hashRequirement(req: EnvironmentRequirement, workflow?: WorkflowPlanInput): string {
   const normal = JSON.stringify({
     outcome: req.outcome.trim(),
     domain: req.domain,
     embodiment: req.embodiment,
     notes: (req.notes ?? '').trim(),
     attachments: [...(req.attachments ?? [])].sort(),
+    workflow: workflow
+      ? {
+          domain: workflow.domain,
+          embodiment: workflow.embodiment,
+          selectedTaskIds: [...(workflow.selectedTaskIds ?? [])],
+          approvedFactsHash: workflow.approvedFactsHash ?? null,
+          inputManifestSummary: workflow.inputManifestSummary ?? null,
+          frozenWorkflowSummary: workflow.frozenWorkflowSummary ?? null,
+        }
+      : null,
   })
   // djb2 — deterministic, browser-safe, no crypto/async needed for an id.
   let h = 5381
@@ -267,12 +294,29 @@ export function getEmbodimentProfile(embodiment: RobotEmbodiment): EmbodimentPro
  * adjusted then domain-themed; the oracle assumptions surface exactly how ground
  * truth is derived so the preview never over-claims bespoke per-domain physics.
  */
-export function buildEnvironmentPlan(req: EnvironmentRequirement): EnvironmentPlan {
-  const theme = DOMAIN_THEMES[req.domain]
-  const profile = EMBODIMENT_PROFILES[req.embodiment]
+export function buildEnvironmentPlan(req: EnvironmentRequirement, workflow?: WorkflowPlanInput): EnvironmentPlan {
+  const domain = workflow?.domain ?? req.domain
+  const embodiment = workflow?.embodiment ?? req.embodiment
+  const theme = DOMAIN_THEMES[domain]
+  const profile = EMBODIMENT_PROFILES[embodiment]
 
-  const tasks = warehouseTasks.map((base) => applyDomainTheme(applyEmbodiment(base, req.embodiment), theme))
+  const selected =
+    workflow?.selectedTaskIds?.length
+      ? workflow.selectedTaskIds
+          .map((id) => warehouseTasks.find((task) => task.id === id))
+          .filter((task): task is WarehouseTask => Boolean(task))
+      : warehouseTasks
+  const baseTasks = selected.length ? selected : warehouseTasks
+  const tasks = baseTasks.map((base) => applyDomainTheme(applyEmbodiment(base, embodiment), theme))
   const labelCounts = labelCountsForPlan(tasks)
+  const workflowMeta: WorkflowPlanMetadata | undefined = workflow
+    ? {
+        approvedFactsHash: workflow.approvedFactsHash ?? null,
+        inputManifestSummary: workflow.inputManifestSummary ?? null,
+        frozenWorkflowSummary: workflow.frozenWorkflowSummary ?? null,
+        selectedTaskIds: baseTasks.map((task) => task.id),
+      }
+    : undefined
 
   const oracleAssumptions = [
     'Ground truth comes from the BFS oracle over a symbolic grid — never an LLM judge.',
@@ -280,16 +324,22 @@ export function buildEnvironmentPlan(req: EnvironmentRequirement): EnvironmentPl
     `${profile.label} embodiment scales battery ×${profile.batteryMul} and step budget ×${profile.stepMul}; the oracle re-derives finish/escalate/refuse from the adjusted budgets.`,
     `Resulting label mix: ${labelCounts.finish} finish · ${labelCounts.escalate} escalate · ${labelCounts.refuse} refuse across ${tasks.length} tasks.`,
     'This is a symbolic Physical AI eval template; all domains share one validated grid core in this phase.',
+    ...(workflowMeta
+      ? [
+          'Approved workflow facts select and annotate canonical tasks only; they do not set labels, rewards, or physics.',
+        ]
+      : []),
   ]
 
   return {
-    id: hashRequirement(req),
-    requirement: req,
+    id: hashRequirement({ ...req, domain, embodiment }, workflow),
+    requirement: { ...req, domain, embodiment },
     theme,
     profile,
     tasks,
     labelCounts,
     oracleAssumptions,
+    workflow: workflowMeta,
   }
 }
 

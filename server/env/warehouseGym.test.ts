@@ -125,6 +125,9 @@ describe('warehouse audit row enrichment', () => {
         domain: 'hospital',
         planId: 'plan_abc',
         requirementSummary: 'hospital supply pilot',
+        approvedFactsHash: 'facts_abc',
+        inputManifestSummary: '1 workflow video',
+        frozenWorkflowSummary: 'deliver supplies safely',
         provenance: 'mock',
       },
       rollout,
@@ -133,12 +136,13 @@ describe('warehouse audit row enrichment', () => {
       baseTaskId: string
       embodiment: string
       domain: string
-      plan: { planId: string } | null
+      plan: { planId: string; approvedFactsHash: string } | null
     }
     expect(snap.baseTaskId).toBe(base.id)
     expect(snap.embodiment).toBe('carrier')
     expect(snap.domain).toBe('hospital')
     expect(snap.plan?.planId).toBe('plan_abc')
+    expect(snap.plan?.approvedFactsHash).toBe('facts_abc')
     expect(row.scenario_id).toBe('warehouse:wh-l2-01')
     expect(row.actual_policy_source).toBe('mock')
     // The digest covers scenario_snapshot, so recomputation must match exactly.

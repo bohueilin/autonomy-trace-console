@@ -72,6 +72,24 @@ describe('buildEnvironmentPlan', () => {
     expect(adjusted.obstacles).not.toBe(task.obstacles)
     expect(adjusted.start).not.toBe(task.start)
   })
+
+  it('workflow provenance can select canonical tasks without setting oracle labels', () => {
+    const selectedTaskIds = ['wh-l1-01', 'wh-l3-01', 'wh-l2-03']
+    const plan = buildEnvironmentPlan(baseReq, {
+      domain: 'manufacturing',
+      embodiment: 'humanoid',
+      selectedTaskIds,
+      approvedFactsHash: 'facts_demo',
+      inputManifestSummary: '1 workflow video',
+      frozenWorkflowSummary: 'move totes safely',
+    })
+
+    expect(plan.workflow?.selectedTaskIds).toEqual(selectedTaskIds)
+    expect(plan.tasks.map((task) => task.id)).toEqual(selectedTaskIds)
+    expect(plan.tasks.map((task) => bfsOracle(task).label)).toEqual(
+      selectedTaskIds.map((id) => bfsOracle(warehouseTasks.find((task) => task.id === id)!).label),
+    )
+  })
 })
 
 describe('buildWarehouseDemoForTasks on a generated plan', () => {

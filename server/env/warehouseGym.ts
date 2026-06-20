@@ -90,6 +90,9 @@ export interface WarehouseResetInput {
   /** Descriptive plan provenance only. */
   planId?: string
   requirementSummary?: string
+  approvedFactsHash?: string
+  inputManifestSummary?: string
+  frozenWorkflowSummary?: string
 }
 
 export type WarehouseResetResult =
@@ -142,6 +145,9 @@ interface WarehouseEpisodePayload {
   domain: PhysicalDomain
   planId?: string
   requirementSummary?: string
+  approvedFactsHash?: string
+  inputManifestSummary?: string
+  frozenWorkflowSummary?: string
   iat: number
   nonce: string
   actions: WarehouseAction[]
@@ -193,6 +199,9 @@ interface PersistCtx {
   domain: PhysicalDomain
   planId?: string
   requirementSummary?: string
+  approvedFactsHash?: string
+  inputManifestSummary?: string
+  frozenWorkflowSummary?: string
   provenance: 'external' | 'mock'
 }
 
@@ -237,6 +246,9 @@ function verifyWarehouse(token: string, secret: string): WarehouseEpisodePayload
       domain: coerceDomain(parsed.domain),
       planId: typeof parsed.planId === 'string' ? parsed.planId : undefined,
       requirementSummary: coerceSummary(parsed.requirementSummary),
+      approvedFactsHash: coerceSummary(parsed.approvedFactsHash),
+      inputManifestSummary: coerceSummary(parsed.inputManifestSummary),
+      frozenWorkflowSummary: coerceSummary(parsed.frozenWorkflowSummary),
     }
   } catch {
     return null
@@ -359,8 +371,18 @@ export function buildWarehouseAuditRow(ctx: PersistCtx, rollout: WarehouseRollou
       domain: ctx.domain,
       domainTheme: getDomainTheme(ctx.domain),
       plan:
-        ctx.planId || ctx.requirementSummary
-          ? { planId: ctx.planId ?? null, requirementSummary: ctx.requirementSummary ?? null }
+        ctx.planId ||
+        ctx.requirementSummary ||
+        ctx.approvedFactsHash ||
+        ctx.inputManifestSummary ||
+        ctx.frozenWorkflowSummary
+          ? {
+              planId: ctx.planId ?? null,
+              requirementSummary: ctx.requirementSummary ?? null,
+              approvedFactsHash: ctx.approvedFactsHash ?? null,
+              inputManifestSummary: ctx.inputManifestSummary ?? null,
+              frozenWorkflowSummary: ctx.frozenWorkflowSummary ?? null,
+            }
           : null,
       rollout: {
         policy: ctx.agentId,
@@ -466,6 +488,9 @@ export function resetWarehouseEpisode(input: WarehouseResetInput, cfg: Warehouse
     domain,
     planId: input.planId?.trim() || undefined,
     requirementSummary: coerceSummary(input.requirementSummary),
+    approvedFactsHash: coerceSummary(input.approvedFactsHash),
+    inputManifestSummary: coerceSummary(input.inputManifestSummary),
+    frozenWorkflowSummary: coerceSummary(input.frozenWorkflowSummary),
     iat: Date.now(),
     nonce: newNonce(),
     actions: [],
@@ -523,6 +548,9 @@ export async function stepWarehouseEpisode(
     domain: payload.domain,
     planId: payload.planId,
     requirementSummary: payload.requirementSummary,
+    approvedFactsHash: payload.approvedFactsHash,
+    inputManifestSummary: payload.inputManifestSummary,
+    frozenWorkflowSummary: payload.frozenWorkflowSummary,
     provenance: 'external',
   }
   const persisted = await persistTerminal(ctx, rollout, cfg)
@@ -548,6 +576,9 @@ export interface WarehouseReferenceInput {
   embodiment?: string
   planId?: string
   requirementSummary?: string
+  approvedFactsHash?: string
+  inputManifestSummary?: string
+  frozenWorkflowSummary?: string
 }
 
 export type WarehouseReferenceResult =
@@ -602,6 +633,9 @@ export async function runWarehouseReferenceEpisode(
     domain,
     planId: input.planId?.trim() || undefined,
     requirementSummary: coerceSummary(input.requirementSummary),
+    approvedFactsHash: coerceSummary(input.approvedFactsHash),
+    inputManifestSummary: coerceSummary(input.inputManifestSummary),
+    frozenWorkflowSummary: coerceSummary(input.frozenWorkflowSummary),
     provenance: 'mock',
   }
   const persisted = await persistTerminal(ctx, rollout, cfg)

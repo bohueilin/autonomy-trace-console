@@ -4,6 +4,7 @@
 
 import { bfsOracle } from '../warehouse'
 import type { EnvironmentPlan } from '../environmentPlan'
+import type { FrozenWorkflow } from '../workflowDraft'
 
 const LABEL_CLASS: Record<string, string> = {
   finish: 'lbl-finish',
@@ -13,10 +14,12 @@ const LABEL_CLASS: Record<string, string> = {
 
 export function EnvironmentPreview({
   plan,
+  frozen,
   onRun,
   onBack,
 }: {
   plan: EnvironmentPlan
+  frozen?: FrozenWorkflow | null
   onRun: () => void
   onBack: () => void
 }) {
@@ -33,6 +36,17 @@ export function EnvironmentPreview({
           <h2>{requirement.outcome}</h2>
         </div>
       </div>
+
+      {frozen && (
+        <div className="frozen-banner">
+          <div>
+            <div className="panel-kicker">Frozen eval boundary</div>
+            <strong>Confirmed by you; scored by deterministic oracle.</strong>
+            <p>{frozen.frozenWorkflowSummary}</p>
+          </div>
+          <span>{frozen.approvedFactsHash}</span>
+        </div>
+      )}
 
       <div className="preview-meta">
         <div className="preview-card">
@@ -73,6 +87,17 @@ export function EnvironmentPreview({
           </ul>
         </div>
       </div>
+
+      {plan.workflow && (
+        <div className="workflow-map-panel">
+          <div className="panel-kicker">Mapped from your approved workflow</div>
+          <div className="workflow-map-grid">
+            <p>{plan.workflow.inputManifestSummary}</p>
+            <p>{plan.workflow.frozenWorkflowSummary}</p>
+            <span>{plan.workflow.selectedTaskIds.length} canonical task(s) selected</span>
+          </div>
+        </div>
+      )}
 
       <div className="preview-tasks">
         <div className="ptask-row ptask-head">

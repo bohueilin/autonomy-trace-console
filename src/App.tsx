@@ -8,6 +8,13 @@ import { seedScenarios, trainScenarios } from './seedScenarios'
 import { verify } from './verifier'
 import { WAREHOUSE_TOOLS, buildWarehouseDemo, buildWarehouseDemoForTasks } from './warehouse'
 import { buildEnvironmentPlan, type EnvironmentPlan, type EnvironmentRequirement } from './environmentPlan'
+import type { CaptureManifest } from './captureManifest'
+import {
+  frozenToPlanInput,
+  proposeUnderstanding,
+  type FrozenWorkflow,
+  type WorkflowUnderstanding,
+} from './workflowDraft'
 import type {
   AgentDecision,
   AgentSource,
@@ -24,7 +31,10 @@ import { LicenseSummary } from './components/LicenseSummary'
 import { TraceViewer } from './components/TraceViewer'
 import { EvidencePanel } from './components/EvidencePanel'
 import { Landing } from './components/Landing'
-import { IntakeForm } from './components/IntakeForm'
+import { CaptureConsole } from './components/CaptureConsole'
+import { UnderstandingProgress } from './components/UnderstandingProgress'
+import { ReflectAlign } from './components/ReflectAlign'
+import { WorkflowIllustration } from './components/WorkflowIllustration'
 import { EnvironmentPreview } from './components/EnvironmentPreview'
 import { LicenseResults } from './components/LicenseResults'
 import { MatrixMini, TriptychCard } from './components/warehouseViz'
@@ -32,18 +42,50 @@ import { actionTrace, pct } from './format'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
 
-type View = 'landing' | 'intake' | 'preview' | 'results' | 'showcase'
+type View =
+  | 'landing'
+  | 'capture'
+  | 'understanding'
+  | 'reflect'
+  | 'illustrate'
+  | 'preview'
+  | 'results'
+  | 'showcase'
 
 function App() {
-  // Phase 1-2 product journey: landing -> intake -> preview -> results, with the
+  // Product journey: landing -> capture -> understanding -> reflect -> illustrate -> preview -> results, with the
   // original static warehouse console reachable as the "showcase" sample eval.
   const [view, setView] = useState<View>('landing')
   const [plan, setPlan] = useState<EnvironmentPlan | null>(null)
+  const [requirement, setRequirement] = useState<EnvironmentRequirement | null>(null)
+  const [manifest, setManifest] = useState<CaptureManifest | null>(null)
+  const [draft, setDraft] = useState<WorkflowUnderstanding | null>(null)
+  const [frozen, setFrozen] = useState<FrozenWorkflow | null>(null)
   const planDemo = useMemo(() => (plan ? buildWarehouseDemoForTasks(plan.tasks) : null), [plan])
 
-  function handleGenerate(req: EnvironmentRequirement) {
-    setPlan(buildEnvironmentPlan(req))
-    setView('preview')
+  function handleAnalyze(req: EnvironmentRequirement, cap: CaptureManifest) {
+    setRequirement(req)
+    setManifest(cap)
+    setDraft(proposeUnderstanding(cap))
+    setFrozen(null)
+    setPlan(null)
+    setView('understanding')
+  }
+
+  function handleManual(req: EnvironmentRequirement, cap: CaptureManifest) {
+    setRequirement(req)
+    setManifest(cap)
+    setDraft(proposeUnderstanding(cap, true))
+    setFrozen(null)
+    setPlan(null)
+    setView('reflect')
+  }
+
+  function handleApproveWorkflow(nextFrozen: FrozenWorkflow) {
+    if (!requirement) return
+    setFrozen(nextFrozen)
+    setPlan(buildEnvironmentPlan(requirement, frozenToPlanInput(nextFrozen)))
+    setView('illustrate')
   }
 
   const [traces, setTraces] = useState<Trace[]>([])
@@ -195,31 +237,56 @@ function App() {
           >
             Sample eval
           </button>
-          <button className="btn primary navlink-cta" onClick={() => setView('intake')}>
-            Create eval
+          <button className="btn primary navlink-cta" onClick={() => setView('capture')}>
+            Describe site
           </button>
         </div>
       </nav>
 
       {view === 'landing' && (
-        <Landing onCreate={() => setView('intake')} onSample={() => setView('showcase')} />
+        <Landing onCreate={() => setView('capture')} onSample={() => setView('showcase')} />
       )}
-      {view === 'intake' && (
-        <IntakeForm onGenerate={handleGenerate} onBack={() => setView('landing')} />
+      {view === 'capture' && (
+        <CaptureConsole onAnalyze={handleAnalyze} onManual={handleManual} onBack={() => setView('landing')} />
+      )}
+      {view === 'understanding' && manifest && draft && (
+        <UnderstandingProgress
+          manifest={manifest}
+          draft={draft}
+          onContinue={() => setView('reflect')}
+          onBack={() => setView('capture')}
+        />
+      )}
+      {view === 'reflect' && draft && (
+        <ReflectAlign
+          draft={draft}
+          onApprove={handleApproveWorkflow}
+          onBack={() => setView('capture')}
+        />
+      )}
+      {view === 'illustrate' && plan && frozen && (
+        <WorkflowIllustration
+          plan={plan}
+          frozen={frozen}
+          onFreeze={() => setView('preview')}
+          onBack={() => setView('reflect')}
+        />
       )}
       {view === 'preview' && plan && (
         <EnvironmentPreview
           plan={plan}
+          frozen={frozen}
           onRun={() => setView('results')}
-          onBack={() => setView('intake')}
+          onBack={() => setView(frozen ? 'illustrate' : 'capture')}
         />
       )}
       {view === 'results' && plan && planDemo && (
         <LicenseResults
           plan={plan}
+          frozen={frozen}
           demo={planDemo}
           onRefine={() => setView('preview')}
-          onRestart={() => setView('intake')}
+          onRestart={() => setView('capture')}
           onSample={() => setView('showcase')}
         />
       )}

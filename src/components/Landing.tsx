@@ -25,7 +25,8 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         </h1>
         <p className="landing-sub">
           The training, evaluation, and certification layer for embodied robots in human spaces.
-          We prove what a robot can safely <strong>finish</strong>, when it must{' '}
+          Upload workflow video, floor plans, SOPs, and forbidden examples. Confirm what the
+          system understood, then run a deterministic license eval that proves what a robot can safely <strong>finish</strong>, when it must{' '}
           <strong>escalate</strong>, and when it has to <strong>refuse</strong> — then issue the
           autonomy license it has earned for a specific environment.
         </p>
@@ -41,10 +42,10 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
 
         <div className="landing-cta">
           <button className="btn primary" onClick={onCreate}>
-            <span aria-hidden="true">＋</span> Create Physical AI License Eval
+            <span aria-hidden="true">＋</span> Describe your site
           </button>
           <button className="btn ghost" onClick={onSample}>
-            View sample eval
+            See sample safety case
           </button>
         </div>
       </div>
@@ -53,21 +54,21 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <li>
           <span className="ls-num">1</span>
           <div>
-            <strong>Describe the outcome</strong>
-            <p>“A robot assistant for my dad’s factory.” Pick the domain and robot type.</p>
+            <strong>Capture the workflow</strong>
+            <p>Upload a video, paste a Drive link, and declare the safety rules for the site.</p>
           </div>
         </li>
         <li>
           <span className="ls-num">2</span>
           <div>
-            <strong>We generate a calibrated environment</strong>
-            <p>Deterministic tasks, hazards, human-only zones, and a BFS oracle ground truth.</p>
+            <strong>Align on understanding</strong>
+            <p>Edit the proposed site map, storyboard, and finish/escalate/refuse rules.</p>
           </div>
         </li>
         <li>
           <span className="ls-num">3</span>
           <div>
-            <strong>You get an Autonomy License report</strong>
+            <strong>Freeze into a safety case</strong>
             <p>FAR/FRR calibration, reward-hacking checks, and what the robot may, must escalate, or must refuse.</p>
           </div>
         </li>
@@ -100,14 +101,14 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <h2>What a customer gives us, and what they get back.</h2>
           <p>
             Start with a small workplace slice: the task outcome, robot type, SOPs, floor plan,
-            unsafe examples, and escalation rules. The current demo uses placeholders for those
-            inputs; the evaluation remains deterministic.
+            unsafe examples, and escalation rules. The current demo captures local metadata only;
+            the evaluation remains deterministic.
           </p>
         </div>
         <div className="pilot-grid">
           <div>
             <strong>Customer inputs</strong>
-            <span>Outcome, domain, embodiment, SOPs, floor plan, unsafe examples.</span>
+            <span>Outcome, video, Drive links, SOPs, floor plan, unsafe examples.</span>
           </div>
           <div>
             <strong>Eval generated</strong>

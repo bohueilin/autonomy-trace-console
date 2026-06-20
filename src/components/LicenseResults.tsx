@@ -8,6 +8,7 @@ import { bfsOracle, type WarehouseDemo, type WarehouseRollout } from '../warehou
 import type { EnvironmentPlan } from '../environmentPlan'
 import { buildPhysicalAiLicenseReport } from '../licenseReport'
 import { persistWarehouseReference } from '../serverEpisodeClient'
+import type { FrozenWorkflow } from '../workflowDraft'
 import { MatrixMini, TriptychCard } from './warehouseViz'
 import { actionTrace, pct } from '../format'
 
@@ -25,12 +26,14 @@ function reportFilename(reportId: string): string {
 
 export function LicenseResults({
   plan,
+  frozen,
   demo,
   onRefine,
   onRestart,
   onSample,
 }: {
   plan: EnvironmentPlan
+  frozen?: FrozenWorkflow | null
   demo: WarehouseDemo
   onRefine: () => void
   onRestart: () => void
@@ -83,6 +86,9 @@ export function LicenseResults({
       embodiment: plan.requirement.embodiment,
       planId: plan.id,
       requirementSummary: plan.requirement.outcome,
+      approvedFactsHash: plan.workflow?.approvedFactsHash ?? undefined,
+      inputManifestSummary: plan.workflow?.inputManifestSummary ?? undefined,
+      frozenWorkflowSummary: plan.workflow?.frozenWorkflowSummary ?? undefined,
     })
     setPersistStatus(res.status)
     const id = res.recordId ? ` · ${res.recordId}` : ''
@@ -203,6 +209,31 @@ export function LicenseResults({
       </div>
 
       <p className="report-disclaimer">{report.disclaimer}</p>
+
+      {(frozen || plan.workflow) && (
+        <div className="provenance-strip">
+          <div>
+            <span>1</span>
+            Inputs declared
+            <small>{plan.workflow?.inputManifestSummary ?? 'Local metadata only'}</small>
+          </div>
+          <div>
+            <span>2</span>
+            Facts confirmed
+            <small>{plan.workflow?.approvedFactsHash ?? frozen?.approvedFactsHash}</small>
+          </div>
+          <div>
+            <span>3</span>
+            Eval frozen
+            <small>Canonical tasks only; oracle labels untouched</small>
+          </div>
+          <div>
+            <span>4</span>
+            Safety case
+            <small>FAR/FRR + reward gates + evidence</small>
+          </div>
+        </div>
+      )}
 
       <div className="persist-strip">
         <div>

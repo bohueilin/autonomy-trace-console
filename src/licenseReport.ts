@@ -21,6 +21,11 @@ export interface PhysicalAiLicenseReport {
     preferencePairs: number
     rewardRows: number
   }
+  provenance?: {
+    inputManifestSummary: string | null
+    approvedFactsHash: string | null
+    frozenWorkflowSummary: string | null
+  }
   nextSteps: string[]
   disclaimer: string
 }
@@ -81,6 +86,13 @@ export function buildPhysicalAiLicenseReport(
       preferencePairs: demo.signal.preferencePairs.length,
       rewardRows: demo.signal.rewardViews.length,
     },
+    provenance: plan.workflow
+      ? {
+          inputManifestSummary: plan.workflow.inputManifestSummary,
+          approvedFactsHash: plan.workflow.approvedFactsHash,
+          frozenWorkflowSummary: plan.workflow.frozenWorkflowSummary,
+        }
+      : undefined,
     nextSteps: [
       'Upload real SOPs, floor plan, and unsafe examples to replace template assumptions.',
       'Run the target robot/model through the same finish/escalate/refuse eval before granting autonomy.',
