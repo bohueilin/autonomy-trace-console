@@ -42,3 +42,7 @@ dist-ssr
 .roo
 .trae
 .windsurf
+
+# agentloop transient logs
+.agentloop/loop.log
+.agentloop/gates.log
