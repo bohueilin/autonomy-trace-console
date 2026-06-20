@@ -1,32 +1,31 @@
-The `npm install vitest` step is the sole blocker. I've made all the file edits the design requires, but I cannot run the gates because `vitest` can't be installed: every `npm install` invocation is refused by the permission layer (this loop runs under `acceptEdits`, whose allow-list covers only `npm run *`, not `npm install`). `npm run build` consequently fails with `Cannot find module 'vitest'` on all five test files.
-
-This is not a disagreement with the plan — the design is correct and I implemented it exactly. It's an environment/permission blocker that needs a human decision: either approve `npm install --save-dev vitest` once, or run the round with the documented `--dangerously-skip-permissions` so the dependency install (and the resulting `package-lock.json` update the design calls for) can proceed. Until then the gates cannot go green.
+All gates green. Implementation complete.
 
 ---
 
-## Implementation report
+# Implementation Report — Unify evidence schema (`external` provenance)
 
-### Files changed
-- `package.json` — added `"test": "vitest run"` script.
-- `vitest.config.ts` (new) — `defineConfig` from `vitest/config`, `environment: 'node'`, `include: ['src/**/*.test.ts', 'server/**/*.test.ts']`. Standalone, does not load `vite.config.ts`.
-- `src/verifier.test.ts` (new) — correct/low-risk (+1), catastrophic ACT-on-high-risk-escalate (−1), over_cautious (−0.15), under_cautious ASK-where-STOP-required (not catastrophic).
-- `src/license.test.ts` (new) — L0 (empty), L4 (perfect), L3/L2/L1 thresholds, and catastrophic-caps-at-L1.
-- `server/evidence/digest.test.ts` (new) — `stableStringify` key-order determinism, `computeAuditDigest` reorder-stability, allow-listed field sensitivity (`scenario_title`, `action`), excluded-field insensitivity (`id`, `createdAt`, `updatedAt`, `created_at`, `audit_row_digest`).
-- `server/env/episodeToken.test.ts` (new) — sign/verify round-trip, tampered body, tampered signature, wrong secret, malformed tokens.
-- `server/env/gym.test.ts` (new) — reset known/unknown scenarioId + visible-only observation, step correct action → reward 1 / done / persisted:false / one-episode L4 (dev fallback), invalid action, tampered episodeId.
+## Plan evaluation
+The plan was sound, well-scoped, and low-risk. It cleanly separates **request-side** policy modes (`mock | nebius`, unchanged) from **evidence-side** provenance (now includes `external`), so the gym `/v1` path's rows are no longer dropped as malformed. No correctness/security/scope concerns — implemented as specified.
 
-### Key decisions
-- Tests import `vitest` symbols explicitly (`describe/it/expect`) — no globals, so no `tsconfig` `types` change is needed for `tsc -b` (which type-checks `src/**` and `server/**`).
-- `package-lock.json` is **not** updated — that update is produced by the (blocked) `npm install`. It's listed in the design scope but cannot be generated without running the installer.
-- Determinism preserved: gym tests use empty InsForge creds (in-memory dev fallback, no network), a fixed `episodeSecret`, fixed `scenarioId`s, and fresh `runId`s; no wall-clock/token-string assertions.
-- No production files touched (verifier/license/server/schema all untouched).
+## Files changed
+- **`src/types.ts`** — added `EvidencePolicySource = 'mock' | 'nebius' | 'external'` (documented as an evidence-only superset of `AgentSource`). Repointed `TraceProvenance.requestedPolicyMode/actualPolicySource` and `CompactRun.requestedPolicyMode/actualPolicySource` to it. `AgentSource` stays `mock | nebius` (UI mode selector + `AgentDecision.source` untouched).
+- **`server/runEpisodeHandler.ts`** — imported `EvidencePolicySource`; repointed `EvidenceItem.requestedPolicyMode/actualPolicySource`; replaced the parser allow-list `POLICY_MODES = ['mock','nebius']` with `EVIDENCE_POLICY_SOURCES: EvidencePolicySource[] = ['mock','nebius','external']` (documented); updated both parser membership checks and the two `parseEvidenceRow` casts. Request coercion in `handleRunEpisode` is **unchanged** — still rejects anything but `mock | nebius`. Dropped the now-unused `AgentSource` import.
+- **`scripts/verifyServerEvidence.mjs`** — added checks 36–40: a gym-shaped row (`trace_id: gym-…`, both provenance fields `external`, `model_name: external-agent/reference-v1`, digest recomputed) parses non-null, preserves `external`, is `digestStatus: 'valid'`, is version-compatible and included in both the license set and trusted set when merged, and unknown provenance (`wat`/`rogue`) is still rejected.
+- **`server/runEpisodeHandler.test.ts`** (new, optional per plan step 10) — focused Vitest regression: accepts external gym row, still accepts legacy mock/nebius, rejects unknown provenance. No network/InsForge mocking.
 
-### Gate results
-- `npm run build` — **FAIL**: `error TS2307: Cannot find module 'vitest'` on all five test files (vitest not installed).
-- `npm run lint`, `npm run verify:evidence`, `npm test` — **not run** (blocked behind the same missing install).
+## Key decisions
+- Chose `EvidencePolicySource` as a distinct named type (not widening `AgentSource`) so the request-side `mock | nebius` contract stays statically enforced — `external` is structurally unselectable for `/api/run-episode`.
+- `vapiHandler.ts:68` (`requestedPolicyMode === 'nebius'`) and `App.tsx` `AgentSource` selector compile unchanged — the widening is backward-compatible.
+- Added the optional Vitest test in addition to (not instead of) the verify-script checks, to graduate the regression into `npm test` per the GOAL's vitest DoD.
 
-### Deferred / open questions for Codex
-- Should the loop's `CLAUDE_CMD` use `--dangerously-skip-permissions` (per `run.sh`'s own comment) for rounds that add dependencies, or should `npm install` / `npm ci` be added to the `.claude/settings.json` allow-list? Without one of these, no dependency-adding round can pass its gates.
-- Once vitest is installed I expect all gates to pass; if any test assertion needs adjustment after a live run I'll fix it in the next round.
+## Gate results — all PASS
+- `npm run build` ✅ (tsc -b + vite build)
+- `npm run lint` ✅ (clean)
+- `npm run verify:evidence` ✅ (40/40 checks, "ALL CHECKS PASSED")
+- `npm test` ✅ (6 files, 29 tests, all green)
+- `npm run gates` ✅ (full chain green)
 
-STATUS: BLOCKED
+## Deferred / open questions for Codex
+- **Nothing deferred within scope.** The change is parse/accept-only; producing real gym `external` rows lives in the `/v1` persist path (out of scope here).
+- The verify-script `externalRow` reuses the legacy `validRow` body and only flips provenance + `model_name`. A real gym row's `scenario_snapshot`/`actual_policy_input` shape may differ; the parser doesn't validate those fields, so it's fine for now — flagging in case Codex wants a follow-up round to assert gym-row field fidelity end-to-end.
+- `model_name` for external rows currently carries a reference id string (`external-agent/reference-v1`). If the gym path stores the external agent identity elsewhere, Codex may want to standardize that column name in a later round.

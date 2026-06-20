@@ -340,5 +340,54 @@ check(
     legacyCompatible.versionMismatch === false,
 )
 
+// --- unified evidence schema: gym /v1 external rows ------------------------
+// A digest-valid gym row whose provenance is `external` (an agent that drove the
+// /v1 env from outside the server) must be accepted as trusted evidence, exactly
+// like a legacy mock/nebius row. Built from the valid shape: gym-style trace_id,
+// external provenance on both fields, a reference external agent id, digest
+// recomputed over the changed fields.
+const externalRow = {
+  ...validRow,
+  trace_id: 'gym-ep_2026-06-20-com-1-1',
+  requested_policy_mode: 'external',
+  actual_policy_source: 'external',
+  model_name: 'external-agent/reference-v1',
+}
+const externalDigested = { ...externalRow, audit_row_digest: computeAuditDigest(externalRow) }
+
+// 36. External gym row parses (no longer dropped as malformed).
+const externalItem = parseEvidenceRow(externalDigested)
+check('36. external gym row parses', !!externalItem)
+
+// 37. Provenance fields are preserved as `external`.
+check(
+  '37. external provenance preserved',
+  externalItem?.requestedPolicyMode === 'external' && externalItem?.actualPolicySource === 'external',
+)
+
+// 38. External row is digest-valid (tamper-evidence holds for gym rows too).
+check('38. external row digest valid', externalItem?.digestStatus === 'valid')
+
+// 39. Merged with other evidence, the external row is version-compatible and in
+//     both the license set and the trusted (digest-verified) set.
+const extSet = mergeDedupe([], [validItem, externalItem])
+const extLicenseSet = extSet.filter((it) => !it.versionMismatch && it.digestStatus !== 'mismatched')
+const extTrusted = extSet.filter((it) => !it.versionMismatch && it.digestStatus === 'valid')
+check(
+  '39. external row trusted + license-eligible',
+  externalItem?.versionMismatch === false &&
+    extLicenseSet.some((it) => it.traceId === 'gym-ep_2026-06-20-com-1-1') &&
+    extTrusted.some((it) => it.traceId === 'gym-ep_2026-06-20-com-1-1') &&
+    extLicenseSet.length === 2 &&
+    extTrusted.length === 2,
+)
+
+// 40. Unknown provenance values are STILL rejected (external is the only addition).
+check(
+  '40. unknown provenance still rejected',
+  parseEvidenceRow({ ...externalDigested, requested_policy_mode: 'wat' }) === null &&
+    parseEvidenceRow({ ...externalDigested, actual_policy_source: 'rogue' }) === null,
+)
+
 console.log(failures === 0 ? '\nALL CHECKS PASSED' : `\n${failures} CHECK(S) FAILED`)
 process.exit(failures === 0 ? 0 : 1)

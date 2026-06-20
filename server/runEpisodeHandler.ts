@@ -23,9 +23,9 @@ import { verify } from '../src/verifier.ts'
 import type {
   Action,
   AgentDecision,
-  AgentSource,
   CompactRun,
   DigestStatus,
+  EvidencePolicySource,
   EvidenceStatus,
   HistorySource,
   LicenseState,
@@ -78,8 +78,8 @@ export interface EvidenceItem {
   runSequence: number
   scenarioId: string
   scenarioTitle: string
-  requestedPolicyMode: 'mock' | 'nebius'
-  actualPolicySource: AgentSource
+  requestedPolicyMode: EvidencePolicySource
+  actualPolicySource: EvidencePolicySource
   fallback: boolean
   fallbackCode: string | null
   action: Action
@@ -352,7 +352,10 @@ export function shouldAttemptReadBack(
 
 const toStr = (v: unknown): string => (typeof v === 'string' ? v : '')
 const ACTIONS: Action[] = ['act', 'ask', 'escalate', 'stop']
-const POLICY_MODES = ['mock', 'nebius']
+// Evidence-only provenance allow-list. Wider than the /api/run-episode request
+// modes (mock | nebius): persisted gym /v1 rows record `external`. Request
+// coercion in handleRunEpisode still accepts only mock | nebius.
+const EVIDENCE_POLICY_SOURCES: EvidencePolicySource[] = ['mock', 'nebius', 'external']
 
 // The deterministic verifier clamps reward to [-1, 1]; reject anything outside.
 const REWARD_MIN = -1
@@ -410,8 +413,9 @@ export function parseEvidenceRow(raw: unknown): EvidenceItem | null {
   if (!Number.isFinite(r.episode_index) || !Number.isFinite(r.run_sequence)) return null
 
   // Policy mode / source / action must be exact enum members — no defaulting.
-  if (!POLICY_MODES.includes(r.requested_policy_mode as string)) return null
-  if (!POLICY_MODES.includes(r.actual_policy_source as string)) return null
+  // Evidence provenance allows `external` (gym /v1 rows); unknown values rejected.
+  if (!EVIDENCE_POLICY_SOURCES.includes(r.requested_policy_mode as EvidencePolicySource)) return null
+  if (!EVIDENCE_POLICY_SOURCES.includes(r.actual_policy_source as EvidencePolicySource)) return null
   if (!ACTIONS.includes(r.action as Action)) return null
 
   // Verdict fields must be the right types and in-bounds.
@@ -447,8 +451,8 @@ export function parseEvidenceRow(raw: unknown): EvidenceItem | null {
     runSequence: r.run_sequence as number,
     scenarioId,
     scenarioTitle,
-    requestedPolicyMode: r.requested_policy_mode as 'mock' | 'nebius',
-    actualPolicySource: r.actual_policy_source as AgentSource,
+    requestedPolicyMode: r.requested_policy_mode as EvidencePolicySource,
+    actualPolicySource: r.actual_policy_source as EvidencePolicySource,
     fallback: r.fallback === true,
     fallbackCode: typeof r.fallback_code === 'string' ? r.fallback_code : null,
     action: r.action as Action,

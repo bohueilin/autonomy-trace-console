@@ -1,0 +1,24 @@
+## Review — Round 1 Vitest Suite
+
+Verdict: **ACCEPT**.
+
+The round added a real `npm test` gate and focused Vitest coverage for the core deterministic pieces without changing verifier, license, digest, token, or gym runtime behavior. Gates are green: `.agentloop/gates.log:2` build PASS, `.agentloop/gates.log:3` lint PASS, `.agentloop/gates.log:4` `verify:evidence` PASS, and `.agentloop/gates.log:5`-`.agentloop/gates.log:6` show 5 test files / 25 tests passing. The new scripts in `package.json:12`-`package.json:14` correctly make `verify:evidence`, `test`, and `gates` first-class commands.
+
+### P0 Findings
+
+- **P0 — Existing gym replay/idempotency hole remains untested and must be fixed next.** `server/env/gym.ts:226` derives `traceId` from the reusable token nonce, and `server/env/gym.ts:232`-`server/env/gym.ts:235` filters prior verdicts with that same trace id before adding the current verdict. That means a valid `episodeId` can be stepped once with a catastrophic action and then stepped again with a better action, effectively replacing the episode's contribution to the returned license. Round 1's token tests cover malformed/tampered tokens (`server/env/episodeToken.test.ts:16`-`server/env/episodeToken.test.ts:39`) and gym tests cover a tampered token (`server/env/gym.test.ts:63`-`server/env/gym.test.ts:68`), but there is no valid-token replay test. Recommendation: next round must make stepping first-write-wins / idempotent and add a regression test proving a later different action cannot overwrite a first reward.
+
+- **P0 — Existing evidence schema split still rejects gym-created evidence in the shared status path.** The gym writes `requested_policy_mode: 'external'` and `actual_policy_source: 'external'` in `server/env/gym.ts:274`-`server/env/gym.ts:275`, while the shared parser only allows `mock | nebius` via `POLICY_MODES` in `server/runEpisodeHandler.ts:355` and rejects anything else in `server/runEpisodeHandler.ts:412`-`server/runEpisodeHandler.ts:414`. The Round 1 tests validate gym reset/step happy paths (`server/env/gym.test.ts:35`-`server/env/gym.test.ts:50`), but do not prove gym rows rehydrate through `/api/evidence/status`. Recommendation: unify the authoritative evidence parser/types around `mock | nebius | external`, and add a test that an external gym row is digest-valid/trusted in the evidence status path.
+
+### P1 Findings
+
+- **P1 — The tests are honest but still mostly unit-level; they do not pin cross-path evidence behavior.** The verifier suite covers correct, catastrophic, over-cautious, and under-cautious scoring (`src/verifier.test.ts:17`-`src/verifier.test.ts:51`). The license suite covers threshold levels and catastrophic capping (`src/license.test.ts:12`-`src/license.test.ts:57`). The digest suite covers stable canonicalization, allow-listed sensitivity, and excluded metadata (`server/evidence/digest.test.ts:4`-`server/evidence/digest.test.ts:56`). These are meaningful invariants, not tautologies. The missing high-value layer is integration: reset -> step -> persisted/digest row -> parser/status/license recomputation, especially for external gym evidence.
+
+- **P1 — InsForge read failure can silently reset gym license history and is not covered.** `server/env/gym.ts:182`-`server/env/gym.ts:183` treats any non-OK read-back as an empty prior verdict set. That may be acceptable for local dev, but with InsForge configured it can undercount prior failures and overstate the current license. Recommendation: once replay/schema are fixed, return an explicit degraded/failed status for configured InsForge read failures instead of silently computing from only the current step.
+
+### P2 Findings
+
+- **P2 — `.agentloop/implementation.md` is stale relative to the committed state.** It still says `STATUS: BLOCKED` and claims `npm run build` failed because Vitest was missing, while `.agentloop/gates.log:2`-`.agentloop/gates.log:7` and the committed `package-lock.json` show the install landed and gates passed. This does not invalidate the code/test round, but the blackboard should be consistent because the loop depends on it for low-human operation. Recommendation: future implementation reports should be updated after any human/manual unblock before commit.
+
+- **P2 — Good first test suite, but a few edge cases remain worth adding after P0.** Episode tokens do not test missing/non-number `iat`, empty `nonce`, or token expiry because expiry does not exist yet (`server/env/episodeToken.ts:14`-`server/env/episodeToken.ts:21`). Gym reset does not test caller-supplied `runId` / `agentId` trimming or bounds. Digest tests use a minimal row (`server/evidence/digest.test.ts:18`-`server/evidence/digest.test.ts:25`), so they do not pin all audit fields. These are lower priority than replay/idempotency and evidence schema unification.
+

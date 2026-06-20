@@ -112,10 +112,30 @@ export type StepResult =
 
 // Dev-only fallback when InsForge is unconfigured: per-run verdicts in memory.
 // NOT authoritative and NOT shared across instances — for local dev convenience.
+//
+// Carries enough to REPLAY a step verbatim (first-write-wins): the license math
+// only needs LicenseVerdict, but a replayed step must echo the original info
+// block, so we keep the verifier detail too. `recordId` is set only for rows
+// rehydrated from InsForge (which have a persisted id); dev rows leave it unset.
 interface DevVerdict extends LicenseVerdict {
   traceId: string
+  category: string
+  expectedAction: Action
+  actualAction: Action
+  reason: string | null
+  recordId?: string | null
 }
 const devRunStore = new Map<string, DevVerdict[]>()
+
+/** Project a verdict down to the bare fields the license math consumes. */
+function toLicenseVerdict(v: DevVerdict): LicenseVerdict {
+  return { passed: v.passed, reward: v.reward, catastrophic: v.catastrophic }
+}
+
+/** The per-episode trace id — stable across replays of the same episode token. */
+function episodeTraceId(runId: string, scenarioId: string, nonce: string): string {
+  return `gym-${runId}-${scenarioId}-${nonce}`
+}
 
 function sampleScenario(): Scenario {
   return seedScenarios[Math.floor(Math.random() * seedScenarios.length)]
@@ -181,9 +201,24 @@ async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<DevVerdic
   }
   const read = await fetchRecentEvidence(cfg.insforge, 500, runId)
   if (read.status !== 'ok') return [] // unavailable/error -> treat as empty this call
+
+  // First-write-wins: keep the EARLIEST row per trace id. fetchRecentEvidence
+  // returns created_at.desc; re-sort oldest-first with a stable comparator so a
+  // later step can never displace the original verdict. Rows whose created_at is
+  // absent/unparseable fall to the end but keep their encounter order (stable
+  // sort), so dedup stays deterministic even without timestamps.
+  const rows = [...read.rows].sort((a, b) => {
+    const at = Date.parse(String((a as Record<string, unknown>).created_at ?? ''))
+    const bt = Date.parse(String((b as Record<string, unknown>).created_at ?? ''))
+    if (Number.isNaN(at) && Number.isNaN(bt)) return 0
+    if (Number.isNaN(at)) return 1
+    if (Number.isNaN(bt)) return -1
+    return at - bt
+  })
+
   const out: DevVerdict[] = []
   const seen = new Set<string>()
-  for (const raw of read.rows) {
+  for (const raw of rows) {
     const r = raw as Record<string, unknown>
     const traceId = typeof r.trace_id === 'string' ? r.trace_id : ''
     if (!traceId || seen.has(traceId)) continue
@@ -200,7 +235,21 @@ async function loadRunVerdicts(runId: string, cfg: GymConfig): Promise<DevVerdic
     if (!stored || computeAuditDigest(r) !== stored) continue
     if (typeof r.passed !== 'boolean' || typeof r.reward !== 'number') continue
     seen.add(traceId)
-    out.push({ traceId, passed: r.passed, reward: r.reward, catastrophic: r.catastrophic === true })
+    // Reconstruct the replayable verdict from persisted evidence fields. These
+    // are all inside the validated digest above, so they are tamper-checked.
+    out.push({
+      traceId,
+      passed: r.passed,
+      reward: r.reward,
+      catastrophic: r.catastrophic === true,
+      category: typeof r.category === 'string' ? r.category : 'unknown',
+      expectedAction: (typeof r.expected_action === 'string'
+        ? r.expected_action
+        : 'stop') as Action,
+      actualAction: (typeof r.actual_action === 'string' ? r.actual_action : 'stop') as Action,
+      reason: typeof r.verifier_reason === 'string' ? r.verifier_reason : null,
+      recordId: r.id != null ? String(r.id) : null,
+    })
   }
   return out
 }
@@ -220,24 +269,55 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
     return { ok: false, code: 'bad_request', error: 'Scenario no longer in registry.' }
   }
 
+  // Trace id is fixed by the episode token (not the action), so re-stepping the
+  // same episode lands on the same id. This is the idempotency key.
+  const traceId = episodeTraceId(payload.runId, payload.scenarioId, payload.nonce)
+  const runVerdicts = await loadRunVerdicts(payload.runId, cfg)
+  const existing = runVerdicts.find((v) => v.traceId === traceId)
+
+  // REPLAY (first-write-wins): this episode already has a recorded verdict. Echo
+  // the ORIGINAL verdict — a later step with a different action cannot overwrite
+  // it or alter the license. Do not recompute or persist a replacement.
+  if (existing) {
+    const license = toLicense(runVerdicts.map(toLicenseVerdict))
+    return {
+      ok: true,
+      episodeId: input.episodeId!,
+      runId: payload.runId,
+      agentId: payload.agentId,
+      reward: existing.reward,
+      done: true,
+      info: {
+        passed: existing.passed,
+        category: existing.category,
+        catastrophic: existing.catastrophic,
+        expectedAction: existing.expectedAction,
+        actualAction: existing.actualAction,
+        reason: existing.reason,
+      },
+      license,
+      persisted: existing.recordId != null,
+      recordId: existing.recordId ?? null,
+    }
+  }
+
   // Deterministic verifier — the source of truth. The verifier only reads .action.
   const result = verify(scenario, { action } as AgentDecision)
   const thisVerdict: DevVerdict = {
-    traceId: `gym-${payload.runId}-${payload.scenarioId}-${payload.nonce}`,
+    traceId,
     passed: result.passed,
     reward: result.reward,
     catastrophic: result.catastrophic,
+    category: result.category,
+    expectedAction: result.expectedAction,
+    actualAction: result.chosenAction,
+    reason: result.failureReason,
   }
 
-  // License over this run's prior trusted verdicts + this one (deduped by traceId).
-  const prior = (await loadRunVerdicts(payload.runId, cfg)).filter(
-    (v) => v.traceId !== thisVerdict.traceId,
-  )
-  const verdicts: LicenseVerdict[] = [...prior, thisVerdict].map((v) => ({
-    passed: v.passed,
-    reward: v.reward,
-    catastrophic: v.catastrophic,
-  }))
+  // License over this run's prior trusted verdicts + this one (no duplicate id —
+  // a replay would have returned above).
+  const prior = runVerdicts
+  const verdicts: LicenseVerdict[] = [...prior, thisVerdict].map(toLicenseVerdict)
   const license = toLicense(verdicts)
 
   // Build the tamper-evident audit row (external-agent provenance).
@@ -305,7 +385,11 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
     recordId = out.status === 'saved' ? out.recordId : null
   } else {
     const list = devRunStore.get(payload.runId) ?? []
-    list.push(thisVerdict)
+    // First-write-wins: never append a duplicate trace id (a replay returns
+    // early above, but stay defensive so the dev history stays one-per-episode).
+    if (!list.some((v) => v.traceId === thisVerdict.traceId)) {
+      list.push(thisVerdict)
+    }
     devRunStore.set(payload.runId, list)
   }
 

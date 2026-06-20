@@ -62,8 +62,16 @@ export type ModelPolicyView = Pick<
   'id' | 'domain' | 'title' | 'situation' | 'visibleSignals'
 >
 
-/** Which policy produced a decision. */
+/** Which policy produced a decision (and the selectable /api/run-episode mode). */
 export type AgentSource = 'mock' | 'nebius'
+
+/**
+ * Provenance of persisted EVIDENCE, which is a superset of `AgentSource`. The gym
+ * `/v1` path records `external` for agents that drive the env from outside the
+ * server (their action is verified identically). This is evidence-only: `external`
+ * is never a selectable `/api/run-episode` policy mode.
+ */
+export type EvidencePolicySource = 'mock' | 'nebius' | 'external'
 
 /**
  * What the agent decides, given only the visible signals. Either the local mock
@@ -136,8 +144,8 @@ export interface EvalVersions {
 
 /** Requested-vs-actual policy provenance (distinguishes Nebius fallbacks). */
 export interface TraceProvenance {
-  requestedPolicyMode: 'mock' | 'nebius'
-  actualPolicySource: AgentSource
+  requestedPolicyMode: EvidencePolicySource
+  actualPolicySource: EvidencePolicySource
   fallback: boolean
   fallbackCode: string | null
 }
@@ -231,8 +239,8 @@ export interface CompactRun {
   runSequence: number
   scenarioId: string
   scenarioTitle: string
-  requestedPolicyMode: 'mock' | 'nebius'
-  actualPolicySource: AgentSource
+  requestedPolicyMode: EvidencePolicySource
+  actualPolicySource: EvidencePolicySource
   fallback: boolean
   fallbackCode: string | null
   action: Action

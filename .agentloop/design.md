@@ -1,91 +1,66 @@
 ## Objective
 
-Create the required `npm test` gate with focused Vitest coverage for the GOAL “Tests” checkbox, starting with verifier, license, digest, episode token, and gym reset/step invariants.
+Unify the evidence schema so `/api/evidence/status` accepts digest-valid gym `/v1` rows with `requested_policy_mode: "external"` and `actual_policy_source: "external"` as trusted evidence.
 
 ## Scope
 
-Create/change exactly:
-
-- `package.json`
-- `package-lock.json`
-- `vitest.config.ts`
-- `server/env/gym.test.ts`
-- `server/env/episodeToken.test.ts`
-- `server/evidence/digest.test.ts`
-- `src/verifier.test.ts`
-- `src/license.test.ts`
+Change only:
+- `src/types.ts`
+- `server/runEpisodeHandler.ts`
+- `scripts/verifyServerEvidence.mjs`
+- optionally `server/runEpisodeHandler.test.ts` if you choose Vitest coverage instead of only extending the verification script
 
 Do NOT touch:
-
-- Verifier or license semantics in `src/verifier.ts` / `src/license.ts`
-- Runtime server behavior in `server/main.ts`
-- Vite middleware consolidation
-- InsForge schema/RLS/migrations
-- Scenario count or scenario content
+- verifier or license scoring semantics
+- digest allow-list / canonicalization
+- gym replay/idempotency logic in `server/env/gym.ts`
+- `/api/run-episode` request policy modes; it should still accept only `mock | nebius`
+- UI behavior beyond type fallout required to compile
 
 ## Steps
 
-1. Install Vitest as a dev dependency and add a test script:
-   - Add `vitest` to `devDependencies`.
-   - Add `"test": "vitest run"` to `package.json`.
-   - Commit the resulting `package-lock.json` changes.
+1. In `src/types.ts`, introduce an evidence provenance type that includes `external`, for example `EvidencePolicySource = "mock" | "nebius" | "external"`.
+2. Keep `AgentSource = "mock" | "nebius"` for actual agent decisions and the UI mode selector.
+3. Update evidence-facing types to use the new provenance type:
+   - `TraceProvenance.requestedPolicyMode`
+   - `TraceProvenance.actualPolicySource`
+   - `CompactRun.requestedPolicyMode`
+   - `CompactRun.actualPolicySource`
+4. In `server/runEpisodeHandler.ts`, update `EvidenceItem.requestedPolicyMode` and `EvidenceItem.actualPolicySource` to use the evidence provenance type.
+5. Replace the parser allow-list currently named `POLICY_MODES = ["mock", "nebius"]` with an evidence-specific allow-list that includes `external`.
+6. Keep the legacy `/api/run-episode` `PolicyMode` type and request coercion as `mock | nebius`; `external` must be accepted only when parsing persisted evidence rows.
+7. Update `parseEvidenceRow` casts so a row with both provenance fields set to `external` parses successfully, provided all other strict validation and digest checks pass.
+8. Extend `scripts/verifyServerEvidence.mjs` with a gym-shaped external row:
+   - start from the existing valid row shape
+   - set `trace_id` to a `gym-...` id
+   - set `requested_policy_mode: "external"`
+   - set `actual_policy_source: "external"`
+   - set `model_name` to a reference external agent id
+   - recompute `audit_row_digest` after those changes
+9. Add checks proving:
+   - `parseEvidenceRow(externalDigested)` returns a non-null item
+   - `requestedPolicyMode` and `actualPolicySource` are both `"external"`
+   - `digestStatus` is `"valid"`
+   - when merged with other evidence, the external row is version-compatible and included in the license/trusted evidence set
+   - unknown provenance values are still rejected
+10. If adding Vitest coverage, create `server/runEpisodeHandler.test.ts` for the same parser regression. Keep it focused; do not mock network or InsForge unless needed.
 
-2. Add `vitest.config.ts`:
-   - Use `defineConfig` from `vitest/config`.
-   - Configure Node environment.
-   - Include tests under `src/**/*.test.ts` and `server/**/*.test.ts`.
-   - Keep it independent from `vite.config.ts` so tests do not load Vite dev middleware plugins.
+## Acceptance Criteria
 
-3. Add verifier tests in `src/verifier.test.ts`:
-   - Assert the correct action for a low-risk scenario passes with reward `1`, category `correct`, and `catastrophic: false`.
-   - Assert choosing `act` for a high-risk scenario that requires `escalate` is `catastrophic`, fails, and has reward `-1`.
-   - Assert choosing a safer-than-needed action is `over_cautious` with the expected mild negative reward.
-   - Assert choosing `ask` where `stop` is required is `under_cautious` but not catastrophic.
-
-4. Add license tests in `src/license.test.ts`:
-   - Empty verdict history returns `L0`.
-   - Perfect verdict history earns `L4`.
-   - Threshold examples earn `L3`, `L2`, and `L1` according to the existing pass-rate / reward rules.
-   - Any catastrophic verdict caps an otherwise higher license at `L1`.
-
-5. Add digest tests in `server/evidence/digest.test.ts`:
-   - `stableStringify` is key-order deterministic.
-   - `computeAuditDigest` is stable for equivalent rows with different object key order.
-   - Digest changes when an allow-listed field changes, such as `scenario_title` or `action`.
-   - Digest does not change when excluded fields change, such as `id`, `createdAt`, `updatedAt`, `created_at`, or `audit_row_digest`.
-
-6. Add episode token tests in `server/env/episodeToken.test.ts`:
-   - `signEpisode` + `verifyEpisode` round-trips the payload.
-   - Tampering with the token body or signature returns `null`.
-   - Malformed tokens return `null`.
-
-7. Add gym contract tests in `server/env/gym.test.ts`:
-   - Use a config with empty InsForge credentials and a fixed `episodeSecret`.
-   - `resetEpisode` with a known `scenarioId` returns `ok: true`, allowed actions, run/agent IDs, and a visible-only observation.
-   - Unknown `scenarioId` returns `bad_request`.
-   - `stepEpisode` with a valid episode and the scenario’s correct action returns `ok: true`, `done: true`, reward `1`, `persisted: false`, and a one-episode `L4` license in dev fallback mode.
-   - Invalid action and tampered `episodeId` return `bad_request`.
-
-8. Keep tests deterministic:
-   - Do not call reset without a fixed `scenarioId`.
-   - Do not depend on wall-clock timestamps, network, or InsForge.
-   - Do not assert exact token strings or random nonces.
-
-## Acceptance criteria
-
-- `npm test` exists and runs Vitest in CI-friendly non-watch mode.
-- Tests cover the deterministic verifier, license math, digest behavior, episode token signing/verification, and gym reset/step happy/error paths.
-- No production behavior or deterministic scoring semantics are changed.
-- The existing evidence verification script still passes.
-- TypeScript and ESLint accept the new test files.
+- A persisted gym row with `requested_policy_mode: "external"` and `actual_policy_source: "external"` is no longer dropped as malformed by `parseEvidenceRow`.
+- Unknown provenance values such as `"wat"` are still rejected.
+- `AgentSource` remains `mock | nebius`; `external` is not a selectable `/api/run-episode` policy mode.
+- Evidence compact rows can carry `external` provenance without TypeScript errors.
+- Existing evidence digest and tamper checks still pass.
 
 ## Gates
-
-Run exactly:
 
 ```bash
 npm run build
 npm run lint
 npm run verify:evidence
 npm test
+npm run gates
+```
+est
 ```
