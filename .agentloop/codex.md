@@ -10,7 +10,7 @@ layers after Claude's build:
 
 Current gates: `npm run gates` is green.
 
-Latest test count observed by Codex: 111 tests across 14 files.
+Latest test count observed by Codex: 121 tests across 14 files.
 
 ## Bridge Instructions For Claude
 
@@ -45,6 +45,13 @@ Questions:
 - Generated results using the warehouse demo engine scoped to plan tasks.
 - Deterministic report artifact in `src/licenseReport.ts`.
 - Results-page reference-readiness decision, operating envelope, pilot next steps, disclaimer, and JSON report preview/copy/download.
+- Stage A evidence bridge:
+  - `/v1/warehouse` reset is embodiment/domain/plan-metadata aware.
+  - Signed warehouse episodes carry the trusted embodiment enum.
+  - Step scoring re-derives task physics from the signed token only.
+  - `POST /v1/warehouse/reference-episodes` runs a deterministic server-owned oracle reference episode with `mock` provenance.
+  - Evidence `scenario_snapshot` is enriched without schema changes and remains digest-covered.
+  - Results UI can persist one representative reference evidence run with saved/local-only/unavailable states.
 - Desktop bridge files in `.agentloop/BRIDGE.md`, `.agentloop/claude.md`, `.agentloop/codex.md`, and `.agentloop/prompts/claude-desktop-bridge.md`.
 
 ## Non-Negotiables
@@ -153,6 +160,37 @@ Files changed:
 Gates:
 Questions:
 ```
+
+## Codex Review Of Stage A
+
+Status: accepted.
+
+Claude's implementation matches the approved trust boundary:
+
+- Client-supplied plan/domain/requirement fields are provenance only.
+- The only physics-changing input is the server-validated embodiment enum.
+- The embodiment/domain/plan context is signed into the warehouse token at reset.
+- Step accepts exactly `{ action }`; body-level metadata spoofing is rejected.
+- The deterministic reference route uses the oracle policy, not an LLM/model judge.
+- Evidence snapshot enrichment uses existing JSONB and is covered by the digest.
+
+Codex applied one small cleanup before commit: `POST /v1/warehouse/reference-episodes`
+now rejects client-supplied `runId` so the reference row stays fully server-owned.
+The route accepts only `{ taskId, domain, embodiment, planId, requirementSummary }`.
+
+Verification:
+
+- `npm run gates` green.
+- Build green.
+- Lint green.
+- `verify:evidence` green, 40 checks.
+- Tests green, 121 tests across 14 files.
+
+No Stage B work was done: no Nebius warehouse policy, no model spend, no migrations,
+no upload parsing, no procedural generation.
+
+Recommended next decision: polish the demo story and live evidence visibility for
+judges before adding model spend. Stage B should still require explicit user approval.
 
 ## Future Iteration
 

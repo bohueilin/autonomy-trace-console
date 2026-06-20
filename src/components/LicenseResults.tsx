@@ -4,9 +4,10 @@
 
 import { useState } from 'react'
 import { computeLicenseFromVerdicts, type LicenseVerdict } from '../license'
-import type { WarehouseDemo, WarehouseRollout } from '../warehouse'
+import { bfsOracle, type WarehouseDemo, type WarehouseRollout } from '../warehouse'
 import type { EnvironmentPlan } from '../environmentPlan'
 import { buildPhysicalAiLicenseReport } from '../licenseReport'
+import { persistWarehouseReference } from '../serverEpisodeClient'
 import { MatrixMini, TriptychCard } from './warehouseViz'
 import { actionTrace, pct } from '../format'
 
@@ -61,6 +62,43 @@ export function LicenseResults({
     a.remove()
     URL.revokeObjectURL(url)
   }
+
+  // Persist ONE representative server-owned reference episode (calibrated oracle).
+  // Prefer a finish task so the evidence shows a passing autonomous run; else the
+  // first task. The browser sends only descriptive context + trusted enums; the
+  // server computes oracle/reward/evidence.
+  const referenceTask = plan.tasks.find((t) => bfsOracle(t).label === 'finish') ?? plan.tasks[0]
+  const [persistStatus, setPersistStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'local_only' | 'unavailable'
+  >('idle')
+  const [persistDetail, setPersistDetail] = useState<string | null>(null)
+
+  async function persistReference() {
+    if (persistStatus === 'saving') return
+    setPersistStatus('saving')
+    setPersistDetail(null)
+    const res = await persistWarehouseReference({
+      taskId: referenceTask.id,
+      domain: plan.requirement.domain,
+      embodiment: plan.requirement.embodiment,
+      planId: plan.id,
+      requirementSummary: plan.requirement.outcome,
+    })
+    setPersistStatus(res.status)
+    const id = res.recordId ? ` · ${res.recordId}` : ''
+    setPersistDetail(`${res.taskId} · ${res.category} · reward ${res.reward.toFixed(2)}${id}`)
+  }
+
+  const persistLabel =
+    persistStatus === 'saving'
+      ? 'Persisting…'
+      : persistStatus === 'saved'
+        ? 'Reference evidence saved'
+        : persistStatus === 'local_only'
+          ? 'Saved locally (no evidence store)'
+          : persistStatus === 'unavailable'
+            ? 'Evidence server unavailable'
+            : 'Persist reference evidence'
 
   return (
     <section className="results">
@@ -165,6 +203,36 @@ export function LicenseResults({
       </div>
 
       <p className="report-disclaimer">{report.disclaimer}</p>
+
+      <div className="persist-strip">
+        <div>
+          <div className="panel-kicker">Evidence bridge</div>
+          <p>
+            Persist <strong>one representative</strong> calibrated-oracle episode (task{' '}
+            <code>{referenceTask.id}</code>) to the server-authoritative warehouse gym and
+            tamper-evident store. This is a single reference run — not the full generated plan.
+          </p>
+          {persistDetail && <p className="persist-detail">{persistDetail}</p>}
+        </div>
+        <div className="persist-actions">
+          <button
+            className="btn primary"
+            onClick={persistReference}
+            disabled={persistStatus === 'saving'}
+          >
+            {persistLabel}
+          </button>
+          <span className={`persist-status persist-${persistStatus}`}>
+            {persistStatus === 'saved'
+              ? 'saved'
+              : persistStatus === 'local_only'
+                ? 'local only'
+                : persistStatus === 'unavailable'
+                  ? 'unavailable'
+                  : ''}
+          </span>
+        </div>
+      </div>
 
       <div className="triptych">
         {demo.triptych.map((item) => (

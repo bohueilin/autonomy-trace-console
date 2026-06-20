@@ -34,6 +34,62 @@ export async function runServerEpisode(
   return { trace: data.trace, license: data.license, persistence: data.persistence, runId: data.runId }
 }
 
+export interface WarehouseReferencePersist {
+  status: 'saved' | 'local_only' | 'unavailable'
+  recordId: string | null
+  taskId: string
+  reward: number
+  category: string
+}
+
+/**
+ * Persist ONE representative server-owned, deterministic warehouse reference
+ * episode (calibrated oracle) for a generated plan. The browser sends only the
+ * descriptive plan context + the server-trusted embodiment/domain enums; the
+ * server computes the oracle, reward, and evidence. Returns a friendly status and
+ * never throws.
+ */
+export async function persistWarehouseReference(input: {
+  taskId: string
+  domain: string
+  embodiment: string
+  planId?: string
+  requirementSummary?: string
+}): Promise<WarehouseReferencePersist> {
+  const fail: WarehouseReferencePersist = {
+    status: 'unavailable',
+    recordId: null,
+    taskId: input.taskId,
+    reward: 0,
+    category: 'unavailable',
+  }
+  try {
+    const resp = await fetch('/v1/warehouse/reference-episodes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    const data = (await resp.json()) as {
+      ok?: boolean
+      persisted?: boolean
+      recordId?: string | null
+      taskId?: string
+      reward?: number
+      info?: { category?: string }
+    } | null
+    if (!resp.ok || !data?.ok) return fail
+    return {
+      status: data.persisted ? 'saved' : 'local_only',
+      recordId: data.recordId ?? null,
+      taskId: data.taskId ?? input.taskId,
+      reward: typeof data.reward === 'number' ? data.reward : 0,
+      category: data.info?.category ?? 'pass',
+    }
+  } catch {
+    return fail
+  }
+}
+
 /** Best-effort fetch of recent server-owned episodes. Returns [] on any failure. */
 export async function fetchRecentRuns(): Promise<RecentRun[]> {
   try {

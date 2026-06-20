@@ -25,9 +25,11 @@ import type { AppConfig } from './config.ts'
 import { resetEpisode, stepEpisode, type GymConfig } from './env/gym.ts'
 import {
   resetWarehouseEpisode,
+  runWarehouseReferenceEpisode,
   stepWarehouseEpisode,
   type WarehouseGymConfig,
 } from './env/warehouseGym.ts'
+import { PHYSICAL_DOMAINS, ROBOT_EMBODIMENTS } from '../src/environmentPlan.ts'
 import { ENVIRONMENT_NAME } from './evalVersions.ts'
 import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
@@ -89,6 +91,11 @@ const badRequest = (
 function extraKeys(body: Record<string, unknown>, allowed: string[]): string[] {
   return Object.keys(body).filter((k) => !allowed.includes(k))
 }
+
+// Server-trusted eval enums. Only these may reach the gym; an unknown value is a
+// client error (rejected here), never silently coerced into changing physics.
+const EMBODIMENT_SET = new Set<string>(ROBOT_EMBODIMENTS)
+const DOMAIN_SET = new Set<string>(PHYSICAL_DOMAINS)
 
 const stepStatus = (r: { ok: boolean; code?: string }): ContentfulStatusCode =>
   r.ok ? 200 : r.code === 'bad_request' ? 400 : 502
@@ -197,9 +204,20 @@ export function createApp(config: AppConfig): Hono {
     const parsed = await strictJsonObject(c)
     if (!parsed.ok) return badRequest(c, parsed.error)
     const body = parsed.body
-    const extra = extraKeys(body, ['taskId', 'agentId', 'runId'])
+    const extra = extraKeys(body, [
+      'taskId',
+      'agentId',
+      'runId',
+      'embodiment',
+      'domain',
+      'planId',
+      'requirementSummary',
+    ])
     if (extra.length) {
-      return badRequest(c, `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, agentId, runId }.`)
+      return badRequest(
+        c,
+        `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, agentId, runId, embodiment, domain, planId, requirementSummary }.`,
+      )
     }
     if ('taskId' in body && (typeof body.taskId !== 'string' || body.taskId.trim() === '')) {
       return badRequest(c, 'taskId must be a non-empty string when provided.')
@@ -210,11 +228,28 @@ export function createApp(config: AppConfig): Hono {
     if ('runId' in body && typeof body.runId !== 'string') {
       return badRequest(c, 'runId must be a string when provided.')
     }
+    // Only a known embodiment may reach the gym (it is the sole physics lever).
+    if ('embodiment' in body && (typeof body.embodiment !== 'string' || !EMBODIMENT_SET.has(body.embodiment))) {
+      return badRequest(c, `embodiment must be one of: ${ROBOT_EMBODIMENTS.join(', ')}.`)
+    }
+    if ('domain' in body && (typeof body.domain !== 'string' || !DOMAIN_SET.has(body.domain))) {
+      return badRequest(c, `domain must be one of: ${PHYSICAL_DOMAINS.join(', ')}.`)
+    }
+    if ('planId' in body && typeof body.planId !== 'string') {
+      return badRequest(c, 'planId must be a string when provided.')
+    }
+    if ('requirementSummary' in body && typeof body.requirementSummary !== 'string') {
+      return badRequest(c, 'requirementSummary must be a string when provided.')
+    }
     const r = resetWarehouseEpisode(
       {
         taskId: body.taskId as string | undefined,
         agentId: body.agentId as string | undefined,
         runId: body.runId as string | undefined,
+        embodiment: body.embodiment as string | undefined,
+        domain: body.domain as string | undefined,
+        planId: body.planId as string | undefined,
+        requirementSummary: body.requirementSummary as string | undefined,
       },
       warehouseCfg,
     )
@@ -236,6 +271,48 @@ export function createApp(config: AppConfig): Hono {
     }
     const r = await stepWarehouseEpisode(
       { episodeId: c.req.param('episodeId'), action: body.action },
+      warehouseCfg,
+    )
+    return c.json(r, stepStatus(r))
+  })
+
+  // Server-owned DETERMINISTIC warehouse reference episode: runs the calibrated
+  // oracle through the embodiment-adjusted task and persists evidence with `mock`
+  // provenance. No model spend. Exact fields only.
+  app.post('/v1/warehouse/reference-episodes', async (c) => {
+    const parsed = await strictJsonObject(c)
+    if (!parsed.ok) return badRequest(c, parsed.error)
+    const body = parsed.body
+    const extra = extraKeys(body, ['taskId', 'domain', 'embodiment', 'planId', 'requirementSummary'])
+    if (extra.length) {
+      return badRequest(
+        c,
+        `Unexpected field(s): ${extra.join(', ')}. Send only { taskId, domain, embodiment, planId, requirementSummary }.`,
+      )
+    }
+    if (typeof body.taskId !== 'string' || body.taskId.trim() === '') {
+      return badRequest(c, 'taskId must be a non-empty string.')
+    }
+    if ('embodiment' in body && (typeof body.embodiment !== 'string' || !EMBODIMENT_SET.has(body.embodiment))) {
+      return badRequest(c, `embodiment must be one of: ${ROBOT_EMBODIMENTS.join(', ')}.`)
+    }
+    if ('domain' in body && (typeof body.domain !== 'string' || !DOMAIN_SET.has(body.domain))) {
+      return badRequest(c, `domain must be one of: ${PHYSICAL_DOMAINS.join(', ')}.`)
+    }
+    if ('planId' in body && typeof body.planId !== 'string') {
+      return badRequest(c, 'planId must be a string when provided.')
+    }
+    if ('requirementSummary' in body && typeof body.requirementSummary !== 'string') {
+      return badRequest(c, 'requirementSummary must be a string when provided.')
+    }
+    const r = await runWarehouseReferenceEpisode(
+      {
+        taskId: body.taskId,
+        domain: body.domain as string | undefined,
+        embodiment: body.embodiment as string | undefined,
+        planId: body.planId as string | undefined,
+        requirementSummary: body.requirementSummary as string | undefined,
+      },
       warehouseCfg,
     )
     return c.json(r, stepStatus(r))

@@ -284,3 +284,71 @@ describe('createApp /v1/warehouse symbolic env', () => {
     expect(malformed.status).toBe(400)
   })
 })
+
+describe('createApp /v1/warehouse embodiment + reference (Stage A)', () => {
+  type ResetBody = { ok: boolean; episodeId: string; observation: { batteryRemaining: number } }
+
+  it('reset accepts a valid embodiment/domain and applies reduced battery server-side', async () => {
+    const human = (await (
+      await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', embodiment: 'humanoid' })
+    ).json()) as ResetBody
+    const arm = (await (
+      await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', embodiment: 'arm', domain: 'hospital' })
+    ).json()) as ResetBody
+    expect(human.ok).toBe(true)
+    expect(arm.ok).toBe(true)
+    expect(arm.observation.batteryRemaining).toBeLessThan(human.observation.batteryRemaining)
+  })
+
+  it('reset rejects an invalid embodiment or domain', async () => {
+    const badEmb = await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', embodiment: 'spider' })
+    expect(badEmb.status).toBe(400)
+    const badDom = await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', domain: 'mars' })
+    expect(badDom.status).toBe(400)
+  })
+
+  it('step trusts only the signed token — embodiment in the step body is rejected', async () => {
+    const reset = (await (
+      await post('/v1/warehouse/episodes', { taskId: 'wh-l1-01', embodiment: 'arm' })
+    ).json()) as ResetBody
+    const spoof = await post(`/v1/warehouse/episodes/${reset.episodeId}/step`, {
+      action: 'observe',
+      embodiment: 'humanoid',
+    })
+    expect(spoof.status).toBe(400)
+  })
+
+  it('reference-episodes runs the oracle and returns terminal evidence', async () => {
+    const resp = await post('/v1/warehouse/reference-episodes', {
+      taskId: 'wh-l1-01',
+      domain: 'manufacturing',
+      embodiment: 'humanoid',
+      planId: 'plan_demo',
+    })
+    expect(resp.status).toBe(200)
+    const body = (await resp.json()) as {
+      ok: boolean
+      agentId: string
+      reward: number
+      info: { expected: string; passed: boolean }
+    }
+    expect(body.ok).toBe(true)
+    expect(body.agentId).toBe('warehouse-oracle-reference')
+    expect(body.info.expected).toBe('finish')
+    expect(body.info.passed).toBe(true)
+    expect(body.reward).toBe(1)
+  })
+
+  it('reference-episodes rejects unknown task, invalid embodiment, and extra fields', async () => {
+    expect((await post('/v1/warehouse/reference-episodes', { taskId: 'nope' })).status).toBe(400)
+    expect(
+      (await post('/v1/warehouse/reference-episodes', { taskId: 'wh-l1-01', embodiment: 'spider' })).status,
+    ).toBe(400)
+    expect(
+      (await post('/v1/warehouse/reference-episodes', { taskId: 'wh-l1-01', bogus: 1 })).status,
+    ).toBe(400)
+    expect(
+      (await post('/v1/warehouse/reference-episodes', { taskId: 'wh-l1-01', runId: 'client-chosen' })).status,
+    ).toBe(400)
+  })
+})
