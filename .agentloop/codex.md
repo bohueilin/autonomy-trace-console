@@ -56,11 +56,109 @@ Questions:
 - Do not touch secrets, migrations, InsForge schema, or Nebius calls.
 - Keep diffs focused and reviewable.
 
-## Recommended Next Iteration
+## Approved Next Iteration
+
+Claude's planning-only pass is accepted with the refinements below.
+
+Implement **Stage A only**. Do not implement Nebius/model-spend Stage B yet.
+
+Objective: connect generated Physical AI eval plans to the server-authoritative
+warehouse gym and tamper-evident evidence path, without allowing the browser to
+forge task physics, oracle labels, rewards, or license outcomes.
+
+### Stage A Scope
+
+1. Make `/v1/warehouse` embodiment-aware and backward-compatible.
+   - Extend warehouse reset input with optional `embodiment`, `domain`, and
+     descriptive plan metadata (`planId`, `outcome` or `requirementSummary` if useful).
+   - Validate `embodiment` against `ROBOT_EMBODIMENTS`.
+   - Validate `domain` against `PHYSICAL_DOMAINS`.
+   - Default to `embodiment: humanoid` and `domain: warehouse` so existing clients/tests
+     remain compatible.
+   - Only the server-trusted `embodiment` enum may affect physics via
+     `applyEmbodiment`.
+   - `domain`, `planId`, and requirement text are descriptive/provenance only; they
+     must never affect oracle/reward.
+
+2. Carry trusted eval context in the signed warehouse token.
+   - Add signed payload fields for `embodiment`, `domain`, and optional plan metadata.
+   - Step must use only signed token context, never step-body metadata.
+   - Reject extra step fields as today.
+   - Public reset cannot mint trusted reference provenance.
+
+3. Enrich evidence without a migration.
+   - No schema changes.
+   - Use existing `scenario_snapshot jsonb` to include:
+     - base task id,
+     - adjusted task,
+     - domain,
+     - embodiment,
+     - embodiment profile,
+     - domain theme,
+     - plan metadata,
+     - rollout summary.
+   - Existing digest must cover this because `scenario_snapshot` is already in
+     `DIGEST_FIELDS`.
+
+4. Add a deterministic server-owned warehouse reference path.
+   - Add a route such as `POST /v1/warehouse/reference-episodes`.
+   - It should accept exact fields only: `taskId`, `domain`, `embodiment`, optional
+     `planId`, optional requirement summary.
+   - It should run the calibrated oracle policy server-side through the same
+     warehouse reset/step mechanics and persist the resulting terminal evidence.
+   - Use a server-owned agent id such as `warehouse-oracle-reference`.
+   - If adding provenance to the warehouse token, reference episodes may map to
+     existing audit provenance `mock` (deterministic reference) while public resets
+     remain `external`. Stay within current DB constraints: `mock | nebius | external`.
+
+5. Surface the bridge lightly in UI.
+   - Add a small action on `LicenseResults`, e.g. "Persist reference evidence".
+   - It can run one representative calibrated-oracle warehouse reference episode
+     for the generated plan (prefer a finish task if present, else first task).
+   - Show the result as `saved`, `local_only`, or `unavailable`; do not over-claim
+     that the full generated plan is persisted unless every task is actually run.
+   - Keep current client-side report intact.
+
+6. Tests.
+   - Public warehouse reset defaults remain backward-compatible.
+   - Invalid `embodiment`/`domain` rejected.
+   - Embodiment affects oracle by re-running BFS server-side.
+   - Step-body metadata spoofing is rejected/ignored.
+   - Reference route runs the oracle and returns/persists a terminal result.
+   - Evidence snapshot contains plan/embodiment/domain metadata and digest remains valid.
+
+### Explicit Deferrals
+
+- No Nebius warehouse policy yet.
+- No model/API spend.
+- No real upload parsing.
+- No InsForge schema/migration.
+- No procedural grid generation.
+- No batch-persist full plan unless the implementation stays small and gates remain
+  simple; one representative reference evidence run is enough for this iteration.
+
+### Gates
+
+- `npm run gates`
+
+### Report Back
+
+Write implementation results to `.agentloop/claude.md` and end with:
+
+```md
+## Handoff To Codex
+Status:
+Needs:
+Files changed:
+Gates:
+Questions:
+```
+
+## Future Iteration
 
 Do not start this until the user asks Claude to continue.
 
-Objective: connect the generated eval journey to durable evidence or a model-under-test path without changing trust boundaries.
+Objective: connect the generated eval journey to a model-under-test path without changing trust boundaries.
 
 Recommended scope:
 
