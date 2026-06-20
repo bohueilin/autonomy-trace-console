@@ -36,6 +36,20 @@ Gates:
 Questions:
 ```
 
+## Publish Policy
+
+The user approved direct GitHub publishing for record keeping when safety and quality
+are met. For implementation passes, Codex and Claude may decide to commit/push the
+current branch directly when:
+
+- the scope is clear,
+- `npm run gates` is green,
+- secrets are untouched,
+- no unrelated local files are staged,
+- and the handoff reports commit SHA, pushed branch, and any remaining local changes.
+
+Do not stage unrelated files such as local agent instructions unless the user asks.
+
 ## What Is Now Built
 
 - Product journey: `landing -> intake -> preview -> results -> showcase`.
@@ -62,6 +76,34 @@ Questions:
 - No model/API spend until gates are green.
 - Do not touch secrets, migrations, InsForge schema, or Nebius calls.
 - Keep diffs focused and reviewable.
+
+## Product Intent: Video-To-Workflow Eval
+
+The user wants the web GUI workflow to support customers describing a real
+workplace task by uploading video (plus text, SOPs, images, floor plans, and
+forbidden examples). The product should extract enough workflow information and
+reasoning to understand:
+
+- what job the robot/agent is supposed to perform,
+- what sequence of observable actions matters,
+- what hazards, human-only zones, escalation triggers, and refusal conditions exist,
+- what success/failure looks like,
+- which robot embodiment is appropriate,
+- and whether the agent did the right job under the deterministic verifier.
+
+Trust boundary:
+
+- Uploaded video and extracted reasoning are **input interpretation**, not the judge.
+- Extraction may propose candidate tasks, constraints, rationales, and symbolic eval
+  mappings, but the oracle/verifier remains the source of truth.
+- Do not let a video model, LLM, or client-uploaded metadata directly set rewards,
+  oracle labels, license outcomes, or trusted evidence.
+- A human/operator approval step is acceptable before extracted workflow facts become
+  server-authoritative eval configuration.
+- For the next pass, do not implement real video parsing, storage, model calls, or
+  upload infrastructure unless explicitly approved. Plan the UX and trust boundary
+  first; if implementing UI polish only, keep it deterministic/local and label it as
+  workflow footage/intake evidence, not parsed evidence.
 
 ## Approved Next Iteration
 
@@ -191,6 +233,195 @@ no upload parsing, no procedural generation.
 
 Recommended next decision: polish the demo story and live evidence visibility for
 judges before adding model spend. Stage B should still require explicit user approval.
+
+## Active Claude Request: Media-Driven Workflow Authoring UX Plan
+
+Mode: **planning only**. Do not code yet. The previous Video-To-Workflow
+implementation scope is paused until this UX plan is reviewed.
+
+Objective: produce a world-class, YC-demo-ready web console UX spec for
+media-driven workflow authoring:
+
+**Capture -> Understand -> Reflect back -> Align -> Illustrate -> Simulate -> License**
+
+The product story is personal and concrete: the worried son wants to know whether a
+robot can be trusted around his dad on a factory floor. The console should feel like
+a calm safety workshop, not a generic upload wizard. Users upload or declare photos,
+videos, SOPs, floor plans, forbidden examples, task descriptions, and robot context;
+the system reflects back what it thinks the job is; the human confirms/edits it; the
+approved workflow freezes into deterministic eval; the output is a safety case.
+
+### Grounding In Current Code
+
+Claude must inspect and cite file:line references for the real code:
+
+- `src/App.tsx:35-47` current view flow is `landing -> intake -> preview -> results -> showcase`.
+- `src/App.tsx:204-224` renders the current journey screens.
+- `src/components/IntakeForm.tsx:1-3` explicitly says no file parsing/upload happens.
+- `src/components/IntakeForm.tsx:26-33` lists placeholder attachment chips.
+- `src/components/IntakeForm.tsx:140-166` captures attachment intent only.
+- `src/components/EnvironmentPreview.tsx:1-3` is already the eval review surface.
+- `src/components/EnvironmentPreview.tsx:37-75` shows plan metadata, vocabulary, and oracle assumptions.
+- `src/components/EnvironmentPreview.tsx:77-111` shows task labels and runs the deterministic eval.
+- `src/environmentPlan.ts:10-16` states the deterministic/no-LLM trust boundary.
+- `src/environmentPlan.ts:35-45` shows current requirement/attachment shape.
+- `src/environmentPlan.ts:264-293` builds the plan from domain + embodiment.
+- `src/components/LicenseResults.tsx:117-205` renders the report/safety readout.
+- `src/components/LicenseResults.tsx:207-235` has the Stage A evidence bridge.
+- `src/licenseReport.ts:36-92` builds the deterministic readiness report.
+- `server/env/warehouseGym.ts:136-148` signs trusted warehouse episode context.
+- `server/env/warehouseGym.ts:312-398` builds digest-covered evidence rows.
+- `server/env/warehouseGym.ts:448-528` scores warehouse episodes from signed context.
+- `server/env/warehouseGym.ts:581-628` runs the deterministic reference episode.
+- `server/app.ts:203-319` exposes the warehouse reset/step/reference routes.
+
+### UX Quality Bar
+
+Design to a frontier console standard:
+
+- Content first; chrome recedes. Depth comes from hierarchy, spacing, and subtle
+  layers, not decoration.
+- One primary action per screen.
+- Warm but restrained copy: protective, practical, never melodramatic.
+- Trust made visible with provenance chips, confidence labels, edit history, and
+  badges for `AI-proposed`, `Confirmed by you`, and `Scored by deterministic oracle`.
+- Every AI-proposed item is editable until approved.
+- Upload/media states are immaculate: empty, drag-over, local capture, analyzing,
+  low-confidence, needs-confirmation, approved, error, offline, and manual fallback.
+- Motion is purposeful: 60fps step transitions, analysis checklist microstates, and
+  deterministic workflow animation; include `prefers-reduced-motion` behavior.
+- Accessibility AA: keyboard upload, keyboard grid/site-map editing, visible focus,
+  screen-reader labels, color-independent status, mobile-safe controls.
+- Responsive first: the site-map/editor remains usable on mobile, not just stacked.
+- Graceful no-AI path: manual mapping must be possible with zero model spend.
+
+### Target Flow To Spec
+
+0. **Landing: Describe your site**
+   - Media-first CTA: "Describe your site".
+   - Secondary CTA: "See sample safety case".
+   - Explain in one sentence: upload examples, confirm the workflow, run deterministic eval.
+
+1. **Capture**
+   - Large upload zone for video/photos/PDF/SOPs/floor plans/unsafe examples.
+   - Local metadata cards with type, size, remove, source role.
+   - Text description and safety rules.
+   - Domain and expected embodiment stay visible but are not final until review.
+   - Primary action: "Analyze workflow".
+   - Manual fallback: "Map manually instead".
+
+2. **Understanding**
+   - Honest processing screen, even when deterministic stubbed.
+   - Checklist: media received, site clues identified, candidate zones drafted,
+     task storyboard drafted, hazards/rules drafted, eval mapping prepared.
+   - Copy sets expectation: "You will confirm every assumption next."
+   - Include low-confidence/offline/manual states.
+
+3. **Reflect Back & Align**
+   - The key screen.
+   - Editable source-linked summary:
+     - site map/grid: start, item, drop, obstacles, hazards, human-only zones,
+     - task storyboard,
+     - safety/terminal rules,
+     - expected finish/escalate/refuse situations.
+   - Each item has source chip, confidence, and state (`AI-proposed`, `edited`,
+     `confirmed`).
+   - Inline accept/edit/delete and keyboard-friendly editing.
+   - Primary action: "Approve workflow".
+   - Secondary: "Back to capture".
+
+4. **Workflow Illustration**
+   - Deterministic animated rollout of the symbolic plan: robot path, scan, move,
+     pick, drop, finish/escalate/refuse moment, captioned why.
+   - Optional richer illustration is clearly labeled as illustration, not proof.
+   - Primary action: "Freeze eval".
+   - This is the emotional alignment moment: "Does this match your dad's floor?"
+
+5. **Freeze -> Preview -> Run**
+   - Existing preview becomes the frozen eval preview.
+   - Add a frozen banner: "Confirmed by you; scored by deterministic oracle."
+   - Once frozen, media/extraction can no longer silently mutate tasks.
+   - Primary action: "Run license eval".
+
+6. **Results = Safety Case**
+   - Existing report becomes the safety case.
+   - Add provenance summary: inputs declared, facts confirmed, eval frozen, oracle
+     scored, reference evidence persisted.
+   - Keep FAR/FRR, triptych, reward-hacking trace, and JSON export prominent.
+
+### Data And Trust Model
+
+Claude must specify:
+
+- Client captures local file metadata only in Stage A: name, type, size, role. No
+  bytes read, no object URLs, no upload/storage.
+- AI/stub output is a draft, never trusted.
+- Human approval creates a frozen workflow snapshot.
+- Frozen workflow may select/reorder existing canonical tasks and carry descriptive
+  provenance, but cannot set labels/rewards/license.
+- Deterministic oracle/verifier remains the judge.
+- Evidence may carry provenance only after freeze; uploaded media is not proof.
+
+### Phased Implementation Plan To Produce
+
+Claude should produce a staged plan, not code:
+
+1. **Stage A, no/low spend**
+   - Real upload UX with local metadata only.
+   - Manual/assisted site mapping.
+   - Reflect-back alignment screen.
+   - Deterministic workflow animation.
+   - Existing eval unchanged except descriptive provenance.
+
+2. **Stage B, gated model spend**
+   - Vision/LLM extraction proposes drafts.
+   - Human approval still required.
+   - Manual fallback remains first-class.
+
+3. **Stage C, gated persistence**
+   - Store uploads, approved plan, and safety case.
+   - Tamper-evident evidence and no schema changes unless approved.
+
+### Deliverables For Claude
+
+Write to `.agentloop/claude.md`:
+
+1. UX narrative and annotated wireframe description for each step.
+2. Full screen/state machine extending `App.tsx`.
+3. Component inventory: new components and existing components to reuse/extend.
+4. Interaction and motion spec, including reduced-motion.
+5. Data and trust model with freeze boundary.
+6. Reuse map with file:line citations.
+7. Phased implementation plan with reviewable diffs.
+8. P0/P1/P2 risks and mitigations.
+9. Test plan to keep `npm run gates` green.
+
+### Explicit Avoids
+
+- No code yet.
+- No LLM/video model as judge.
+- No model/API spend.
+- No real upload/storage.
+- No InsForge schema changes.
+- No procedural grid-physics generation.
+- No secrets in client code.
+
+### Gates
+
+- Run `npm run gates` before writing the plan.
+
+### Report Back
+
+End with:
+
+```md
+## Handoff To Codex
+Status:
+Needs:
+Files changed:
+Gates:
+Questions:
+```
 
 ## Future Iteration
 

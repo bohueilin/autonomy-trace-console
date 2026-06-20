@@ -1,99 +1,119 @@
 # Claude Bridge Output
 
 ## Mode
-Implementation pass — **Stage A only**, exactly as approved in `.agentloop/codex.md`.
-Scope was unambiguous, so I implemented rather than re-planning. No Stage B, no
-Nebius/model spend, no migrations, no upload parsing, no procedural generation.
+Planning only (per `.agentloop/codex.md` → "Next Claude Planning Pass"). Read,
+inspected the repo, ran gates. **No code changed.** Returns evaluation + scoped plan
+for the video-to-workflow-to-eval journey.
 
-## What I implemented
+## Repo state
+- `npm run gates` GREEN: build + lint + verify:evidence (40) + **121 tests / 14 files**.
+- Stage A landed: `/v1/warehouse` is embodiment/domain/plan-aware; embodiment enum is
+  the ONLY physics lever; reference path + enriched (digest-covered) `scenario_snapshot`.
+- Inspected: `IntakeForm.tsx`, `environmentPlan.ts`, `EnvironmentPreview.tsx`,
+  `LicenseResults.tsx`, `server/env/warehouseGym.ts`, `server/app.ts`,
+  `server/evidence/digest.ts`.
 
-### 1. `/v1/warehouse` is embodiment-aware (server-trusted enum)
-- `WarehouseResetInput` + the **signed** `WarehouseEpisodePayload` now carry
-  `embodiment`, `domain`, and optional `planId` / `requirementSummary`.
-- Reset applies `applyEmbodiment(canonicalTask, embodiment)` server-side; the oracle
-  and reward derive from the **adjusted** task. The token stores the base task id +
-  embodiment, so step re-derives identical physics from the **signed token only**
-  (never step-body fields). Defaults: `embodiment: humanoid` (identity) +
-  `domain: warehouse` → existing callers/tests unchanged.
-- `domain`, `planId`, requirement text are **descriptive/provenance only** — never
-  touch oracle/reward. `verifyWarehouse` coerces unknown/legacy values to defaults.
+## Evaluation — current UI gaps vs the video-to-workflow intent
+Current journey: `landing → intake → preview → results → showcase`.
 
-### 2. Route validation (`server/app.ts`)
-- Reset allow-list extended; `embodiment` validated against `ROBOT_EMBODIMENTS` and
-  `domain` against `PHYSICAL_DOMAINS` — unknown values → 400 (not coerced).
-- Step still rejects any extra field (so embodiment in the step body → 400).
+1. **Intake captures intent, not artifacts.** `IntakeForm` has outcome + domain +
+   embodiment + notes + attachment **toggle chips** ("Workspace images / video", etc.).
+   The chips are non-functional and — critically — **never reach `buildEnvironmentPlan`**
+   (it takes only the requirement; attachments/notes are dropped). There is no footage
+   or file declaration.
+2. **No extraction step.** Nothing turns inputs into structured **workflow facts**
+   (actors/robot, zones, task steps, tools/actions, hazards, human-only zones,
+   escalation triggers, refusal conditions, success criteria).
+3. **No human approve/edit gate.** The intent of "operator confirms facts before they
+   become eval config" has no surface.
+4. **Plan ignores the job.** `buildEnvironmentPlan(req)` is a pure function of
+   **domain + embodiment** over the canonical 18 tasks. So today the product cannot
+   honestly claim "we understood your workflow" — two different outcomes in the same
+   domain/embodiment yield identical evals.
+5. **Preview shows truth but not the link.** `EnvironmentPreview` correctly shows
+   `bfsOracle` labels + oracle assumptions (truth surface intact), but never connects a
+   task/label back to the customer's declared workflow.
+6. **Evidence lacks input provenance.** Stage A records embodiment/domain/plan in
+   `scenario_snapshot`, but no input manifest or approved-facts snapshot.
+7. **Trust framing is implicit.** Oracle-as-truth holds, but the UI doesn't yet make
+   the "interpretation vs judge" distinction explicit — which becomes essential the
+   moment video/extraction is shown to a judge.
 
-### 3. Evidence enriched without a migration
-- `scenario_snapshot` (already in `DIGEST_FIELDS`) now includes `baseTaskId`,
-  adjusted `task`, `embodiment`, `embodimentProfile`, `domain`, `domainTheme`, `plan`
-  ({planId, requirementSummary}), and the rollout summary. Tampering with any of it
-  breaks the existing digest. **No schema change.**
-- Refactored `persistTerminal` into a pure, exported `buildWarehouseAuditRow(ctx,
-  rollout)` (digest computed inside) + a thin persist wrapper.
+## The trust-boundary spine (must hold in the design)
+- Video/inputs/extraction = **interpretation only**. They feed a **proposal** the
+  operator edits and **approves**.
+- Approved facts may become eval config **only through already-server-trusted levers**:
+  the **embodiment enum**, **canonical task selection**, and **descriptive metadata**.
+  They must **never** set oracle labels, rewards, license, or trusted evidence.
+- `bfsOracle` over canonical tasks stays the sole source of labels; the preview keeps
+  showing server-derived labels.
+- Uploaded media is **declared, not parsed** this pass — never proof of safety.
 
-### 4. Deterministic server-owned reference path
-- `POST /v1/warehouse/reference-episodes` (exact fields: `taskId`, `domain`,
-  `embodiment`, optional `planId`, `requirementSummary`, `runId`). Runs the
-  **calibrated oracle** through the embodied task via the same engine and persists
-  evidence with **`mock`** provenance (deterministic reference, **no model spend**).
-  Agent id `warehouse-oracle-reference`. Public reset still cannot mint this.
+## Scoped plan — judge-ready "video-to-workflow-to-eval" (UI + deterministic facts)
+New journey: `landing → intake → extract/review (approve) → preview → results → showcase`.
 
-### 5. UI bridge (`LicenseResults`)
-- "Persist reference evidence" action persists **one representative** oracle episode
-  (prefers a finish task, else the first) via `persistWarehouseReference` in
-  `serverEpisodeClient.ts`. Shows `saved` / `local only` / `unavailable`; copy is
-  explicit that it is a single reference run, **not** the full generated plan. The
-  client sends only descriptive context + trusted enums; server computes everything.
+**V1 — deterministic facts model + UX (no parsing/model/storage/schema)**
+1. **`src/workflowFacts.ts` (new, pure, tested).**
+   - `WorkflowFacts` type: actors[], robotEmbodiment (enum), domain (enum),
+     workspaceZones[], taskSteps[], tools[] (subset of warehouse tools), hazards[],
+     humanOnlyZones[], escalationTriggers[], refusalConditions[], successCriteria[].
+     Each fact carries `source: 'declared' | 'proposed' | 'edited'` (provenance only).
+   - `proposeWorkflowFacts(requirement, declaredInputs)` — a **deterministic template
+     stub** that stands in the exact UX + trust slot the future video/LLM extractor will
+     occupy. Clearly labeled "proposed from template — no media parsed yet." No model.
+   - `factsToPlanInput(approvedFacts)` → `{ embodiment, domain, curationHints,
+     factsSnapshot }`. Emits **only** the enum levers + descriptive snapshot — provably
+     cannot inject physics or labels.
+2. **Intake upgrade.** Add a "Workflow footage & inputs" section. Decision needed
+   (Q4) on `<input type=file>` capturing name/type/size **client-side only, never read
+   or uploaded** vs declarative chips. Prominent trust label.
+3. **`ExtractionReview` screen (new) — beats 2+3.** Shows proposed facts grouped and
+   **editable**, each with a source badge, under a banner: *"Interpretation only — the
+   oracle remains the judge."* An **"Approve & build eval"** button gates progression.
+4. **`buildEnvironmentPlan(requirement, approvedFacts?)` extended (backward-compatible).**
+   When facts are present: derive embodiment/domain from them, optionally curate the
+   canonical task subset (Q2), and attach the approved `facts` snapshot to the plan.
+   **Oracle labels are unchanged** — a test will assert labels are identical with/without
+   facts for the same embodiment.
+5. **Preview link (beat 4).** Add a "Mapped from your approved workflow" panel that ties
+   declared refusal/escalation/success facts to the matching oracle-labeled tasks
+   (descriptive narrative; truth still from `bfsOracle`).
+6. **App view-state machine.** Insert `extract`/`review` between `intake` and `preview`.
+7. **Tests.** `proposeWorkflowFacts` deterministic; `factsToPlanInput` only ever yields a
+   valid embodiment enum + descriptive data (never raw battery/labels); plan-with-facts
+   keeps oracle labels identical to plan-without; approval-gate logic.
 
-### 6. Tests (+10)
-- Embodiment re-runs BFS server-side (finish→escalate under `arm`); bare reset stays
-  humanoid-identity (backward-compatible).
-- `buildWarehouseAuditRow` carries plan/embodiment/domain metadata, sets
-  `actual_policy_source: mock`, keeps `scenario_id: warehouse:<baseId>`, and stays
-  digest-valid.
-- Reference episode runs the oracle, returns a passing terminal result, rejects
-  unknown task.
-- Route-level: reset applies reduced battery for `arm`; invalid embodiment/domain →
-  400; step rejects body metadata; reference route returns terminal evidence; rejects
-  unknown task / invalid embodiment / extra fields.
+**V2 — evidence provenance (optional, small, additive; no schema)**
+8. Thread a descriptive `inputManifest` (declared artifact types + counts) and an
+   `approvedFactsHash` through the existing reset / reference-episode descriptive plan
+   metadata into `scenario_snapshot.plan`. Digest-covered JSONB, **no schema**. Can be
+   deferred to a follow-up if you'd rather keep this pass UI-only (Q3).
 
-## Verification
-- `npm run gates` GREEN: build + lint + verify:evidence (40) + **121 tests / 14
-  files** (was 111; +10).
-- Browser (Vite preview, no backend running): journey → results renders the new
-  Evidence-bridge strip; reference task resolves to a finish task (`wh-l1-01`);
-  clicking degrades gracefully to "Evidence server unavailable" with **no console
-  errors**. A live `saved` row requires the Hono server (`npm run server`, which has
-  InsForge creds in `.env.local`); I did **not** start it to avoid a live InsForge
-  write during verification — the full server/persistence path is covered by the new
-  tests (reference route returns terminal evidence; audit row digest-valid).
+## Explicit deferrals (not in this plan)
+Real video parsing/transcription, vision/LLM extraction, file upload/storage infra,
+model/API spend, Nebius/Stage B, InsForge schema/migration, procedural grid generation.
+The "extractor" is a clearly-labeled deterministic template stub.
 
 ## Handoff To Codex
-Status: Stage A implemented and green. `/v1/warehouse` is embodiment-aware with a
-server-trusted enum baked into the signed token; plan/domain/requirement are
-descriptive-only; evidence enriched in `scenario_snapshot` with no migration;
-deterministic `/v1/warehouse/reference-episodes` added; UI persists one representative
-reference episode. No Stage B, no spend, no schema.
-Needs: Review of (a) the `scenario_snapshot` enrichment shape (is it what the future
-Signal Extractor / model path will want?), and (b) the reference-route idempotency
-choice below.
-Files changed:
-- `server/env/warehouseGym.ts` (embodiment-aware reset/step, signed eval context,
-  exported `buildWarehouseAuditRow`, `runWarehouseReferenceEpisode`)
-- `server/app.ts` (enum validation on reset; `POST /v1/warehouse/reference-episodes`)
-- `src/serverEpisodeClient.ts` (`persistWarehouseReference`)
-- `src/components/LicenseResults.tsx` (persist action + status)
-- `src/App.css` (`.persist-strip` styles)
-- `server/env/warehouseGym.test.ts`, `server/app.test.ts` (+10 tests)
-- `.agentloop/claude.md` (this report)
+Status: Planning complete. Current journey can't represent a customer's real workflow
+(inputs are dropped, no extraction/approval, plan depends only on domain+embodiment).
+Proposed a deterministic facts model + extract/review/approve UX that maps approved
+facts into the eval ONLY through existing server-trusted levers, keeping the oracle the
+sole judge. No code written.
+Needs: Decisions on Q1–Q5 below, then green light to implement V1 (and a yes/no on V2).
+Files changed: none (planning only). This file (`.agentloop/claude.md`) is the only write.
 Gates: `npm run gates` GREEN — build + lint + verify:evidence (40) + 121 tests / 14 files.
 Questions:
-1. Reference route uses a fresh nonce per call, so repeated clicks create distinct
-   evidence rows (each is a real, separate episode). Acceptable, or should it be
-   idempotent per `(planId, taskId, embodiment)` to avoid duplicate rows on repeated
-   clicks?
-2. Audit `domain` column stays `'robotics'`; the **physical** domain lives in
-   `scenario_snapshot.domain`. Keep that split, or surface physical domain at top level
-   (would touch DIGEST scope / future schema)?
-3. Should the UI offer a "persist all plan tasks" batch later, or is one representative
-   reference episode the intended ceiling for this layer?
+1. Is a **deterministic template "extractor" stub** (no model, labeled "no media parsed
+   yet") the right stand-in for this UI pass?
+2. May approved facts **curate/filter** the canonical task subset (deterministic; changes
+   which tasks appear, never their oracle labels), or strictly set embodiment+domain +
+   descriptive annotations only?
+3. Include the **V2 evidence provenance** threading (inputManifest + approvedFactsHash,
+   no schema) this pass, or defer it?
+4. Footage/inputs control: real `<input type=file>` capturing name/type/size
+   **client-side only (never read/uploaded)**, or keep declarative chips to avoid any
+   impression of upload? (I lean file inputs, names only.)
+5. Where is embodiment decided — keep the intake selector, or **propose it in extraction
+   and confirm it in review** (since "which embodiment is appropriate" is itself a fact)?
+   (I lean propose-then-confirm.)

@@ -30,3 +30,24 @@ Implement only the approved scope from `.agentloop/codex.md` and/or the user's
 latest explicit green light. Run `npm run gates`. Write the implementation report
 to `.agentloop/claude.md`. Do not silently expand scope; list adjacent ideas under
 Questions or Deferred.
+
+For the current media-driven workflow authoring planning pass:
+Please read `.agentloop/BRIDGE.md`, `.agentloop/GOAL.md`, `.agentloop/PROTOCOL.md`,
+and `.agentloop/codex.md`, especially "Active Claude Request: Media-Driven Workflow
+Authoring UX Plan". PLANNING MODE ONLY: inspect the repo, run `npm run gates`, and
+write a world-class UX spec + implementation plan to `.agentloop/claude.md`. Do not
+code yet. Ground the plan in file:line citations from the real code.
+
+The target flow is:
+Capture -> Understand -> Reflect back -> Align -> Illustrate -> Simulate -> License.
+
+Design the end-to-end media-driven authoring console: upload/declare photos, videos,
+SOPs, floor plans, forbidden examples, text description, robot context, and safety
+rules; reflect back an editable source-linked workflow understanding; let the human
+approve it; illustrate the workflow; freeze it into deterministic eval; then produce
+the safety case. AI/extraction is authoring only. The deterministic oracle/verifier is
+the judge.
+
+Do not implement real video parsing, upload/storage infrastructure, LLM/vision
+extraction, model spend, Nebius/Stage B, migrations, procedural grid physics, or any
+LLM-as-judge path. End with the standard Handoff To Codex block.
