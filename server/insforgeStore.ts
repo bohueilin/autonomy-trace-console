@@ -1,7 +1,8 @@
 // ----------------------------------------------------------------------------
 // PROTOTYPE InsForge evidence store for the hackathon — NOT production-hardened.
 //
-// Runs ONLY in the Node process (Vite middleware). The InsForge service key
+// Runs ONLY in the Node process (the standalone Hono server, server/main.ts).
+// The InsForge service key
 // (INSFORGE_API_KEY, an `ins_...` admin key) lives here and is never sent to the
 // browser. InsForge is EVIDENCE STORAGE ONLY — it never computes or overrides the
 // deterministic verifier. Persistence is best-effort: this module never throws,

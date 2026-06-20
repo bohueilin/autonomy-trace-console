@@ -102,7 +102,13 @@ npm run dev      # in another terminal: start the Vite frontend (default http://
 
 `server/main.ts` is the only backend route owner (`/health`, `/api/*`, `/v1/*`).
 The Vite dev server proxies `/api` and `/v1` to it (default origin
-`http://localhost:8787`, override with `VITE_BACKEND_ORIGIN`).
+`http://localhost:8787`). To point at a different backend origin, pass
+`VITE_BACKEND_ORIGIN` as a shell env when launching Vite (it is read by
+`vite.config.ts`, not from `.env.local`):
+
+```bash
+VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev
+```
 
 Other scripts:
 
@@ -158,7 +164,8 @@ npm run dev      # Vite frontend — proxies /api and /v1 to the server
 ```
 
 The Vite dev server proxies `/api` and `/v1` to the standalone server (default
-`http://localhost:8787`, override with `VITE_BACKEND_ORIGIN`), so the frontend
+`http://localhost:8787`; to override, launch Vite with a shell env, e.g.
+`VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev`), so the frontend
 reaches `POST /api/nebius-action` and the rest of the backend through one origin.
 `server/main.ts` is the only runtime owner of those routes; `server/nebiusHandler.ts`
 holds the Nebius logic it calls.

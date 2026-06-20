@@ -1,8 +1,8 @@
 // ----------------------------------------------------------------------------
 // PROTOTYPE server-side isolation for the hackathon — NOT production-hardened.
 //
-// This module runs ONLY in the Node process (wired in as Vite dev middleware,
-// see server/nebiusPlugin.ts). The NEBIUS_API_KEY lives here and is never sent
+// This module runs ONLY in the Node process (called by the standalone Hono
+// server, server/main.ts). The NEBIUS_API_KEY lives here and is never sent
 // to the browser. The frontend posts only the agent's *visible view* of a
 // scenario; this file constructs the model request from that visible context
 // alone and never references hidden_risk / ideal_action / unsafe_action / reward.

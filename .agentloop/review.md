@@ -1,44 +1,36 @@
 ## Review
 
-**P0 (must-fix): none.**
+**P1 — proxy override is documented in `.env.example`, but Vite no longer loads `.env.local`.**  
+[vite.config.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/vite.config.ts:12) reads `process.env.VITE_BACKEND_ORIGIN || process.env.BACKEND_ORIGIN`, while [.env.example](/Users/bohueilin/hackathons/0619/autonomy-trace-console/.env.example:9) tells users to put `VITE_BACKEND_ORIGIN` in the copied env file. Since this round intentionally removed `loadEnv`, that override will only work if exported in the shell, not if placed in `.env.local`. Recommendation: either document the override as a shell env only, or explicitly load only non-secret Vite proxy env. Given the design goal, prefer docs-only: remove it from `.env.example` and show `VITE_BACKEND_ORIGIN=http://... npm run dev` in README.
 
-**P1 (architecture): still not a single backend, and Vite middleware remains an active API server.**  
-The GOAL requires the standalone server to be the only backend and Vite middleware to be removed (`.agentloop/GOAL.md:24-27`). This repo still imports and installs Vite API plugins in `vite.config.ts:3-4` and `vite.config.ts:25-29`, while `server/runEpisodePlugin.ts:39-112` and `server/nebiusPlugin.ts:55-75` still register live `/api/*` middleware. Recommendation: next round should remove those middleware plugins and make Vite proxy `/api` and `/v1` to the Hono server in `server/main.ts`.
+**P2 — stale current-architecture comments still reference deleted Vite middleware/plugin files.**  
+[server/nebiusHandler.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/nebiusHandler.ts:4) still says it is wired as Vite dev middleware and references deleted `server/nebiusPlugin.ts` at line 5. [server/insforgeStore.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/insforgeStore.ts:4) still says “Vite middleware.” This misses the design’s repo-search cleanup intent, even though runtime behavior is fine. Recommendation: update comments to say these modules are called only by the standalone Hono server.
 
-**P1 (architecture): legacy `/api/run-episode` still uses module-global mutable license history.**  
-The GOAL explicitly says one evidence schema should avoid module-global mutable state in the request path (`.agentloop/GOAL.md:30-32`). The legacy handler still keeps `serverRecords` as process-global state at `server/runEpisodeHandler.ts:119-122`, derives episode identity from it at `server/runEpisodeHandler.ts:205`, pushes before persistence at `server/runEpisodeHandler.ts:229`, and computes license from it at `server/runEpisodeHandler.ts:231`. This round correctly rolls failed configured writes back at `server/runEpisodeHandler.ts:307-314`, so this is not a regression, but it remains the next trust-boundary debt. Recommendation: after single-backend proxying, drive UI/reference flows through `/v1` or document/contain legacy as dev-only.
+**No P0 findings.** The runtime change satisfies the main acceptance criteria: Vite has only `react()` plus `/api` and `/v1` proxies at [vite.config.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/vite.config.ts:16), deleted middleware plugins are gone, and `server/main.ts` owns `/health`, `/api/*`, and `/v1/*` at [server/main.ts](/Users/bohueilin/hackathons/0619/autonomy-trace-console/server/main.ts:60). Gates are honestly green per `.agentloop/gates.log`: build, lint, evidence verification, and 40 vitest tests passed.
 
-**P2 (quality): rollback behavior is implemented but not directly asserted.**  
-The design required failed configured episodes not to remain in `serverRecords` (`.agentloop/design.md:35-38` and `.agentloop/design.md:58-60`). The code removes the exact record by reference at `server/runEpisodeHandler.ts:307-309`, which is the right concurrency-safe choice for this narrow handler. The new tests assert fail-closed shape for HTTP 500 and thrown fetch at `server/runEpisodeHandler.test.ts:174-200`, but they do not call `getRecentRuns` or a subsequent successful episode to prove the failed record did not pollute history. Recommendation: add a focused assertion in a later cleanup if this legacy path remains long enough to matter.
+**Verdict: NEEDS-FIX** for the proxy override documentation mismatch and stale architecture comments.
 
-**P2 (gates/tests): gates are honest for this scope.**  
-The requested gates ran through `npm run gates` at `.agentloop/gates.log:2-3`; build completed at `.agentloop/gates.log:6-17`, evidence verification passed all 40 checks at `.agentloop/gates.log:23-67`, and Vitest passed 6 files / 40 tests at `.agentloop/gates.log:119-124`. The new fail-closed tests are visible in the test log at `.agentloop/gates.log:90-95`.
-
-**Verdict: ACCEPT** for this round’s change. The last `design.md` acceptance criteria were met: configured legacy persistence failures return no trace/license/persistence/runId/auditRow, local-only behavior still works, and verifier/reward/license semantics were not changed.
-
-## Next design
+## Next Design
 
 **Objective**  
-Make the standalone Hono server the only backend during development by removing Vite-owned API middleware and proxying frontend `/api` plus `/v1` traffic to `server/main.ts`.
+Clean up the single-backend transition fallout without changing runtime semantics: make proxy override instructions true, and remove stale Vite middleware references.
 
 **Scope**  
-Change only `vite.config.ts`, `package.json` if needed for scripts, and tests/config references directly broken by removing Vite middleware imports. Do not change verifier, reward, license semantics, `/v1` gym behavior, InsForge store APIs, UI behavior, scenario data, or evidence parsing.
+Change only `README.md`, `.env.example`, `server/nebiusHandler.ts`, and `server/insforgeStore.ts`.
 
 **Steps**  
-1. Remove `nebiusApiPlugin` and `runEpisodeApiPlugin` imports and plugin registration from `vite.config.ts`.
-2. Add Vite dev-server proxy entries for `/api` and `/v1` targeting the standalone server, defaulting to `http://localhost:8787` or the existing server port config if already centralized.
-3. Keep `react()` as the only Vite plugin unless another non-backend plugin already exists.
-4. Ensure `server/main.ts` remains the implementation of `/health`, `/api/run-episode`, `/api/runs/recent`, `/api/evidence/status`, `/api/nebius-action`, `/api/vapi/tools`, and `/v1/*`.
-5. Do not delete handler modules yet if `server/main.ts`, tests, or verification scripts still import them. Remove only Vite middleware wiring this round.
-6. Add or update a minimal test/static check only if existing tests do not catch accidental Vite middleware reintroduction.
-7. Run the full gates.
+1. Remove `VITE_BACKEND_ORIGIN` from `.env.example`, or clearly mark that `.env.local` is not read by Vite config. Prefer removal.
+2. In README, document proxy override as a shell env when launching Vite, e.g. `VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev`.
+3. Update stale comments in `server/nebiusHandler.ts` and `server/insforgeStore.ts` to reference the standalone Hono server, not Vite middleware or deleted plugin files.
+4. Run `rg` for `server/nebiusPlugin`, `server/runEpisodePlugin`, `Vite middleware`, and `VITE_BACKEND_ORIGIN` to confirm remaining references are accurate.
+5. Do not touch verifier, license, reward, persistence logic, route handlers, proxy config, or tests unless lint requires comment formatting.
 
-**Acceptance criteria**  
-- `vite.config.ts` no longer imports or registers `server/runEpisodePlugin.ts` or `server/nebiusPlugin.ts`.
-- Vite dev frontend reaches `/api` and `/v1` through proxy config to the standalone Hono server.
-- `server/main.ts` is the only runtime owner of backend routes.
-- No verifier, reward, license, persistence, digest, scenario, or UI response semantics change.
-- Existing evidence, fail-closed, and gym tests remain green.
+**Acceptance Criteria**  
+- No current-architecture comment references deleted plugin files.
+- README proxy override instructions work with the current `vite.config.ts`.
+- `.env.example` does not imply Vite reads `.env.local`.
+- No runtime behavior changes.
+- Gates remain green.
 
 **Gates**  
 `npm run build`  

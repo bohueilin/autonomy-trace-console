@@ -1,26 +1,31 @@
-All changes in place. Implementation complete.
+All gates pass.
+
+---
 
 ## Implementation report
 
-Made the standalone Hono server the only dev backend, per `design.md`.
+**Round scope:** Documentation-only cleanup to align the single-backend transition docs with current architecture. No runtime behavior touched. Plan was sound and low-risk — implemented as written.
 
 ### Files changed
-- **`vite.config.ts`** — Removed `loadEnv` import and the two plugin imports; dropped all server-side env loading and the `nebius`/`insforge` config construction (Vite no longer reads secrets). `react()` is now the only plugin. Added a dev-server proxy: `/api` and `/v1` → backend origin, `changeOrigin: true`, default `http://localhost:8787`, overridable via `VITE_BACKEND_ORIGIN` (falls back to `BACKEND_ORIGIN`). Preserved the existing `allowedHosts` list and the `PORT` handling.
-- **`package.json`** — Added `"dev:client": "vite"` alias. Kept `server` and `dev` unchanged. No new dependencies.
-- **`server/nebiusPlugin.ts`**, **`server/runEpisodePlugin.ts`** — Deleted (`git rm`). Their route logic already lives in `server/main.ts`; nothing moved or duplicated.
-- **`.env.example`** — Clarified secrets are read by `server/main.ts`/`server/config.ts` (not Vite), documented the two-process dev flow, kept `PORT=8787`, and documented the optional non-secret `VITE_BACKEND_ORIGIN` proxy override.
-- **`README.md`** — Updated the "no separate server" / "API lives as Vite middleware" claims to the two-command flow (`npm run server` + `npm run dev`, Vite proxies `/api` + `/v1`); removed the "why middleware" rationale block; corrected the `loadEnv` secret-handling paragraph; replaced the deleted plugin rows in the project-layout table with a `server/main.ts` row; updated the two smoke-check `npm run dev` lines to include `npm run server`.
+- **`.env.example`** — Removed the commented `VITE_BACKEND_ORIGIN` proxy-override block (lines 9–11). The file now lists only server-loaded env vars.
+- **`README.md`** — Both proxy-override mentions (the dev quick-start at ~L105 and the Nebius "Run" section at ~L161) now state explicitly that `VITE_BACKEND_ORIGIN` is a **shell env passed when launching Vite** (read by `vite.config.ts`, not `.env.local`), with the example `VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev`.
+- **`server/nebiusHandler.ts`** — Header comment: replaced "wired in as Vite dev middleware, see server/nebiusPlugin.ts" with "called by the standalone Hono server, server/main.ts".
+- **`server/insforgeStore.ts`** — Header comment: replaced "(Vite middleware)" with "(the standalone Hono server, server/main.ts)".
+- **`vitest.config.ts`** — Comment now says tests run in plain Node "without starting the app or the standalone gym server" instead of the stale "Vite dev middleware plugins (which boot the gym server)" wording.
 
 ### Key decisions
-- Used `process.env` (not `loadEnv`) for the proxy origin since it's a non-secret build-time setting and the design says Vite should no longer read env via `loadEnv`.
-- Updated two smoke-checklist `npm run dev` references for accuracy (the backend is now a separate process) — these are within the README scope of the plan.
+- Kept the live `VITE_BACKEND_ORIGIN` reference in `vite.config.ts` untouched (it's the actual code that reads the var) — per acceptance criteria, that's where it should remain.
+- Phrased the README override as a fenced shell command in the quick-start and inline for the Nebius section, matching the surrounding prose density.
 
-### Gate results — all pass
-- `npm run build` ✅ (tsc -b + vite build, 222 kB bundle)
-- `npm run lint` ✅ (clean)
-- `npm run verify:evidence` ✅ (40/40 checks)
-- `npm test` ✅ (6 files, 40 tests)
+### Step 6 verification (rg sweep)
+Remaining matches are exactly the allowed set: `vite.config.ts` (the code) and README shell-env instructions. No comments reference deleted `server/nebiusPlugin.ts` / `server/runEpisodePlugin.ts`, no active "Vite middleware" descriptions, no `loadEnv`.
 
-### Open questions for Codex
-- `server/nebiusHandler.ts:5` has a stale comment cross-referencing `server/nebiusPlugin.ts` ("see server/nebiusPlugin.ts"). It's a comment only (no code dependency), and that file is in the design's "Do NOT touch" list, so I left it. Worth a one-line comment fix in a future round.
-- The frontend uses same-origin relative paths (`/api/...`, `/v1/...`) so the proxy covers dev. For `vite preview`/production-static hosting there's no proxy — the standalone server is the intended prod backend, consistent with the GOAL's deployability item (a later round).
+### Gate results — all PASS
+- `npm run build` — ✓ tsc + vite build (built in 74ms)
+- `npm run lint` — ✓ clean
+- `npm run verify:evidence` — ✓ ALL CHECKS PASSED (40 checks)
+- `npm test` — ✓ 6 files, 40 tests passed
+- `npm run gates` — ✓ ALL CHECKS PASSED
+
+### Deferred / open questions for Codex
+- None deferred within scope. Adjacent (not done, flagging only): the GOAL's "Single backend" box also depends on the legacy `/api/*` + Vite-middleware *runtime* being fully removed in favor of the proxy — this round only fixed docs/comments, not whether any middleware still exists in code. If that runtime removal is still pending, it's a candidate for a future round's design.

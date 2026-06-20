@@ -1,80 +1,38 @@
 ## Objective
-Make the standalone Hono server the only development backend, satisfying the GOAL “Single backend” checkbox by removing Vite-owned `/api/*` middleware and proxying frontend traffic to `server/main.ts`.
+Clean up the single-backend transition documentation so the GOAL’s “Single backend” checkbox is not undermined by false Vite env and middleware references.
 
 ## Scope
 Change only:
-- `vite.config.ts`
-- `package.json`
-- `README.md`
 - `.env.example`
-- Delete `server/nebiusPlugin.ts`
-- Delete `server/runEpisodePlugin.ts`
-
-Do NOT touch:
-- `server/main.ts` route behavior
-- `server/runEpisodeHandler.ts`
+- `README.md`
 - `server/nebiusHandler.ts`
-- `server/env/gym.ts`
-- verifier, reward, license, digest, scenario, persistence, or UI semantics
-- migrations or InsForge store APIs
+- `server/insforgeStore.ts`
+- `vitest.config.ts`
+
+Do NOT touch runtime behavior, route handlers, proxy config, tests, verifier, license, reward, scenarios, persistence logic, migrations, or UI code.
 
 ## Steps
-1. In `vite.config.ts`, remove all imports and registration of:
-   - `nebiusApiPlugin`
-   - `runEpisodeApiPlugin`
-
-2. Remove the now-unneeded Vite-side env loading and config object construction from `vite.config.ts`; secrets should no longer be read by Vite at all.
-
-3. Keep `react()` as the only Vite plugin.
-
-4. Add Vite dev-server proxy config:
-   - `/api` targets the standalone server.
-   - `/v1` targets the standalone server.
-   - Default target is `http://localhost:8787`.
-   - Allow override with a non-secret env var such as `VITE_BACKEND_ORIGIN` or `BACKEND_ORIGIN`.
-   - Use `changeOrigin: true`.
-
-5. Preserve the existing `server.allowedHosts` list in `vite.config.ts`.
-
-6. Update `package.json` scripts so local development is explicit:
-   - Keep `server`: `node server/main.ts`.
-   - Keep `dev`: `vite`.
-   - Add a clear client alias if useful, e.g. `dev:client`: `vite`.
-   - Do not add new dependencies just to run two processes.
-
-7. Delete `server/nebiusPlugin.ts` and `server/runEpisodePlugin.ts`. Their route logic already exists in `server/main.ts`; do not move or duplicate code.
-
-8. Update `.env.example` comments:
-   - Say server-side secrets are read by `server/main.ts` / `server/config.ts`, not Vite middleware.
-   - Keep `PORT=8787` as the standalone server default.
-   - Document optional frontend proxy override if added.
-
-9. Update only the README sections that currently claim:
-   - “There is no separate server to start.”
-   - APIs live as Vite middleware.
-   - `server/nebiusPlugin.ts` and `server/runEpisodePlugin.ts` are active architecture.
-
-   Replace with:
-   - Start backend with `npm run server`.
-   - Start frontend with `npm run dev`.
-   - Vite proxies `/api` and `/v1` to the standalone server.
-   - `server/main.ts` is the only backend route owner.
-
-10. Run a repo search to confirm no active references remain to:
-   - `nebiusApiPlugin`
-   - `runEpisodeApiPlugin`
-   - `server/nebiusPlugin`
-   - `server/runEpisodePlugin`
-   - “Vite middleware” claims in current architecture docs, except historical notes if clearly marked obsolete.
+1. In `.env.example`, remove the commented `VITE_BACKEND_ORIGIN=...` proxy override block. Keep only server-loaded env vars there.
+2. In `README.md`, keep the proxy override documented, but make it explicit that it is a shell env for launching Vite, for example:
+   ```bash
+   VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev
+   ```
+   Do not imply `.env.local` controls Vite proxy config.
+3. In `server/nebiusHandler.ts`, replace the header comment’s Vite middleware / `server/nebiusPlugin.ts` reference with standalone Hono server wording.
+4. In `server/insforgeStore.ts`, replace “Vite middleware” in the header comment with standalone Node/Hono server wording.
+5. In `vitest.config.ts`, update the stale comment about avoiding Vite middleware plugins; it should now say tests are independent from `vite.config.ts` and run in plain Node without starting the app/server.
+6. Run:
+   ```bash
+   rg -n "server/nebiusPlugin|server/runEpisodePlugin|Vite middleware|middleware plugins|VITE_BACKEND_ORIGIN|loadEnv" .
+   ```
+   Confirm remaining `VITE_BACKEND_ORIGIN` references are only in `vite.config.ts` and README shell-env instructions, and that no current-architecture comments reference deleted plugin files or active Vite middleware.
 
 ## Acceptance criteria
-- `vite.config.ts` no longer imports, constructs config for, or registers backend middleware plugins.
-- `server/nebiusPlugin.ts` and `server/runEpisodePlugin.ts` are gone.
-- Vite dev proxies both `/api/*` and `/v1/*` to the standalone Hono server at port `8787` by default.
-- `server/main.ts` remains the only runtime owner of `/health`, `/api/*`, and `/v1/*`.
-- No verifier, reward, license, digest, persistence, scenario, or UI response semantics change.
-- README and `.env.example` no longer instruct users that Vite middleware is the backend.
-- Existing evidence, fail-closed, and gym tests remain green.
+- `.env.example` no longer contains `VITE_BACKEND_ORIGIN` or any Vite proxy override.
+- README proxy override instructions match current `vite.config.ts` behavior: shell env only.
+- No current comments reference deleted `server/nebiusPlugin.ts` / `server/runEpisodePlugin.ts`.
+- No current comments describe `/api` or `/v1` as Vite middleware.
+- No runtime code or behavior changes.
 
 ## Gates
 ```bash
