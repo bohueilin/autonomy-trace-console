@@ -23,7 +23,7 @@ P="$L/prompts"
 MAX_ROUNDS="${MAX_ROUNDS:-8}"
 CODEX_CMD="${CODEX_CMD:-codex exec --sandbox read-only}"
 CLAUDE_CMD="${CLAUDE_CMD:-claude --permission-mode acceptEdits --add-dir "$ROOT"}"
-GATES="${GATES:-npm run build && npm run lint && npm run verify:evidence}"
+GATES="${GATES:-npm run gates}"
 
 bar() { printf '\n\033[1m── round %s · %s ──\033[0m\n' "$1" "$2"; }
 pause() { [ "${STEP:-0}" = "1" ] && { read -r -p "   [enter to continue] " _; } || true; }
