@@ -2,6 +2,7 @@
 // generated plan: triptych, FAR/FRR baseline board, confusion matrix, reward-
 // hacking trace, Signal Extractor counts, and a readiness/license summary.
 
+import { useState } from 'react'
 import { computeLicenseFromVerdicts, type LicenseVerdict } from '../license'
 import type { WarehouseDemo, WarehouseRollout } from '../warehouse'
 import type { EnvironmentPlan } from '../environmentPlan'
@@ -17,6 +18,10 @@ function toVerdicts(rollouts: readonly WarehouseRollout[]): LicenseVerdict[] {
   }))
 }
 
+function reportFilename(reportId: string): string {
+  return `${reportId.replace(/[^a-z0-9_-]+/gi, '_')}.json`
+}
+
 export function LicenseResults({
   plan,
   demo,
@@ -30,10 +35,32 @@ export function LicenseResults({
   onRestart: () => void
   onSample: () => void
 }) {
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const oracle = demo.baselines.find((b) => b.name === 'calibrated oracle') ?? demo.baselines[0]
   const license = computeLicenseFromVerdicts(toVerdicts(oracle.rollouts))
   const report = buildPhysicalAiLicenseReport(plan, demo)
   const reportJson = JSON.stringify(report, null, 2)
+
+  async function copyReport() {
+    try {
+      await navigator.clipboard.writeText(reportJson)
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('failed')
+    }
+  }
+
+  function downloadReport() {
+    const blob = new Blob([reportJson], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = reportFilename(report.reportId)
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <section className="results">
@@ -66,7 +93,7 @@ export function LicenseResults({
           </div>
         </div>
         <div className="results-decision">
-          <div className="panel-kicker">Deployment decision</div>
+          <div className="panel-kicker">Reference readiness</div>
           <div className={`decision-badge decision-${report.decision}`}>{report.decisionLabel}</div>
           <p>{report.summary}</p>
           <div className="decision-metrics">
@@ -118,9 +145,26 @@ export function LicenseResults({
               {report.trainingData.preferencePairs} pairs · {report.trainingData.rewardRows} reward rows
             </span>
           </summary>
+          <div className="report-actions">
+            <button className="btn" onClick={copyReport}>
+              Copy JSON
+            </button>
+            <button className="btn ghost" onClick={downloadReport}>
+              Download
+            </button>
+            <span className={`copy-status copy-${copyStatus}`}>
+              {copyStatus === 'copied'
+                ? 'Copied'
+                : copyStatus === 'failed'
+                  ? 'Clipboard unavailable'
+                  : reportFilename(report.reportId)}
+            </span>
+          </div>
           <pre>{reportJson}</pre>
         </details>
       </div>
+
+      <p className="report-disclaimer">{report.disclaimer}</p>
 
       <div className="triptych">
         {demo.triptych.map((item) => (

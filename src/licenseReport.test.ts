@@ -26,7 +26,9 @@ describe('buildPhysicalAiLicenseReport', () => {
     const plan = buildEnvironmentPlan(req)
     const report = buildPhysicalAiLicenseReport(plan, buildWarehouseDemoForTasks(plan.tasks))
 
-    expect(report.decision).toBe('reference_ready')
+    expect(report.decision).toBe('reference_cleared')
+    expect(report.decisionLabel).toBe('Reference oracle clears eval')
+    expect(report.disclaimer).toContain('not a regulatory certification')
     expect(report.calibration.far).toBe(0)
     expect(report.calibration.frr).toBe(0)
     expect(report.trainingData.failureTags).toBeGreaterThan(0)

@@ -2,9 +2,11 @@
 
 ## Status
 
-Phase 1 + Phase 2 are implemented and reviewed. Codex added one product polish
-layer after Claude's build: a deterministic Physical AI License Report model and
-results-page report panel/export preview.
+Phase 1 + Phase 2 are implemented and reviewed. Codex added two product polish
+layers after Claude's build:
+
+1. A deterministic Physical AI License Report model and results-page report panel/export preview.
+2. Investor/judge-ready polish: Why now / Why us, Pilot package, readiness-pack disclaimer, rescaled reference-readiness wording, and native report JSON copy/download.
 
 Current gates: `npm run gates` is green.
 
@@ -42,7 +44,7 @@ Questions:
 - Generated environment preview with oracle labels/assumptions.
 - Generated results using the warehouse demo engine scoped to plan tasks.
 - Deterministic report artifact in `src/licenseReport.ts`.
-- Results-page deployment decision, operating envelope, pilot next steps, and JSON report preview.
+- Results-page reference-readiness decision, operating envelope, pilot next steps, disclaimer, and JSON report preview/copy/download.
 - Desktop bridge files in `.agentloop/BRIDGE.md`, `.agentloop/claude.md`, `.agentloop/codex.md`, and `.agentloop/prompts/claude-desktop-bridge.md`.
 
 ## Non-Negotiables
@@ -58,28 +60,26 @@ Questions:
 
 Do not start this until the user asks Claude to continue.
 
-Objective: make the product demo investor/judge-ready without changing trust
-boundaries.
+Objective: connect the generated eval journey to durable evidence or a model-under-test path without changing trust boundaries.
 
 Recommended scope:
 
-1. Visual storytelling polish:
-   - Add a compact "Why now / why us" section to Landing.
-   - Make the dad/factory wedge emotionally clear while preserving the larger Physical AI category.
-   - Add a "Pilot package" block: what a customer gives us, what they get back in 48 hours.
+1. Plan persistence design:
+   - Decide whether generated EnvironmentPlan snapshots should be persisted in the existing `eval_episodes` audit row, a new table, or a local-only export first.
+   - Do not add schema until Codex/user approves the trust boundary.
 
-2. Results polish:
-   - Make the report JSON easier to copy/download if feasible without new dependencies.
-   - Add a crisp "not a certification authority yet; readiness evidence pack" disclaimer.
+2. Model-under-test bridge:
+   - Design how Nebius/external policies should consume a generated plan task without letting the client forge oracle labels or rewards.
+   - Prefer reusing `/v1/warehouse` signed rollout state.
 
-3. Review-only:
-   - Check responsive layout on mobile/desktop if browser tooling is available.
+3. Visual review:
+   - Check landing/results desktop and mobile if browser tooling is available.
 
 Avoid:
 
 - No real upload parsing yet.
-- No InsForge schema changes.
-- No live model spend.
+- No InsForge schema changes without explicit approval.
+- No live model spend until gates are green and the model path is explicitly approved.
 - No procedural grid generation yet.
 
 Gates:
