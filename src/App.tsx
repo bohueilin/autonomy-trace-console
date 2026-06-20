@@ -4,7 +4,7 @@ import { decide, toMockView } from './agent'
 import { fetchEvidenceStatus } from './serverEpisodeClient'
 import { buildGymTrace, gymLicenseToState, runReferenceGymEpisode } from './gymClient'
 import { computeLicense } from './license'
-import { seedScenarios } from './seedScenarios'
+import { seedScenarios, trainScenarios } from './seedScenarios'
 import { verify } from './verifier'
 import type {
   AgentDecision,
@@ -36,7 +36,7 @@ function App() {
   const [evidence, setEvidence] = useState<EvidenceStatus | null>(null)
   const [backendReached, setBackendReached] = useState(false)
   // Latest authoritative license returned by a `/v1` gym step. When present it is
-  // the headline license; the demo-only 9-episode eval clears it.
+  // the headline license; the demo-only train eval clears it.
   const [gymLicense, setGymLicense] = useState<LicenseState | null>(null)
 
   const traceLicense = useMemo(() => computeLicense(traces), [traces])
@@ -115,14 +115,15 @@ function App() {
     }
   }
 
-  // Full 9-episode eval — intentionally MOCK-ONLY and client-side for reliability.
-  // Clears the authoritative gym license so this demo-only view never masquerades
-  // as the environment-returned `/v1` license.
-  function runFullEval() {
+  // Train-split batch eval — intentionally MOCK-ONLY and client-side for
+  // reliability. Measures only the public training scenarios; held-out scenarios
+  // are reserved for generalization checks. Clears the authoritative gym license so
+  // this demo-only view never masquerades as the environment-returned `/v1` license.
+  function runTrainEval() {
     if (running) return
     setNotice(null)
     try {
-      const fresh = seedScenarios.map((s, i) => buildTrace(s, i + 1, decide(toMockView(s))))
+      const fresh = trainScenarios.map((s, i) => buildTrace(s, i + 1, decide(toMockView(s))))
       setTraces(fresh)
       setGymLicense(null)
       setCursor(seedScenarios.length)
@@ -215,11 +216,11 @@ function App() {
             </button>
             <button
               className="btn"
-              onClick={runFullEval}
+              onClick={runTrainEval}
               disabled={running}
-              aria-label="Run the full nine-episode evaluation with the mock policy"
+              aria-label="Run the train-split evaluation with the mock policy"
             >
-              <span aria-hidden="true">⏩</span> Run 9-Episode Eval
+              <span aria-hidden="true">⏩</span> Run Train Eval
               <span className="mock-tag">mock</span>
             </button>
             <button

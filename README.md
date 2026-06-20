@@ -25,15 +25,16 @@ no matter how good the average looks.
 ## What this is
 
 - **The local loop works by default with zero external dependencies.** A
-  self-contained React + TypeScript dashboard: nine seeded scenarios, a mock
+  self-contained React + TypeScript dashboard: a 24-scenario eval corpus, a mock
   agent policy, a deterministic verifier, a reward model, a trace viewer, and a
   license ladder. Start the backend with `npm run server` and the frontend with
   `npm run dev`; no external services are required.
 - **An optional Nebius model-under-test** can be swapped in for *single-episode*
   evaluation. Nebius **proposes an action only** — the same deterministic verifier
   still scores it. The API key is server-side only (details below).
-- **Run 9-Episode Eval stays mock-only** so the headline demo is instant and
-  deterministic.
+- **Run Train Eval stays mock-only** so the headline demo is instant and
+  deterministic. It runs only the **train split** (15 scenarios); the **held-out
+  split** (9 scenarios) is reserved for generalization checks.
 - **The canonical episode path is the `/v1` gym env.** `POST /v1/episodes` (reset)
   returns an observation; the reference agent (mock or Nebius) proposes an action;
   `POST /v1/episodes/:episodeId/step` submits **only** that action, and the
@@ -51,6 +52,24 @@ authoritative history that survives a server restart when configured). The
 canonical episode path is the **`/v1` gym env** (reset/step); `/api/run-episode` is
 retained only as legacy compatibility. No auth, no real payments, no robotics
 simulation, no RL training, no scenario generation.
+
+### Scenario corpus
+
+The eval corpus is **24 hand-authored scenarios** in `src/seedScenarios.ts` — **8
+per domain** (commerce / business_ops / robotics), every one deterministic with no
+LLM generation. Each scenario carries two metadata fields:
+
+- `difficulty` (`easy` | `medium` | `hard`) — every domain spans all three tiers.
+- `split` (`train` | `heldout`) — each domain has **5 train** and **3 held-out**
+  scenarios (15 train / 9 held-out overall).
+
+The default batch demo (**Run Train Eval**) measures only the **train split**. The
+**held-out split** is reserved for generalization checks: those scenarios are not in
+the default batch run but remain addressable by their `scenarioId` through the
+existing `/v1` reset/step and `/api/run-episode` paths (e.g. `com-6`, `ops-7`,
+`rob-8`). `trainScenarios`, `heldoutScenarios`, and `scenarioCorpusSummary` are
+exported from `src/seedScenarios.ts`; corpus size, per-domain balance, split, and
+tier coverage are enforced by `src/seedScenarios.test.ts`.
 
 ---
 
@@ -248,8 +267,9 @@ only once the request is proven valid.
   The browser sends only `{ scenarioId, mode }`. (External agents drive the public
   `/v1/episodes` reset/step boundary directly, sending only `{ scenarioId,
   agentId }` then `{ action }`.)
-- **Run 9-Episode Eval is mock-only by design**, kept instant and deterministic
-  for the headline demo. (Tagged `mock` in the UI.)
+- **Run Train Eval is mock-only by design**, kept instant and deterministic for the
+  headline demo. It runs the **train split** (15 scenarios); held-out scenarios are
+  excluded. (Tagged `mock` in the UI.)
 - If Nebius is unreachable (no key, timeout, upstream error, missing endpoint),
   the episode **falls back to the local mock policy** and shows a non-blocking
   banner: *"Nebius unavailable — using local policy fallback for demo
@@ -273,10 +293,12 @@ configured via `.env.local`.
 
 ---
 
-## What the 9-episode eval demonstrates
+## What the train eval demonstrates
 
-Click **Run 9-Episode Eval** to run all nine seeded scenarios at once (three each
-across **commerce**, **business_ops**, and **robotics**).
+Click **Run Train Eval** to run the **train split** at once — 15 scenarios, five
+each across **commerce**, **business_ops**, and **robotics**. (The 9 held-out
+scenarios are excluded; they stay addressable by `scenarioId` for generalization
+checks.)
 
 The mock policy is competent on the surface — it correctly acts on the genuinely
 routine tasks and correctly stops when a danger is *visible* (e.g. a human inside a
@@ -299,7 +321,7 @@ right to act" is the entire point.
 
 1. **(0:00) Local mock eval.** "Agents should earn autonomy before they exercise
    it — this is a local gym that measures that." Make sure the toggle is on **Mock
-   Policy**, then click **Run 9-Episode Eval**. It runs all nine seeded scenarios
+   Policy**, then click **Run Train Eval**. It runs the 15-scenario train split
    instantly and deterministically. Scan the trace list: passes build trust,
    catastrophic rows (⚠) cap it.
 2. **(0:50) The license cap.** Land on the **license summary**: the mock policy
@@ -399,11 +421,11 @@ above.
 | | Authority | Persisted? | License |
 | --- | --- | --- | --- |
 | **Run Gym Episode** (`/v1`, mock or Nebius) | `server_authoritative_episode` | yes (InsForge, best-effort) | environment-returned `/v1` step license |
-| **Run 9-Episode Eval** (mock-only demo) | `demo_client_trace` | no | client session view only (demo-only) |
+| **Run Train Eval** (mock-only demo) | `demo_client_trace` | no | client session view only (demo-only) |
 
 After a **Run Gym Episode**, the header **license chip** and the **license
 summary** show the **environment-returned `/v1` step license** — the authoritative
-license the env computed over that run. **Run 9-Episode Eval** is a mock-only,
+license the env computed over that run. **Run Train Eval** is a mock-only,
 client-side demo: it **clears** the gym license so its client-session license is
 clearly **demo-only** and never masquerades as the authoritative `/v1` license.
 The **Evidence store** panel always reflects the **server's own authoritative run
@@ -722,7 +744,7 @@ shown and how the environment scored it.
 | File | Responsibility |
 | ---- | -------------- |
 | [`src/types.ts`](src/types.ts) | Domain model (actions, scenarios, verdicts, license). |
-| [`src/seedScenarios.ts`](src/seedScenarios.ts) | The 9 seeded scenarios with hidden risks. |
+| [`src/seedScenarios.ts`](src/seedScenarios.ts) | The 24-scenario eval corpus (8 per domain) with hidden risks, difficulty tiers, and a train/held-out split; exports `trainScenarios`, `heldoutScenarios`, `scenarioCorpusSummary`. |
 | [`src/agent.ts`](src/agent.ts) | Mock policy + `toMockView` (`MockPolicyView`, incl. mock-only `visibleRiskScore`) / `toModelView` (`ModelPolicyView`, no risk score) projections — neither can see hidden risk. |
 | [`src/nebiusClient.ts`](src/nebiusClient.ts) | Frontend client for `/api/nebius-action`; sends a `ModelPolicyView` (key never touched). |
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |

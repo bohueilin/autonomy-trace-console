@@ -8,6 +8,13 @@ export type Domain = 'commerce' | 'business_ops' | 'robotics'
 
 export type RiskLevel = 'low' | 'medium' | 'high'
 
+/** Eval-corpus difficulty tier — how hard the scenario is to get right. */
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
+/** Which corpus split a scenario belongs to. Held-out is reserved for
+ * generalization checks and is excluded from the default train eval. */
+export type ScenarioSplit = 'train' | 'heldout'
+
 /** A single visible signal the agent is allowed to see before deciding. */
 export interface VisibleSignal {
   label: string
@@ -33,6 +40,10 @@ export interface Scenario {
   visibleRiskScore: number
   /** The true risk level, used by the verifier for asymmetric penalties. */
   riskLevel: RiskLevel
+  /** Eval-corpus difficulty tier (metadata only — not read by the verifier). */
+  difficulty: Difficulty
+  /** Train vs held-out split (metadata only — not read by the verifier). */
+  split: ScenarioSplit
   /** The action a competent operator should take. The verifier rewards this. */
   correctAction: Action
   /** Withheld from the agent. Revealed in the UI only after scoring. */

@@ -1,31 +1,32 @@
-Implemented exactly as specified in `design.md`. The plan was sound — tightening `/v1` body validation without touching verifier/license/digest semantics — so no objection.
+All gates green. Implementation report below.
 
 ## Implementation report
 
+Implemented the plan in `design.md` exactly — expanded the scenario registry to a documented 24-scenario eval corpus with difficulty tiers and a train/held-out split. Verifier/license/digest/persistence semantics untouched.
+
 ### Files changed
-- **`server/app.ts`** — Added a strict `/v1` body parser and applied it to all four strict routes.
-- **`server/referenceAgent.ts`** — Tightened the trusted runner's input type to the validated boundary.
-- **`server/app.test.ts`** — Added focused boundary tests.
-- **`README.md`** — Reconciled the three stale endpoint descriptions.
+- **`src/types.ts`** — added `Difficulty` (`easy|medium|hard`) and `ScenarioSplit` (`train|heldout`) types; added `difficulty` and `split` fields to `Scenario`, documented as metadata-only (not read by the verifier).
+- **`src/seedScenarios.ts`** — bumped `SCENARIO_VERSION` to `2026-06-20.1`; tagged the existing 9 scenarios with difficulty/split (content unchanged); added 15 new hand-authored scenarios (com-4..8, ops-4..8, rob-4..8) → 8 per domain. Each domain has exactly 5 train / 3 held-out and spans all three tiers. Added exports `trainScenarios`, `heldoutScenarios`, and `scenarioCorpusSummary` (counts by domain/split/difficulty, all derived from `seedScenarios`).
+- **`src/App.tsx`** — imports `trainScenarios`; renamed `runFullEval`→`runTrainEval` to run the train split only; UI copy "Run 9-Episode Eval"→"Run Train Eval"; updated the stale "nine-episode" aria-label and the gym-license comment.
+- **`src/components/ScenarioCard.tsx`** — added compact `difficulty` + `split` chips next to the domain chip. Hidden-risk reveal behavior unchanged.
+- **`src/seedScenarios.test.ts`** (new) — 9 tests enforcing corpus size (24), unique ids, 8/domain, 5 train + 3 held-out per domain, all tiers per domain, both splits per domain, split-export reconstruction, summary consistency, and per-scenario validity (`visibleRiskScore` finite in [0,1], `correctAction` ∈ action set, non-empty `hiddenRisk`/`rationale`).
+- **`README.md`** — replaced all "nine seeded"/"9-Episode Eval" wording; added a "Scenario corpus" section; updated demo script, authority table, and the `src/seedScenarios.ts` file-table entry.
 
 ### Key decisions
-- **`strictJsonObject(c)`** returns a discriminated `{ ok: true; body } | { ok: false; error }` that distinguishes malformed JSON (parse throws), arrays (`Array.isArray`), and non-object/`null` from valid objects. Added a small `badRequest(c, error)` helper so every `/v1` rejection emits the uniform `{ ok:false, code:"bad_request", error }` at HTTP 400. The permissive `jsonBody()` is **untouched** and still serves the legacy `/api/*` routes, exactly as scoped.
-- **`POST /v1/reference-episodes`** now enforces, in order: strict object → exact keys `{scenarioId, mode}` → `scenarioId` non-empty string → `mode` exactly `"mock"|"nebius"`. A missing/mistyped/blank/array/malformed body can no longer mint a random trusted reference scenario.
-- **`POST /v1/episodes`** (public) keeps random-scenario behavior when `scenarioId` is omitted, but rejects a *present* `scenarioId` that isn't a non-empty string and a *present* non-string `agentId`. Empty `agentId` still defaults to `anonymous` (unchanged gym behavior).
-- **Both step routes** keep exact-key enforcement and add `action` (and body-form `episodeId`) non-empty-string checks at the HTTP boundary, before reaching `stepEpisode`.
-- **`referenceAgent.ts`**: `runReferenceEpisode` input is now `{ scenarioId: string; mode: ReferenceMode }`; removed the runtime `mode` guard and the non-string→`undefined` coercion (the route validates first). `runMockEpisode`'s param tightened to `scenarioId: string`. Unknown scenarios still fail closed via `resetReferenceEpisode`/`pickScenario`. `server/env/gym.ts` was deliberately not touched (out of scope); `resetReferenceEpisode` keeps its existing `string | undefined` signature.
-- **README**: demo-script step 4 and the canonical-path blockquote now say the primary UI posts `{ scenarioId, mode }` to `POST /v1/reference-episodes`, with public `/v1/episodes` reset/step (`{scenarioId, agentId}` → `{action}`) called out as the external-agent path. The "Verifying the audit semantics" line was labeled as the **legacy `/api/run-episode`** path — that script (`verifyServerEvidence.mjs`) genuinely exercises `handleRunEpisode({ scenarioId, policyMode })`, so the field name is correct; the fix removes the ambiguity that it might describe `/v1`.
+- New scenarios cover a spread of `correctAction` (act/ask/escalate/stop) with `riskLevel` chosen so the verifier's catastrophic gate stays meaningful (e.g. held-out `com-6`/`ops-7` are high-risk stop scenarios; `ops-6` is high-risk escalate).
+- Held-out scenarios are addressable through existing server paths automatically — `server/env/gym.ts` and `server/runEpisodeHandler.ts` resolve any id via `seedScenarios.find(...)`, so no server changes were needed (per scope).
+- Splits/summary are **derived** from `seedScenarios` (single source of truth), so the test assertions and UI can't drift from the data.
+
+### Deviation from listed scope (flagged)
+- I added a small self-contained CSS block to **`src/App.css`** to style the new difficulty/split chips. `App.css` was **not** in the design's file list, but step 4 ("display compact scenario metadata") renders nothing legible without it. The block only adds `.scenario-meta`/`.meta-chip` + tier/split color classes; no existing rules changed. If Codex prefers strict scope, this can be reverted (chips would still render as plain text).
 
 ### Gate results — all pass
-- `npm run build` — ✅ (tsc + vite)
-- `npm run lint` — ✅ (eslint, clean)
-- `npm run verify:evidence` — ✅ (40/40 checks)
-- `npm test` — ✅ (8 files, **74** tests, up from 66 — 8 new boundary tests)
-- `npm run gates` — ✅ (full chain)
+- `npm run build` — ✅ tsc + vite build clean.
+- `npm run lint` — ✅ no errors.
+- `npm run verify:evidence` — ✅ ALL CHECKS PASSED (40 checks).
+- `npm test` — ✅ 9 files, **83 passed** (includes the new 9 corpus tests).
 
-### Deferred / out of scope (for Codex)
-- **Legacy `/api/*` routes** still use the permissive `jsonBody()` per the plan ("may keep the old permissive behavior for this round"). If a later round wants uniform strictness, `/api/run-episode`, `/api/nebius-action`, and `/api/vapi/tools` could adopt `strictJsonObject` too.
-- `resetReferenceEpisode` in `gym.ts` retains `scenarioId?: string | undefined`. Since the only caller now always passes a validated non-empty string, its signature could be tightened to `string` in a future gym-scoped round — left untouched here to respect the file scope.
-
-### Open questions
-- None blocking. The `badRequest`/`strictJsonObject` helpers are currently `/v1`-local; if legacy routes adopt strict parsing later, consider promoting them to a shared module.
+### Open questions for Codex
+- App.css styling deviation above — keep or revert?
+- The single `/v1` UI episode still cycles through the full `seedScenarios` (24) via `cursor`, per the plan ("keep cycling through the full registry unless a smaller change is needed"). Left unchanged — confirm that's the intent, or should the single-episode cursor also be train-only?
+- Possible follow-up (not done — adjacent): surface `scenarioCorpusSummary` somewhere in the UI (e.g. the scenario-bank header) so the train/held-out balance is visible at a glance.

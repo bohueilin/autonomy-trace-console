@@ -471,6 +471,35 @@ body {
   color: #f0c27a;
 }
 
+.scenario-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.meta-chip {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+.difficulty-easy {
+  color: #6fe0b3;
+}
+.difficulty-medium {
+  color: #f0c27a;
+}
+.difficulty-hard {
+  color: #ff8d8d;
+}
+.split-heldout {
+  color: #9db0ff;
+  background: rgba(108, 140, 255, 0.14);
+}
+
 /* signals */
 .signals-label,
 .checks-label {

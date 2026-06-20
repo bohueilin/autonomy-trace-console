@@ -1,81 +1,82 @@
 ## Objective
 
-Tighten `/v1` runtime body validation for the GOAL “Gym is canonical” / “One evidence schema” checkboxes so trusted reference provenance cannot be minted from malformed or mistyped requests.
+Satisfy the GOAL “Scenario scale” checkbox by expanding the scenario registry to a documented 24-scenario eval corpus with difficulty tiers and a held-out split, while keeping verifier/license semantics unchanged.
 
 ## Scope
 
 Change only:
-- `server/app.ts`
-- `server/referenceAgent.ts`
-- `server/app.test.ts`
+- `src/types.ts`
+- `src/seedScenarios.ts`
+- `src/App.tsx`
+- `src/components/ScenarioCard.tsx`
+- `src/seedScenarios.test.ts` (new)
 - `README.md`
 
-Do NOT touch verifier semantics, reward/license math, digest fields, episode token signing, InsForge store helpers, scenario contents, Vite config, UI components, or legacy `/api/run-episode` behavior.
+Do NOT touch:
+- verifier/reward/license logic (`src/verifier.ts`, `src/license.ts`)
+- gym reset/step semantics (`server/env/gym.ts`)
+- evidence digest field list or InsForge persistence
+- `/api` or `/v1` route behavior
+- Nebius/Vapi handlers
+- migrations or config
 
 ## Steps
 
-1. In `server/app.ts`, replace the permissive `jsonBody()` behavior for strict `/v1` routes with a small runtime parser that can distinguish:
-   - malformed JSON
-   - non-object JSON
-   - array bodies
-   - valid JSON object bodies
+1. Extend the `Scenario` type in `src/types.ts` with:
+   - `difficulty: "easy" | "medium" | "hard"`
+   - `split: "train" | "heldout"`
 
-2. Apply that strict parser to:
-   - `POST /v1/episodes`
-   - `POST /v1/episodes/:episodeId/step`
-   - `POST /v1/step`
-   - `POST /v1/reference-episodes`
+2. In `src/seedScenarios.ts`:
+   - Bump `SCENARIO_VERSION`.
+   - Expand `seedScenarios` from 9 to exactly 24 scenarios.
+   - Preserve the existing 9 scenario ids/content unless a metadata-only update is needed.
+   - Add 5 new scenarios per domain so each domain has exactly 8 scenarios:
+     - commerce: `com-1` through `com-8`
+     - business_ops: `ops-1` through `ops-8`
+     - robotics: `rob-1` through `rob-8`
+   - Assign each domain exactly 5 `train` and 3 `heldout` scenarios.
+   - Ensure each domain includes all three difficulty tiers.
+   - Keep every scenario deterministic and hand-authored: no LLM generation path, no randomness, no hidden answer leakage into `visibleSignals`.
+   - Export:
+     - `trainScenarios`
+     - `heldoutScenarios`
+     - `scenarioCorpusSummary` with counts by domain/split/difficulty, computed from `seedScenarios`.
 
-   Legacy `/api/*` routes may keep the old permissive behavior for this round.
+3. In `src/App.tsx`:
+   - Import and use `trainScenarios` for the mock batch eval, so the default batch run measures the training/public split only.
+   - Rename UI copy from “Run 9-Episode Eval” to “Run Train Eval”.
+   - Keep single `/v1` gym episodes cycling through the full `seedScenarios` registry unless a smaller change is needed; do not change the `/v1` request contract.
+   - Update labels/aria text that still say “nine-episode”.
 
-3. For `POST /v1/reference-episodes`, enforce exactly:
-   - body keys: `scenarioId`, `mode`
-   - `scenarioId`: present, string, trimmed non-empty
-   - `mode`: exactly `"mock"` or `"nebius"`
+4. In `src/components/ScenarioCard.tsx`:
+   - Display compact scenario metadata for `difficulty` and `split` next to the domain chip.
+   - Keep hidden risk reveal behavior unchanged.
 
-   Reject failures with HTTP `400` and `{ ok:false, code:"bad_request", error:string }`.
+5. Add `src/seedScenarios.test.ts` with focused corpus tests:
+   - exactly 24 scenarios
+   - unique ids
+   - exactly 8 scenarios per domain
+   - exactly 5 train and 3 heldout scenarios per domain
+   - every domain has at least one `easy`, `medium`, and `hard`
+   - every split has at least one scenario in each domain
+   - `visibleRiskScore` is finite and within `[0, 1]`
+   - `correctAction` is one of `act|ask|escalate|stop`
+   - `hiddenRisk` and `rationale` are non-empty strings
 
-4. In `server/referenceAgent.ts`, make the trusted runner’s input type reflect the stricter boundary:
-   - accept `scenarioId: string`
-   - accept `mode: ReferenceMode`
-   - remove the current non-string-to-`undefined` conversion
-   - keep unknown scenario handling fail-closed through `resetReferenceEpisode`
-
-5. For public `/v1/episodes`, keep existing random-scenario behavior if `scenarioId` is omitted, but reject invalid field types when present:
-   - `scenarioId` present but not string -> `400`
-   - `scenarioId` present as empty/blank string -> `400`
-   - `agentId` present but not string -> `400`
-   - malformed JSON / array / non-object -> `400`
-
-6. For both step routes, keep exact-key enforcement and add type validation:
-   - path-form body must be exactly `{ action }`, with `action` a non-empty string
-   - body-form body must be exactly `{ episodeId, action }`, both non-empty strings
-   - malformed JSON / array / non-object -> `400`
-
-7. Add focused tests in `server/app.test.ts`:
-   - `/v1/reference-episodes` rejects missing `scenarioId`
-   - rejects non-string `scenarioId`
-   - rejects empty/blank `scenarioId`
-   - rejects array body
-   - rejects malformed JSON
-   - still accepts valid `{ scenarioId:"com-1", mode:"mock" }`
-   - public `/v1/episodes` still accepts omitted `scenarioId` for random external reset
-   - public `/v1/episodes` rejects non-string or blank `scenarioId`
-   - step routes reject non-string/blank `action`
-
-8. Update stale README text that still says the primary UI browser posts `{ scenarioId, agentId }` to `/v1/episodes` for reference gym runs:
-   - Demo script step 4 should say the primary UI posts `{ scenarioId, mode }` to `POST /v1/reference-episodes`; public `/v1/episodes` reset/step is for external agents.
-   - “Server-owned episodes & InsForge evidence store” canonical path text should say the primary UI uses `POST /v1/reference-episodes`; external agents use public reset/step.
-   - “Verifying the audit semantics” should not say only `{ scenarioId, policyMode }` if it is describing `/v1`; use the current `{ scenarioId, mode }` reference endpoint wording.
+6. Update `README.md`:
+   - Replace stale “nine seeded scenarios” / “Run 9-Episode Eval” wording.
+   - Document the corpus: 24 scenarios, 8 per domain, train/heldout split, difficulty tiers.
+   - Explain that the default batch eval runs the train split and held-out scenarios are reserved for generalization checks via known scenario ids.
+   - Update the file table entry for `src/seedScenarios.ts`.
 
 ## Acceptance criteria
 
-- `POST /v1/reference-episodes` cannot run a random scenario when `scenarioId` is missing, mistyped, blank, malformed, or in an array body.
-- Valid reference requests still run end-to-end for mock mode.
-- Public external `/v1/episodes` keeps its intentional random-scenario option when `scenarioId` is omitted.
-- Public and step routes reject malformed JSON, arrays, non-object bodies, invalid field types, and blank required strings.
-- README consistently distinguishes server-owned `POST /v1/reference-episodes` from public external `/v1/episodes` reset/step.
-- No deterministic verifier/license behavior changes.
+- The repo contains 24 hand-authored scenarios across the 3 existing domains.
+- Scenario metadata makes train vs held-out and difficulty visible in code and UI.
+- The default batch demo no longer claims to run all scenarios or a 9-episode eval.
+- Held-out scenarios are present and addressable by existing server/gym paths through `scenarioId`.
+- New tests enforce corpus size, balance, split, tiers, and basic scenario validity.
+- Deterministic verifier/license behavior is unchanged.
 
 ## Gates
 

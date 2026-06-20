@@ -1,46 +1,47 @@
 ## Review
 
-Verdict: ACCEPT for this round’s change. The previous provenance-forgery hole is closed.
+**Verdict: NEEDS-FIX**
 
-P0: none.
+**P0:** None.
 
-P1: Runtime body validation is still too loose on the new trusted reference route. `POST /v1/reference-episodes` only checks extra keys in `server/app.ts:119-131`, then `runReferenceEpisode` silently converts any non-string `scenarioId` to `undefined` in `server/referenceAgent.ts:102-110`. That means malformed trusted-reference requests can sample a random scenario instead of failing closed. Recommendation: add a shared `/v1` schema parser that rejects malformed JSON, non-object bodies, bad field types, empty IDs, and unknown scenarios before minting trusted reference provenance.
+**P1:** None.
 
-P2: README still contradicts the new primary path. It says the browser sends `{ scenarioId, agentId }` to `/v1/episodes` for primary gym runs in `README.md:315-318` and again in `README.md:341-345`, but the code now calls `runReferenceGymEpisode(scenario.id, mode)` from `src/App.tsx:97-99`, which posts `{ scenarioId, mode }` to `/v1/reference-episodes` in `src/gymClient.ts:43-51`. Recommendation: remove the stale reset/step wording from the demo script and canonical path section.
+**P2 - README still conflates the primary reference path with public `/v1/episodes`.**  
+`README.md:37-41` says the canonical path is `POST /v1/episodes` reset, then “the reference agent” proposes, then `/v1/episodes/:episodeId/step`. That is now inaccurate for the primary UI/reference-agent flow: later docs correctly say primary UI uses server-owned `POST /v1/reference-episodes` and external agents use public reset/step (`README.md:243-250`, `README.md:343-350`). Recommendation: update the top summary to mirror the later trust-boundary wording so the README consistently distinguishes server-owned reference execution from public external-agent reset/step.
 
-What is solid:
-- Public reset rejects reserved reference IDs: `server/env/gym.ts:243-257`, tested in `server/app.test.ts:29-45`.
-- Durable provenance comes from signed `policySource`, not `agentId`: `server/env/episodeToken.ts:24-33`, `server/env/gym.ts:451-455`.
-- Step routes reject extra client-controlled digest fields: `server/app.ts:83-113`, tested in `server/app.test.ts:47-88`.
-- Nebius fallback does not step the Nebius episode; it opens a fresh mock episode: `server/referenceAgent.ts:116-126`.
-- Gates are honest for this scope: `.agentloop/gates.log` reports build, lint, `verify:evidence` 40/40, and 66/66 tests passing.
+**P2 - Non-object body rejection is implemented but not honestly covered.**  
+The design required `/v1` public and step routes to reject non-object JSON bodies (`.agentloop/design.md:44-53`, `.agentloop/design.md:76`). The parser does reject primitives/null (`server/app.ts:72-75`), but the new route tests cover arrays and malformed JSON, not primitive/non-object bodies (`server/app.test.ts:63-71`, `server/app.test.ts:141-145`, `server/app.test.ts:217-227`). Recommendation: add a focused primitive/null body test for at least one route using the shared strict parser, or explicitly cover reference/public/step if you want route-level confidence.
+
+Gates are green: build/lint/evidence/tests all ran under `npm run gates`, evidence passed 40/40, Vitest passed 8 files / 74 tests, and `GATES: PASS` is present (`.agentloop/gates.log:2-3`, `.agentloop/gates.log:67`, `.agentloop/gates.log:121-126`). The application behavior matches the trust-boundary thesis; the remaining issue is documentation/test honesty against the stated acceptance criteria.
 
 ## Next design
 
-Objective: Tighten `/v1` runtime schema validation and fix stale docs so the trusted reference boundary fails closed and the README matches the implemented architecture.
+**Objective**  
+Close the remaining documentation and test honesty gaps from the strict `/v1` body-validation round, without changing verifier/license/digest or gym semantics.
 
-Scope:
-- `server/app.ts`
-- `server/referenceAgent.ts`
-- `server/app.test.ts`
-- `src/gymClient.test.ts` if needed
+**Scope**  
+Touch only:
 - `README.md`
+- `server/app.test.ts`
 
-Steps:
-1. Add small local validators for `/v1` JSON bodies.
-2. `POST /v1/reference-episodes` must require exactly `{ scenarioId, mode }` where `scenarioId` is a non-empty string and `mode` is `mock | nebius`.
-3. Reject malformed JSON/non-object bodies with `400 bad_request` on strict `/v1` routes instead of silently treating them as `{}`.
-4. Keep public `/v1/episodes` behavior unchanged unless the body is malformed or field types are invalid.
-5. Add route tests for non-string `scenarioId`, missing `scenarioId`, malformed JSON, array body, and valid reference requests.
-6. Update README lines that still describe the primary UI as browser-driven `/v1/episodes` reset/step.
+**Steps**
+1. Update the top README “canonical episode path” summary so it says:
+   - Primary UI/reference runs use server-owned `POST /v1/reference-episodes` with `{ scenarioId, mode }`.
+   - Public `/v1/episodes` reset/step is for external agents.
+   - Both paths still use the environment as verifier/license authority.
+2. Add focused strict-parser tests for non-object JSON bodies:
+   - `POST /v1/reference-episodes` rejects `null` or a primitive.
+   - `POST /v1/episodes` rejects `null` or a primitive.
+   - At least one step route rejects `null` or a primitive.
+3. Keep existing malformed JSON, array, exact-key, and valid mock reference tests intact.
 
-Acceptance criteria:
-- Malformed or mistyped `/v1/reference-episodes` requests cannot mint trusted mock/nebius provenance.
-- Valid `{ scenarioId: "com-1", mode: "mock" | "nebius" }` still works.
-- Public external reset/step behavior from this round remains intact.
-- README consistently says the primary UI uses `POST /v1/reference-episodes`; public reset/step is for external agents.
+**Acceptance criteria**
+- README has no top-level wording implying the browser mints reference-agent provenance through public `/v1/episodes`.
+- Tests cover malformed JSON, arrays, and primitive/non-object JSON bodies for strict `/v1` validation.
+- No production code changes unless a test exposes an actual defect.
+- Deterministic verifier/license/digest behavior is unchanged.
 
-Gates:
+**Gates**
 ```bash
 npm run build
 npm run lint

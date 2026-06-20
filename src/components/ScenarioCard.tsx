@@ -17,8 +17,16 @@ export function ScenarioCard({ scenario, revealed }: Props) {
     <div className="card scenario-card">
       <div className="card-head">
         <span className="step-tag">1 · Scenario</span>
-        <span className={`domain-chip domain-${scenario.domain}`}>
-          {DOMAIN_LABEL[scenario.domain]}
+        <span className="scenario-meta">
+          <span className={`meta-chip difficulty-${scenario.difficulty}`}>
+            {scenario.difficulty}
+          </span>
+          <span className={`meta-chip split-${scenario.split}`}>
+            {scenario.split === 'heldout' ? 'held-out' : 'train'}
+          </span>
+          <span className={`domain-chip domain-${scenario.domain}`}>
+            {DOMAIN_LABEL[scenario.domain]}
+          </span>
         </span>
       </div>
 
