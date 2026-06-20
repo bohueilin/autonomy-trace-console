@@ -11,10 +11,22 @@
 
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 
+/**
+ * Server-controlled provenance baked into the signed token. A PUBLIC reset is
+ * always `external`; only the server-owned reference path mints `mock` / `nebius`.
+ * Durable evidence derives its provenance from THIS field, never from the
+ * client-supplied `agentId`.
+ */
+export type EpisodePolicySource = 'external' | 'mock' | 'nebius'
+
+const POLICY_SOURCES: EpisodePolicySource[] = ['external', 'mock', 'nebius']
+
 export interface EpisodePayload {
   runId: string
   agentId: string
   scenarioId: string
+  /** Signed provenance — see EpisodePolicySource. */
+  policySource: EpisodePolicySource
   /** issued-at, epoch ms */
   iat: number
   nonce: string
@@ -54,7 +66,12 @@ export function verifyEpisode(token: string, secret: string): EpisodePayload | n
     ) {
       return null
     }
-    return parsed
+    // Older tokens (pre-provenance) lack policySource; treat them as `external`
+    // so they can never carry trusted reference attribution.
+    const policySource: EpisodePolicySource = POLICY_SOURCES.includes(parsed.policySource)
+      ? parsed.policySource
+      : 'external'
+    return { ...parsed, policySource }
   } catch {
     return null
   }

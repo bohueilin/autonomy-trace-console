@@ -5,7 +5,7 @@ import {
   REWARD_MODEL_VERSION,
   VERIFIER_VERSION,
 } from '../evalVersions.ts'
-import { resetEpisode, stepEpisode, type GymConfig } from './gym.ts'
+import { resetEpisode, resetReferenceEpisode, stepEpisode, type GymConfig } from './gym.ts'
 
 // Empty InsForge credentials -> the env uses its in-memory dev fallback, so the
 // tests stay deterministic and never touch the network. A fixed secret keeps
@@ -40,6 +40,29 @@ describe('resetEpisode', () => {
     expect(reset.ok).toBe(false)
     if (reset.ok) return
     expect(reset.code).toBe('bad_request')
+  })
+
+  it('rejects reserved reference-agent ids on the PUBLIC reset path', () => {
+    for (const agentId of ['mock-reference', 'nebius-reference']) {
+      const reset = resetEpisode({ scenarioId: 'com-1', agentId }, cfg)
+      expect(reset.ok).toBe(false)
+      if (reset.ok) return
+      expect(reset.code).toBe('bad_request')
+    }
+  })
+
+  it('allows a normal external agentId (signed external, not trusted)', () => {
+    const reset = resetEpisode({ scenarioId: 'com-1', agentId: 'rl-trainer-7' }, cfg)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+    expect(reset.agentId).toBe('rl-trainer-7')
+  })
+
+  it('mints reserved ids only via the server-owned reference path', () => {
+    const mock = resetReferenceEpisode('com-1', 'mock', cfg)
+    const nebius = resetReferenceEpisode('com-1', 'nebius', cfg)
+    expect(mock.ok && mock.agentId).toBe('mock-reference')
+    expect(nebius.ok && nebius.agentId).toBe('nebius-reference')
   })
 })
 
@@ -501,18 +524,15 @@ describe('stepEpisode', () => {
     }
   })
 
-  // Provenance is derived from the SIGNED reset agentId — the reference agents
-  // keep concrete attribution instead of a generic `external`. The insert body is
-  // captured so we can assert what was durably persisted.
-  async function persistedRowFor(agentId: string): Promise<Record<string, unknown>> {
-    const cfg2: GymConfig = {
-      insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
-      episodeSecret: 'gym-test-secret',
-    }
-    const reset = resetEpisode({ scenarioId: 'com-1', runId: `run_prov_${agentId}`, agentId }, cfg2)
-    expect(reset.ok).toBe(true)
-    if (!reset.ok) throw new Error('reset failed')
+  // Durable provenance is derived from the SIGNED token policySource — NOT the
+  // client-supplied agentId. We step an episode created by a given reset and
+  // capture the InsForge insert body to assert what was durably persisted.
+  const cfgConfigured: GymConfig = {
+    insforge: { baseUrl: 'https://fake.insforge.app', apiKey: 'ins_fake_key' },
+    episodeSecret: 'gym-test-secret',
+  }
 
+  async function persistedRowFor(episodeId: string): Promise<Record<string, unknown>> {
     let inserted: Record<string, unknown> | null = null
     const realFetch = globalThis.fetch
     const json = (data: unknown, status = 200) =>
@@ -530,7 +550,7 @@ describe('stepEpisode', () => {
     }) as typeof fetch
 
     try {
-      const step = await stepEpisode({ episodeId: reset.episodeId, action: 'act' }, cfg2)
+      const step = await stepEpisode({ episodeId, action: 'act' }, cfgConfigured)
       expect(step.ok).toBe(true)
       if (!step.ok) throw new Error('step failed')
       expect(step.persisted).toBe(true)
@@ -541,8 +561,11 @@ describe('stepEpisode', () => {
     return inserted
   }
 
-  it('configured InsForge: a mock-reference reset persists mock/mock provenance', async () => {
-    const row = await persistedRowFor('mock-reference')
+  it('configured InsForge: the server-owned mock reference path persists mock/mock provenance', async () => {
+    const reset = resetReferenceEpisode('com-1', 'mock', cfgConfigured)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+    const row = await persistedRowFor(reset.episodeId)
     expect(row.requested_policy_mode).toBe('mock')
     expect(row.actual_policy_source).toBe('mock')
     expect(row.model_name).toBe('mock-reference')
@@ -550,8 +573,11 @@ describe('stepEpisode', () => {
     expect(row.fallback_code).toBeNull()
   })
 
-  it('configured InsForge: a nebius-reference reset persists nebius/nebius provenance', async () => {
-    const row = await persistedRowFor('nebius-reference')
+  it('configured InsForge: the server-owned nebius reference path persists nebius/nebius provenance', async () => {
+    const reset = resetReferenceEpisode('com-1', 'nebius', cfgConfigured)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+    const row = await persistedRowFor(reset.episodeId)
     expect(row.requested_policy_mode).toBe('nebius')
     expect(row.actual_policy_source).toBe('nebius')
     expect(row.model_name).toBe('nebius-reference')
@@ -559,9 +585,26 @@ describe('stepEpisode', () => {
     expect(row.fallback_code).toBeNull()
   })
 
-  it('configured InsForge: an unknown external agentId persists external/external provenance', async () => {
-    const row = await persistedRowFor('rl-trainer-7')
+  it('configured InsForge: a PUBLIC reset (even with a crafted agentId) persists external/external', async () => {
+    // The threat model: a public caller trying to forge trusted provenance. The
+    // signed token is `external`, so the durable row stays external regardless of
+    // the agentId string the client chose.
+    const reset = resetEpisode({ scenarioId: 'com-1', agentId: 'totally-not-nebius' }, cfgConfigured)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+    const row = await persistedRowFor(reset.episodeId)
     expect(row.requested_policy_mode).toBe('external')
     expect(row.actual_policy_source).toBe('external')
+  })
+
+  it('configured InsForge: gym rows record deterministic rationale/requested_info/confidence', async () => {
+    const reset = resetReferenceEpisode('com-1', 'mock', cfgConfigured)
+    expect(reset.ok).toBe(true)
+    if (!reset.ok) return
+    const row = await persistedRowFor(reset.episodeId)
+    // Public clients cannot write these digest-covered fields through /v1.
+    expect(row.rationale).toBe('')
+    expect(row.requested_info).toBe('')
+    expect(row.confidence).toBe(0.5)
   })
 })

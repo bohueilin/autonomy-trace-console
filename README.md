@@ -104,7 +104,8 @@ npm run server   # start the standalone Hono backend (default http://localhost:8
 npm run dev      # in another terminal: start the Vite frontend (default http://localhost:5173)
 ```
 
-`server/main.ts` is the only backend route owner (`/health`, `/api/*`, `/v1/*`).
+`server/app.ts` (`createApp`) is the only backend route owner (`/health`,
+`/api/*`, `/v1/*`); `server/main.ts` is the thin entrypoint that serves it.
 The Vite dev server proxies `/api` and `/v1` to it (default origin
 `http://localhost:8787`). To point at a different backend origin, pass
 `VITE_BACKEND_ORIGIN` as a shell env when launching Vite (it is read by
@@ -171,8 +172,8 @@ The Vite dev server proxies `/api` and `/v1` to the standalone server (default
 `http://localhost:8787`; to override, launch Vite with a shell env, e.g.
 `VITE_BACKEND_ORIGIN=http://localhost:8788 npm run dev`), so the frontend
 reaches `POST /api/nebius-action` and the rest of the backend through one origin.
-`server/main.ts` is the only runtime owner of those routes; `server/nebiusHandler.ts`
-holds the Nebius logic it calls.
+`server/app.ts` (`createApp`) is the only runtime owner of those routes (served by
+`server/main.ts`); `server/nebiusHandler.ts` holds the Nebius logic it calls.
 
 ### Two policy views
 
@@ -239,11 +240,14 @@ only once the request is proven valid.
 
 - **Agent mode toggle** (Mock Policy / Nebius Policy) and a **model-under-test**
   badge sit next to the run buttons.
-- **Run Gym Episode** (the primary button) drives the canonical `/v1` gym env:
-  reset → the reference agent proposes an action → step. In Nebius mode it becomes
-  **Run 1 Nebius Gym Episode** — a single real model call for the proposed action,
-  still scored by the environment's deterministic verifier. The browser sends only
-  `{ scenarioId, agentId }` on reset and only `{ action }` on step.
+- **Run Gym Episode** (the primary button) drives the canonical `/v1` gym env via
+  the **server-owned** `POST /v1/reference-episodes` endpoint: the server resets →
+  the reference agent proposes an action → the server steps. In Nebius mode it
+  becomes **Run 1 Nebius Gym Episode** — a single real (server-side) model call for
+  the proposed action, still scored by the environment's deterministic verifier.
+  The browser sends only `{ scenarioId, mode }`. (External agents drive the public
+  `/v1/episodes` reset/step boundary directly, sending only `{ scenarioId,
+  agentId }` then `{ action }`.)
 - **Run 9-Episode Eval is mock-only by design**, kept instant and deterministic
   for the headline demo. (Tagged `mock` in the UI.)
 - If Nebius is unreachable (no key, timeout, upstream error, missing endpoint),
@@ -363,6 +367,29 @@ happens on the server:
 license summary. The client cannot even send them — it sends only the two fields
 above.
 
+**Public vs server-owned gym paths (`/v1`):**
+
+- `POST /v1/episodes` is the **public** boundary for **external agents**. Episodes
+  are always signed with provenance `external`, and the reserved reference-agent
+  ids `mock-reference` / `nebius-reference` are **rejected with 400** — a public
+  caller can never mint trusted `mock` / `nebius` provenance. External agents may
+  still pass any other `agentId`.
+- `POST /v1/reference-episodes` (body `{ scenarioId, mode }`, `mode` =
+  `mock` | `nebius`) is **server-owned** and is the **only** path that can produce
+  trusted reference-agent provenance — and only after the server actually runs
+  that reference agent against the env (reset → propose → step).
+- Durable gym provenance is derived from the **signed token `policySource`**, not
+  the client-supplied `agentId`: public resets → `external`/`external`; the mock
+  reference path → `mock`/`mock`; the nebius reference path → `nebius`/`nebius`
+  **only when Nebius actually returns an action**.
+- `/v1` **step bodies are server-enforced** as exactly `{ action }`
+  (`POST /v1/episodes/:episodeId/step`) or `{ episodeId, action }`
+  (`POST /v1/step`). Any extra key — `confidence`, `rationale`, `reward`,
+  `license`, `passed`, `episodeId` in the path-form — is rejected with 400, so a
+  client cannot write a digest-covered audit field. `rationale`,
+  `requested_info`, and `confidence` are recorded as deterministic server
+  defaults.
+
 ### Server-authoritative vs local/demo-only
 
 | | Authority | Persisted? | License |
@@ -379,14 +406,17 @@ The **Evidence store** panel always reflects the **server's own authoritative ru
 history** and may differ — that's expected; the panel is the authoritative one.
 Traces are tagged `server` / `demo` in the trace list.
 
-On a **Nebius fallback** (the model could not propose), the UI does **not** step
-the `nebius-reference` episode — that would persist durable evidence claiming
-Nebius decided. Instead it opens and steps a **fresh `mock-reference` gym
-episode** for the same scenario, so the persisted provenance honestly reads
-`mock` and a banner notes the fallback. Gym rows derive `requested_policy_mode` /
-`actual_policy_source` from the signed reset `agentId`: `mock-reference` →
-`mock`/`mock`, `nebius-reference` → `nebius`/`nebius`, any other external agent →
-`external`/`external`.
+The primary **Run Gym Episode** button calls the **server-owned**
+`POST /v1/reference-episodes` endpoint — the browser never claims reference-agent
+provenance itself. On a **Nebius fallback** (the model could not propose), the
+server does **not** step the `nebius-reference` episode — that would persist
+durable evidence claiming Nebius decided. Instead it opens and steps a **fresh
+`mock-reference` gym episode** for the same scenario, so the persisted provenance
+honestly reads `mock` and the response flags the fallback (a banner notes it).
+Gym rows derive `requested_policy_mode` / `actual_policy_source` from the **signed
+token `policySource`** (not the client `agentId`): the mock reference path →
+`mock`/`mock`, the nebius reference path → `nebius`/`nebius` (only on a real
+Nebius action), and every public `/v1/episodes` agent → `external`/`external`.
 
 ### Configure InsForge
 
@@ -693,9 +723,11 @@ shown and how the environment scored it.
 | [`src/verifier.ts`](src/verifier.ts) | Pure, inspectable deterministic scorer. |
 | [`src/license.ts`](src/license.ts) | The L0–L4 ladder and the catastrophic gate. |
 | `src/components/*` | Scenario, agent-action, verifier, trace, license, and evidence UI. |
-| [`src/gymClient.ts`](src/gymClient.ts) | Frontend client for the canonical `/v1` reset/step env (reset sends only `{ scenarioId, agentId }`, step only `{ action }`) + the step→Trace mapper. |
+| [`src/gymClient.ts`](src/gymClient.ts) | Frontend client for the `/v1` gym env: the server-owned `runReferenceGymEpisode` (primary UI path, sends only `{ scenarioId, mode }`) + the public `resetGymEpisode`/`stepGymEpisode` helpers (external agents) + the step→Trace mapper. |
 | [`src/serverEpisodeClient.ts`](src/serverEpisodeClient.ts) | Frontend client for the legacy `/api/run-episode` + `/api/runs/recent` + `/api/evidence/status`. |
-| [`server/main.ts`](server/main.ts) | Standalone Hono server — the only backend route owner (`/health`, `/api/*`, `/v1/*`). Vite proxies to it. |
+| [`server/app.ts`](server/app.ts) | Hono route table (`createApp(config)`) — the only backend route owner (`/health`, `/api/*`, `/v1/*`); strict `/v1` step validation; testable without a listener. |
+| [`server/main.ts`](server/main.ts) | Thin entrypoint: load config, log warnings, serve `createApp(config)`. Vite proxies to it. |
+| [`server/referenceAgent.ts`](server/referenceAgent.ts) | Server-owned reference agents (mock/nebius) that drive the `/v1` env and are the only minters of trusted reference provenance; handles the Nebius→mock fallback. |
 | [`server/nebiusHandler.ts`](server/nebiusHandler.ts) | Server-only: builds the request from visible context, calls Nebius, normalizes. |
 | [`server/runEpisodeHandler.ts`](server/runEpisodeHandler.ts) | Server-owned episode: canonical scenario → policy → verifier → reward → license → replayable audit row → persist. |
 | [`server/insforgeStore.ts`](server/insforgeStore.ts) | Server-only best-effort InsForge persistence (`eval_episodes`). |

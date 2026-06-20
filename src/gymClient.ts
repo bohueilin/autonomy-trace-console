@@ -2,8 +2,10 @@ import { LICENSE_LEVELS } from './license'
 import type {
   Action,
   AgentDecision,
+  AgentSource,
   Domain,
   GymObservation,
+  GymReferenceResult,
   GymResetResult,
   GymRunLicense,
   GymStepResult,
@@ -25,7 +27,43 @@ import type {
 // agentId }; the step body carries ONLY { action }. The client never sends — and
 // the env never trusts — confidence, rationale, reward, verifier result, expected
 // action, catastrophic, license, or any hidden scenario field.
+//
+// The PRIMARY UI path uses the server-owned reference endpoint
+// (`runReferenceGymEpisode`) so the browser never claims reference-agent
+// provenance; `resetGymEpisode` / `stepGymEpisode` remain for EXTERNAL gym
+// clients (which can pass any non-reserved agentId and are signed `external`).
 // ----------------------------------------------------------------------------
+
+/**
+ * Run one server-owned reference episode (`mock` or `nebius`). The server resets,
+ * proposes via the reference agent, steps, and returns the scored step + the
+ * decision + provenance. Nebius failures fall back to a fresh mock episode
+ * server-side; the browser never mints reference-agent provenance itself.
+ */
+export async function runReferenceGymEpisode(
+  scenarioId: string,
+  mode: AgentSource,
+): Promise<GymReferenceResult> {
+  const resp = await fetch('/v1/reference-episodes', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scenarioId, mode }),
+  })
+
+  type Ok = GymReferenceResult & { ok: true }
+  type Err = { ok: false; error?: string }
+  let data: Ok | Err | null = null
+  try {
+    data = (await resp.json()) as Ok | Err
+  } catch {
+    // Non-JSON / missing endpoint — treated as failure below.
+  }
+
+  if (!data || data.ok !== true) {
+    throw new Error(data && 'error' in data && data.error ? data.error : 'Gym reference episode unavailable')
+  }
+  return { step: data.step, decision: data.decision, provenance: data.provenance }
+}
 
 /** reset — open a signed episode and return the observation the agent may see. */
 export async function resetGymEpisode(scenarioId: string, agentId: string): Promise<GymResetResult> {

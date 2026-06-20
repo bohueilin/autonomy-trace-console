@@ -1,31 +1,37 @@
-All gates green. Here's the implementation report.
+All four gates pass (build → lint → verify:evidence → test, 66 tests). Here's the implementation report.
 
 ---
 
-## Implementation report — Round 10
-
-Implemented `design.md` exactly: made `/v1` gym evidence and the visible license authoritative for reference-agent runs.
+## Implementation report — Round 11: close provenance-forgery hole, strict `/v1` boundary
 
 ### Files changed
-- **`server/env/gym.ts`** — Added `visibleRiskScore: number` to the server `Observation` shape and returned `scenario.visibleRiskScore` from `resetEpisode` (hidden fields stay excluded because the observation is built only from listed fields). Added a `provenanceForAgent(agentId)` helper that derives durable provenance from the signed reset `agentId` (`mock-reference`→`mock/mock`, `nebius-reference`→`nebius/nebius`, else `external/external`) and used it for `requested_policy_mode` / `actual_policy_source` in `auditRow`. `fallback: false` / `fallback_code: null` unchanged; step request body still only `{ action }`.
-- **`src/types.ts`** — Mirrored `visibleRiskScore: number` onto `GymObservation`.
-- **`src/gymClient.ts`** — Added `observationToMockView(obs)` (builds `MockPolicyView` from reset observation fields only, incl. `visibleRiskScore`); kept `observationToModelView` omitting it. Added pure `gymLicenseToState(GymRunLicense): LicenseState` adapter.
-- **`src/App.tsx`** — Mock proposer now uses `observationToMockView(reset.observation)` (normal + fallback). Nebius fallback opens a **fresh `mock-reference` reset** and steps only that, so no `nebius-reference` episode is stepped/persisted. Added `gymLicense` state set from the `/v1` step license (headline chip + `LicenseSummary` render it); `runFullEval` and `reset` clear it so the 9-episode demo stays demo-only.
-- **`README.md`** — Replaced the stale "Run Server Episode / Run Episode" table rows with the current `/v1` gym button and mock 9-episode demo; documented the fresh mock-reference fallback and that the headline license after a gym run is environment-returned (9-episode eval is demo-only).
-- **`server/env/gym.test.ts`** — reset observation includes `visibleRiskScore` and excludes hidden fields; configured-InsForge inserts persist `mock/mock`, `nebius/nebius`, and (extra) `external/external` provenance.
-- **`src/gymClient.test.ts`** — `observationToMockView` uses only gym observation fields incl. `visibleRiskScore`; `gymLicenseToState` maps level/stats into `LicenseState` (+ L0 fallback for unknown level).
-
-### Key decisions
-- 9-episode eval **clears** `gymLicense` (the "clear" option in the plan) rather than adding a visual label; displayed `license = gymLicense ?? traceLicense`, so the demo can't overwrite the authoritative gym license.
-- Added a small extra `external/external` provenance test (covers the acceptance criterion for unknown `agentId`s); within the spirit of the provenance steps, no scope expansion.
+- **`server/env/episodeToken.ts`** — Added `EpisodePolicySource` (`external|mock|nebius`) and a signed `policySource` field to `EpisodePayload`. `verifyEpisode` validates it and defaults missing/invalid (pre-provenance) tokens to `external`, so an old token can never carry trusted attribution.
+- **`server/env/gym.ts`** —
+  - Reserved `mock-reference`/`nebius-reference` (`RESERVED_AGENT_IDS`); public `resetEpisode` now **rejects** them with `bad_request` and always signs `external`.
+  - Added server-only `resetReferenceEpisode(scenarioId, 'mock'|'nebius', cfg)` — the only minter of trusted `policySource`. Shared scenario resolution (`pickScenario`) and signing (`buildReset`).
+  - Durable provenance now derives from `payload.policySource` (`provenanceForSource`), not `agentId`. Removed `provenanceForAgent` + `clamp01`.
+  - `StepInput` dropped `confidence`/`rationale`; audit rows now write deterministic defaults (`rationale:''`, `requested_info:''`, `confidence:0.5`). Exported `GymStepSuccess`.
+- **`server/referenceAgent.ts`** (new) — `runReferenceEpisode({scenarioId,mode}, {gym,nebius})`. Mock: trusted reset → `decide` → step. Nebius: trusted reset → server-side `handleNebiusAction` → step only on success; on failure **does not step** the nebius episode, opens a fresh trusted mock episode (`fallback:true`, `actualPolicySource:'mock'`).
+- **`server/app.ts`** (new) — `createApp(config)` owns the route table (no listener). Strict step validation: `/v1/episodes/:episodeId/step` accepts exactly `{action}`, `/v1/step` exactly `{episodeId,action}`, extra keys → 400. New `POST /v1/reference-episodes`.
+- **`server/main.ts`** — slimmed to load config + `serve(createApp(config))`.
+- **`src/gymClient.ts`** — added `runReferenceGymEpisode(scenarioId, mode)`; kept public `resetGymEpisode`/`stepGymEpisode` for external clients.
+- **`src/App.tsx`** — primary button now calls the server-owned reference endpoint (browser sends only `{scenarioId,mode}`); removed browser-side Nebius/reset/step orchestration and now-unused imports.
+- **`src/types.ts`** — added `GymReferenceResult`.
+- **Tests**: `episodeToken.test.ts` (policySource round-trip + legacy default), `gym.test.ts` (reserved-ID rejection, trusted reference provenance via `resetReferenceEpisode`, public reset stays `external`, deterministic audit defaults), `app.test.ts` (new — route-level trust boundary + reference path + Nebius fallback), `gymClient.test.ts` (reference helper + external agentId).
+- **`README.md`** — documented public vs server-owned `/v1` paths, signed-`policySource` provenance, strict step bodies; updated file table + route-owner references to `server/app.ts`.
 
 ### Gate results — all pass
-- `npm run build` ✅ (tsc -b + vite)
-- `npm run lint` ✅ (eslint clean)
-- `npm run verify:evidence` ✅ (40/40, incl. legacy `external` provenance checks unaffected)
-- `npm test` ✅ (7 files, 49 tests)
-- `npm run gates` ✅
+- `npm run build` ✅ · `npm run lint` ✅ · `npm run verify:evidence` ✅ (40/40) · `npm test` ✅ (66/66, 8 files) · `npm run gates` ✅
 
-### Deferred / open questions for Codex
-- The header chip and `LicenseSummary` now show the run-scoped `/v1` license, while the Evidence panel still shows the global server run history — these can legitimately differ after a fresh run. Left as-is per "keep the evidence panel's server license unchanged"; flag if you'd prefer a visible "run-scoped vs global" label.
-- No new dedicated demo-only badge on the 9-episode license beyond clearing the gym license. If you want an explicit UI label, that's a small follow-up.
+### Key decisions
+- **Provenance source of truth is the signed `policySource`**, not `agentId` — fixes the P0 directly. Reference IDs are reserved and rejected on the public path (chosen rejection over silent-downgrade per design, since misuse becomes obvious).
+- **Strict step enforced at the HTTP boundary** in `app.ts` (reject unknown keys) — closes the P1 where the route merged the whole body into `stepEpisode`.
+- **All gym rows use deterministic server defaults** for rationale/requested_info/confidence (uniform, including the reference path) — `confidence:0.5` matches the prior effective default, so no digest drift; `verify:evidence` unaffected.
+- **Nebius now runs server-side** inside the reference endpoint (it already had the key); the browser no longer calls `/api/nebius-action` for the gym path.
+
+### Intentionally deferred / out of scope
+- Did not touch verifier/reward/license math, digest field list, InsForge store, Vapi, migrations, or `/api/run-episode`.
+
+### Open questions for Codex
+- The legacy `POST /api/nebius-action` route still exists (used by `runEpisodeHandler` fallback paths and the legacy flow) but is no longer called by the gym UI path. Worth pruning the legacy `/api` Nebius/run-episode surface in a later round, or keep for the DoD "two evidence paths → unify" item?
+- `model_name` on persisted gym rows still records `payload.agentId` (e.g. `mock-reference`, or an external agent's chosen string). It's digest-covered and not trust-bearing for provenance, but an external caller controls that label — acceptable, or should it be sanitized/namespaced for external agents?

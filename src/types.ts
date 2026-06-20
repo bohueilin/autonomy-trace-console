@@ -369,6 +369,18 @@ export interface GymStepResult {
   recordId: string | null
 }
 
+/**
+ * Successful POST /v1/reference-episodes result. The server-owned reference agent
+ * (mock or Nebius) drove the gym env: it proposed the `decision`, the env scored
+ * `step`, and `provenance` records requested-vs-actual policy (incl. Nebius
+ * fallback). The browser renders these — it runs no verifier/license math.
+ */
+export interface GymReferenceResult {
+  step: GymStepResult
+  decision: AgentDecision
+  provenance: TraceProvenance
+}
+
 /** A compact row from GET /api/runs/recent. */
 export interface RecentRun {
   id: string

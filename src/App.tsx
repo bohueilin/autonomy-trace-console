@@ -1,29 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { decide, toMockView } from './agent'
-import { fetchNebiusAction } from './nebiusClient'
 import { fetchEvidenceStatus } from './serverEpisodeClient'
-import {
-  buildGymTrace,
-  gymLicenseToState,
-  observationToMockView,
-  observationToModelView,
-  resetGymEpisode,
-  stepGymEpisode,
-} from './gymClient'
+import { buildGymTrace, gymLicenseToState, runReferenceGymEpisode } from './gymClient'
 import { computeLicense } from './license'
 import { seedScenarios } from './seedScenarios'
 import { verify } from './verifier'
 import type {
   AgentDecision,
   AgentSource,
-  EvidencePolicySource,
   EvidenceStatus,
   LicenseState,
   PersistenceStatus,
   Scenario,
   Trace,
-  TraceProvenance,
 } from './types'
 import { ScenarioCard } from './components/ScenarioCard'
 import { AgentActionCard } from './components/AgentActionCard'
@@ -92,10 +82,12 @@ function App() {
     }
   }
 
-  // Canonical single-episode path: drive the `/v1` gym env. The reference agent
-  // (mock or Nebius) only PROPOSES an action from the returned observation; the
-  // ENVIRONMENT verifies it, scores it, and computes the license. The browser
-  // runs no verifier/license math for this path — it renders what `/v1` returns.
+  // Canonical single-episode path: the SERVER-OWNED reference endpoint drives the
+  // `/v1` gym env. The reference agent (mock or Nebius) proposes an action from
+  // the observation; the ENVIRONMENT verifies it, scores it, and computes the
+  // license. Nebius failures fall back to a fresh mock episode server-side. The
+  // browser runs no verifier/license math and never mints reference provenance —
+  // it renders what the endpoint returns.
   async function runGymEpisode() {
     if (running) return
     setRunning(true)
@@ -103,42 +95,8 @@ function App() {
     setPersistenceStatus('saving')
     try {
       const scenario = seedScenarios[cursor % seedScenarios.length]
-      // Open the episode for the requested reference agent.
-      let reset = await resetGymEpisode(
-        scenario.id,
-        mode === 'nebius' ? 'nebius-reference' : 'mock-reference',
-      )
+      const { step, decision, provenance } = await runReferenceGymEpisode(scenario.id, mode)
 
-      // Reference agent proposes an action from the observation only.
-      let decision: AgentDecision
-      let actualSource: EvidencePolicySource = 'mock'
-      let fellBack = false
-      if (mode === 'nebius') {
-        try {
-          decision = await fetchNebiusAction(observationToModelView(reset.observation))
-          actualSource = 'nebius'
-        } catch {
-          // Nebius failed to propose. Do NOT step the nebius-reference episode —
-          // stepping it would persist durable evidence claiming Nebius decided.
-          // Open a fresh mock-reference episode for the same scenario and step
-          // only that one, so provenance honestly reads mock.
-          fellBack = true
-          reset = await resetGymEpisode(scenario.id, 'mock-reference')
-          decision = decide(observationToMockView(reset.observation))
-        }
-      } else {
-        decision = decide(observationToMockView(reset.observation))
-      }
-
-      // The environment is the verifier/license authority — send only the action.
-      const step = await stepGymEpisode(reset.episodeId, decision.action)
-
-      const provenance: TraceProvenance = {
-        requestedPolicyMode: mode,
-        actualPolicySource: actualSource,
-        fallback: fellBack,
-        fallbackCode: fellBack ? 'nebius_unavailable' : null,
-      }
       setTraces((prev) => [
         ...prev,
         { ...buildGymTrace(scenario, decision, step, provenance), displayIndex: prev.length + 1 },
@@ -147,7 +105,7 @@ function App() {
       setGymLicense(gymLicenseToState(step.license))
       setCursor((c) => c + 1)
       setPersistenceStatus(step.persisted ? 'saved' : 'local_only')
-      if (fellBack) setNotice(FALLBACK_MSG)
+      if (provenance.fallback) setNotice(FALLBACK_MSG)
       refreshEvidence()
     } catch {
       setPersistenceStatus('unavailable')

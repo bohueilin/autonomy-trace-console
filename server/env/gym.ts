@@ -34,10 +34,29 @@ import {
   persistEpisodeOnce,
   type InsforgeConfig,
 } from '../insforgeStore.ts'
-import { newNonce, signEpisode, verifyEpisode } from './episodeToken.ts'
+import {
+  newNonce,
+  signEpisode,
+  verifyEpisode,
+  type EpisodePolicySource,
+} from './episodeToken.ts'
 
 const ACTIONS: Action[] = ['act', 'ask', 'escalate', 'stop']
 const CATEGORIES = ['correct', 'over_cautious', 'under_cautious', 'catastrophic'] as const
+
+// Reference-agent identities are reserved: a PUBLIC reset may never claim them,
+// and only the server-owned reference path (resetReferenceEpisode) mints them.
+const REFERENCE_AGENT_ID: Record<'mock' | 'nebius', string> = {
+  mock: 'mock-reference',
+  nebius: 'nebius-reference',
+}
+const RESERVED_AGENT_IDS = new Set<string>(Object.values(REFERENCE_AGENT_ID))
+
+// Deterministic server defaults for the digest-covered "what the agent said"
+// fields. A PUBLIC `/v1` caller can never write these through reset/step — the
+// environment only trusts the chosen action; rationale/requested_info/confidence
+// are not part of the gym contract and are recorded as fixed server values.
+const GYM_DEFAULT_CONFIDENCE = 0.5
 
 const VERIFIER_RULES =
   'Choose exactly one action (act|ask|escalate|stop). A deterministic verifier scores it ' +
@@ -76,11 +95,12 @@ export type ResetResult =
     }
   | { ok: false; code: 'bad_request'; error: string }
 
+// The PUBLIC step contract is exactly an episode reference + the chosen action.
+// confidence/rationale are intentionally absent — clients cannot write the
+// digest-covered audit fields through `/v1`.
 export interface StepInput {
   episodeId?: string
   action?: string
-  confidence?: number
-  rationale?: string
 }
 export interface StepInfo {
   passed: boolean
@@ -113,6 +133,9 @@ export type StepResult =
     }
   | { ok: false; code: 'bad_request' | 'unknown'; error: string }
 
+/** The success branch of a step — the payload the reference path forwards. */
+export type GymStepSuccess = Extract<StepResult, { ok: true }>
+
 // Dev-only fallback when InsForge is unconfigured: per-run verdicts in memory.
 // NOT authoritative and NOT shared across instances — for local dev convenience.
 //
@@ -144,24 +167,27 @@ function sampleScenario(): Scenario {
   return seedScenarios[Math.floor(Math.random() * seedScenarios.length)]
 }
 
+function pickScenario(
+  scenarioId: string | undefined,
+): { ok: true; scenario: Scenario } | { ok: false; error: string } {
+  if (scenarioId) {
+    const scenario = seedScenarios.find((s) => s.id === scenarioId)
+    if (!scenario) return { ok: false, error: 'Unknown scenarioId.' }
+    return { ok: true, scenario }
+  }
+  return { ok: true, scenario: sampleScenario() }
+}
+
 /**
- * Durable provenance for a gym row, derived from the SIGNED reset agentId (never
- * a client step field). The reference agents that drive the env get concrete
- * `mock` / `nebius` attribution; any other external agent stays `external`.
+ * Durable provenance for a gym row, derived from the SIGNED token `policySource`
+ * (never the client-supplied agentId or a step field). Public resets sign
+ * `external`; only the server-owned reference path mints `mock` / `nebius`.
  */
-function provenanceForAgent(agentId: string): {
+function provenanceForSource(source: EvidencePolicySource): {
   requested: EvidencePolicySource
   actual: EvidencePolicySource
 } {
-  if (agentId === 'mock-reference') return { requested: 'mock', actual: 'mock' }
-  if (agentId === 'nebius-reference') return { requested: 'nebius', actual: 'nebius' }
-  return { requested: 'external', actual: 'external' }
-}
-
-function clamp01(n: unknown): number {
-  const x = Number(n)
-  if (!Number.isFinite(x)) return 0.5
-  return Math.max(0, Math.min(1, x))
+  return { requested: source, actual: source }
 }
 
 function toLicense(verdicts: LicenseVerdict[]): RunLicense {
@@ -176,24 +202,19 @@ function toLicense(verdicts: LicenseVerdict[]): RunLicense {
   }
 }
 
-/** reset — issue a signed episode and return the observation the agent sees. */
-export function resetEpisode(input: ResetInput, cfg: GymConfig): ResetResult {
-  let scenario: Scenario | undefined
-  if (input.scenarioId) {
-    scenario = seedScenarios.find((s) => s.id === input.scenarioId)
-    if (!scenario) return { ok: false, code: 'bad_request', error: 'Unknown scenarioId.' }
-  } else {
-    scenario = sampleScenario()
-  }
-
-  const runId = input.runId?.trim() || `run_${randomUUID()}`
-  const agentId = input.agentId?.trim() || 'anonymous'
+/** Sign an episode for a resolved scenario and build its public reset result. */
+function buildReset(
+  scenario: Scenario,
+  runId: string,
+  agentId: string,
+  policySource: EpisodePolicySource,
+  cfg: GymConfig,
+): ResetResult {
   const view = toModelView(scenario)
   const episodeId = signEpisode(
-    { runId, agentId, scenarioId: scenario.id, iat: Date.now(), nonce: newNonce() },
+    { runId, agentId, scenarioId: scenario.id, policySource, iat: Date.now(), nonce: newNonce() },
     cfg.episodeSecret,
   )
-
   return {
     ok: true,
     episodeId,
@@ -212,6 +233,44 @@ export function resetEpisode(input: ResetInput, cfg: GymConfig): ResetResult {
     allowedActions: ACTIONS,
     verifierRules: VERIFIER_RULES,
   }
+}
+
+/**
+ * reset — the PUBLIC gym boundary for EXTERNAL agents. The episode is always
+ * signed `external`; reserved reference-agent ids are rejected so a public caller
+ * can never mint trusted `mock` / `nebius` provenance.
+ */
+export function resetEpisode(input: ResetInput, cfg: GymConfig): ResetResult {
+  const picked = pickScenario(input.scenarioId)
+  if (!picked.ok) return { ok: false, code: 'bad_request', error: picked.error }
+
+  const agentId = input.agentId?.trim() || 'anonymous'
+  if (RESERVED_AGENT_IDS.has(agentId)) {
+    return {
+      ok: false,
+      code: 'bad_request',
+      error: 'agentId is reserved for server-owned reference agents; use POST /v1/reference-episodes.',
+    }
+  }
+
+  const runId = input.runId?.trim() || `run_${randomUUID()}`
+  return buildReset(picked.scenario, runId, agentId, 'external', cfg)
+}
+
+/**
+ * reset — the SERVER-OWNED reference boundary. Only this path can sign an episode
+ * whose durable provenance becomes `mock` / `nebius`. Never reachable from the
+ * public `/v1/episodes` route; invoked only by the reference-agent runner.
+ */
+export function resetReferenceEpisode(
+  scenarioId: string | undefined,
+  source: 'mock' | 'nebius',
+  cfg: GymConfig,
+): ResetResult {
+  const picked = pickScenario(scenarioId)
+  if (!picked.ok) return { ok: false, code: 'bad_request', error: picked.error }
+  const runId = `run_${randomUUID()}`
+  return buildReset(picked.scenario, runId, REFERENCE_AGENT_ID[source], source, cfg)
 }
 
 /**
@@ -390,9 +449,9 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
   const license = toLicense(verdicts)
 
   // Build the tamper-evident audit row. Provenance is derived from the signed
-  // reset agentId (mock/nebius reference agents keep concrete attribution).
+  // token policySource (mock/nebius only for server-owned reference episodes).
   const createdAt = new Date().toISOString()
-  const provenance = provenanceForAgent(payload.agentId)
+  const provenance = provenanceForSource(payload.policySource)
   const versions = getEvalVersions()
   const view = toModelView(scenario)
   const episodeIndex = prior.length + 1
@@ -430,9 +489,11 @@ export async function stepEpisode(input: StepInput, cfg: GymConfig): Promise<Ste
     actual_policy_input: view,
     model_name: payload.agentId,
     action: result.chosenAction,
-    rationale: typeof input.rationale === 'string' ? input.rationale.slice(0, 600) : '',
+    // Deterministic server defaults: the public `/v1` step contract is exactly
+    // { action }, so these digest-covered fields are never client-controlled.
+    rationale: '',
     requested_info: '',
-    confidence: clamp01(input.confidence),
+    confidence: GYM_DEFAULT_CONFIDENCE,
     passed: result.passed,
     reward: result.reward,
     category: result.category,
