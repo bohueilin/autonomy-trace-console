@@ -31,23 +31,23 @@ latest explicit green light. Run `npm run gates`. Write the implementation repor
 to `.agentloop/claude.md`. Do not silently expand scope; list adjacent ideas under
 Questions or Deferred.
 
-For the current media-driven workflow authoring planning pass:
+For the current media-driven workflow authoring implementation pass:
 Please read `.agentloop/BRIDGE.md`, `.agentloop/GOAL.md`, `.agentloop/PROTOCOL.md`,
-and `.agentloop/codex.md`, especially "Active Claude Request: Media-Driven Workflow
-Authoring UX Plan". PLANNING MODE ONLY: inspect the repo, run `npm run gates`, and
-write a world-class UX spec + implementation plan to `.agentloop/claude.md`. Do not
-code yet. Ground the plan in file:line citations from the real code.
+and `.agentloop/codex.md`, especially "Approved Next Iteration: Media-Driven
+Workflow Authoring Stage A". Implement only that approved Stage A scope. Inspect the
+repo first, keep diffs reviewable, and run `npm run gates`.
 
 The target flow is:
 Capture -> Understand -> Reflect back -> Align -> Illustrate -> Simulate -> License.
 
-Design the end-to-end media-driven authoring console: upload/declare photos, videos,
-SOPs, floor plans, forbidden examples, text description, robot context, and safety
-rules; reflect back an editable source-linked workflow understanding; let the human
-approve it; illustrate the workflow; freeze it into deterministic eval; then produce
-the safety case. AI/extraction is authoring only. The deterministic oracle/verifier is
-the judge.
+Build the end-to-end no-spend media-driven authoring console: metadata-only file
+capture, deterministic draft/stub understanding, Reflect/Align approval, workflow
+illustration, frozen eval preview, safety-case provenance, and descriptive no-schema
+evidence metadata. AI/extraction is authoring only. The deterministic oracle/verifier
+is the judge.
 
 Do not implement real video parsing, upload/storage infrastructure, LLM/vision
 extraction, model spend, Nebius/Stage B, migrations, procedural grid physics, or any
-LLM-as-judge path. End with the standard Handoff To Codex block.
+LLM-as-judge path. If gates are green and only in-scope files are staged, commit and
+push directly per `.agentloop/codex.md` publish policy. Write the implementation
+report to `.agentloop/claude.md` and end with the standard Handoff To Codex block.

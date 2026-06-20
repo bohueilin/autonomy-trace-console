@@ -234,185 +234,155 @@ no upload parsing, no procedural generation.
 Recommended next decision: polish the demo story and live evidence visibility for
 judges before adding model spend. Stage B should still require explicit user approval.
 
-## Active Claude Request: Media-Driven Workflow Authoring UX Plan
+## Approved Next Iteration: Media-Driven Workflow Authoring Stage A
 
-Mode: **planning only**. Do not code yet. The previous Video-To-Workflow
-implementation scope is paused until this UX plan is reviewed.
-
-Objective: produce a world-class, YC-demo-ready web console UX spec for
-media-driven workflow authoring:
+Claude's UX plan is accepted. Implement Stage A only, as a polished,
+YC-demo-ready no-spend build:
 
 **Capture -> Understand -> Reflect back -> Align -> Illustrate -> Simulate -> License**
 
-The product story is personal and concrete: the worried son wants to know whether a
-robot can be trusted around his dad on a factory floor. The console should feel like
-a calm safety workshop, not a generic upload wizard. Users upload or declare photos,
-videos, SOPs, floor plans, forbidden examples, task descriptions, and robot context;
-the system reflects back what it thinks the job is; the human confirms/edits it; the
-approved workflow freezes into deterministic eval; the output is a safety case.
+The product should feel like a calm safety workshop for a worried family member or
+operations lead who needs to know whether a robot can be trusted around real people.
 
-### Grounding In Current Code
+### Decisions On Claude's Questions
 
-Claude must inspect and cite file:line references for the real code:
+1. Site map is descriptive in Stage A: **yes**.
+   - Editing the site map must not synthesize new scored grid physics.
+   - It may drive the illustration and select/reorder existing canonical tasks.
+   - UI copy must explicitly say the site map is a workflow illustration/mapping, not
+     the scored physics grid.
+   - Procedural grid physics is deferred.
 
-- `src/App.tsx:35-47` current view flow is `landing -> intake -> preview -> results -> showcase`.
-- `src/App.tsx:204-224` renders the current journey screens.
-- `src/components/IntakeForm.tsx:1-3` explicitly says no file parsing/upload happens.
-- `src/components/IntakeForm.tsx:26-33` lists placeholder attachment chips.
-- `src/components/IntakeForm.tsx:140-166` captures attachment intent only.
-- `src/components/EnvironmentPreview.tsx:1-3` is already the eval review surface.
-- `src/components/EnvironmentPreview.tsx:37-75` shows plan metadata, vocabulary, and oracle assumptions.
-- `src/components/EnvironmentPreview.tsx:77-111` shows task labels and runs the deterministic eval.
-- `src/environmentPlan.ts:10-16` states the deterministic/no-LLM trust boundary.
-- `src/environmentPlan.ts:35-45` shows current requirement/attachment shape.
-- `src/environmentPlan.ts:264-293` builds the plan from domain + embodiment.
-- `src/components/LicenseResults.tsx:117-205` renders the report/safety readout.
-- `src/components/LicenseResults.tsx:207-235` has the Stage A evidence bridge.
-- `src/licenseReport.ts:36-92` builds the deterministic readiness report.
-- `server/env/warehouseGym.ts:136-148` signs trusted warehouse episode context.
-- `server/env/warehouseGym.ts:312-398` builds digest-covered evidence rows.
-- `server/env/warehouseGym.ts:448-528` scores warehouse episodes from signed context.
-- `server/env/warehouseGym.ts:581-628` runs the deterministic reference episode.
-- `server/app.ts:203-319` exposes the warehouse reset/step/reference routes.
+2. Use real file inputs, metadata only: **yes**.
+   - Use `<input type="file" multiple>`.
+   - Store only serializable metadata: name, type, size, role, and local id.
+   - Do not keep `File` objects in long-lived React state.
+   - Do not read bytes, use `FileReader`, upload files, create object URLs, or parse media.
+   - Copy must say: "declared locally; not uploaded or parsed in this demo".
 
-### UX Quality Bar
+3. Replace the old `intake` journey with `capture`: **yes**.
+   - The richer `capture` flow becomes the default "Create eval" path.
+   - Keep `showcase` intact.
+   - It is fine to refactor or retire `IntakeForm` if the new components replace it.
 
-Design to a frontier console standard:
+4. Tests: pure logic + browser/preview verification, no new testing dependency: **yes**.
+   - Do not add `@testing-library` in this pass.
+   - Add focused Vitest tests for pure modules and trust-boundary behavior.
+   - Verify the UX manually/browser-side and report what was checked.
 
-- Content first; chrome recedes. Depth comes from hierarchy, spacing, and subtle
-  layers, not decoration.
-- One primary action per screen.
-- Warm but restrained copy: protective, practical, never melodramatic.
-- Trust made visible with provenance chips, confidence labels, edit history, and
-  badges for `AI-proposed`, `Confirmed by you`, and `Scored by deterministic oracle`.
-- Every AI-proposed item is editable until approved.
-- Upload/media states are immaculate: empty, drag-over, local capture, analyzing,
-  low-confidence, needs-confirmation, approved, error, offline, and manual fallback.
-- Motion is purposeful: 60fps step transitions, analysis checklist microstates, and
-  deterministic workflow animation; include `prefers-reduced-motion` behavior.
-- Accessibility AA: keyboard upload, keyboard grid/site-map editing, visible focus,
-  screen-reader labels, color-independent status, mobile-safe controls.
-- Responsive first: the site-map/editor remains usable on mobile, not just stacked.
-- Graceful no-AI path: manual mapping must be possible with zero model spend.
+5. Embodiment: tentative in Capture, final in Reflect/Align.
+   - Capture may ask for expected robot type as a hint.
+   - Understanding can propose a robot embodiment.
+   - Reflect/Align must let the operator confirm/change the embodiment before freeze.
+   - Only the confirmed enum may reach `buildEnvironmentPlan` and the server.
 
-### Target Flow To Spec
+6. Provenance rides into evidence now, no schema: **yes, keep it descriptive**.
+   - Thread `approvedFactsHash`, `inputManifestSummary`, and a compact
+     `frozenWorkflowSummary` through plan/report metadata and the warehouse reference
+     metadata if needed.
+   - Store under `scenario_snapshot.plan` so it is digest-covered.
+   - These fields are provenance only and must never affect oracle/reward/license.
 
-0. **Landing: Describe your site**
-   - Media-first CTA: "Describe your site".
-   - Secondary CTA: "See sample safety case".
-   - Explain in one sentence: upload examples, confirm the workflow, run deterministic eval.
+### Implementation Scope
 
-1. **Capture**
-   - Large upload zone for video/photos/PDF/SOPs/floor plans/unsafe examples.
-   - Local metadata cards with type, size, remove, source role.
-   - Text description and safety rules.
-   - Domain and expected embodiment stay visible but are not final until review.
-   - Primary action: "Analyze workflow".
-   - Manual fallback: "Map manually instead".
+Implement in small, reviewable diffs. Keep the existing deterministic shell intact.
 
-2. **Understanding**
-   - Honest processing screen, even when deterministic stubbed.
-   - Checklist: media received, site clues identified, candidate zones drafted,
-     task storyboard drafted, hazards/rules drafted, eval mapping prepared.
-   - Copy sets expectation: "You will confirm every assumption next."
-   - Include low-confidence/offline/manual states.
+1. Capture model and Capture UI.
+   - Add `src/captureManifest.ts` or equivalent pure module.
+   - Add `CaptureConsole` or equivalent component.
+   - Support upload/drop/file picker states, role assignment, remove, empty/error states.
+   - Capture text description, safety rules, domain, and expected embodiment.
+   - "Map manually instead" must work with zero AI/model spend.
 
-3. **Reflect Back & Align**
-   - The key screen.
+2. Workflow draft/freeze model.
+   - Add `src/workflowDraft.ts` or equivalent pure module.
+   - Types for site map, storyboard, terminal rules, provenance/confidence, draft,
+     frozen workflow, and frozen hash.
+   - Deterministic stub proposer: same capture manifest -> same draft.
+   - `freezeWorkflow` creates immutable/serializable approved snapshot.
+   - `frozenToPlanInput` must be a whitelist: domain enum, embodiment enum,
+     canonical task selection/order, and descriptive provenance only.
+
+3. Understanding screen.
+   - Add honest checklist microstate screen.
+   - Since Stage A has no model, label it clearly as a deterministic template draft.
+   - Include low-confidence/offline/manual path copy.
+
+4. Reflect/Align screen.
    - Editable source-linked summary:
-     - site map/grid: start, item, drop, obstacles, hazards, human-only zones,
+     - descriptive site map,
      - task storyboard,
-     - safety/terminal rules,
-     - expected finish/escalate/refuse situations.
-   - Each item has source chip, confidence, and state (`AI-proposed`, `edited`,
-     `confirmed`).
-   - Inline accept/edit/delete and keyboard-friendly editing.
-   - Primary action: "Approve workflow".
-   - Secondary: "Back to capture".
+     - finish/escalate/refuse safety rules,
+     - confirmed domain/embodiment.
+   - Provenance chips: `AI-proposed`, `Edited`, `Confirmed by you`, and source refs.
+   - Gate progression on explicit approval.
 
-4. **Workflow Illustration**
-   - Deterministic animated rollout of the symbolic plan: robot path, scan, move,
-     pick, drop, finish/escalate/refuse moment, captioned why.
-   - Optional richer illustration is clearly labeled as illustration, not proof.
-   - Primary action: "Freeze eval".
-   - This is the emotional alignment moment: "Does this match your dad's floor?"
+5. Workflow illustration.
+   - Deterministic SVG/CSS illustration of representative rollout.
+   - Caption why terminal action is finish/escalate/refuse.
+   - Label as illustration, not proof.
+   - Implement `prefers-reduced-motion` fallback/static stepper.
 
-5. **Freeze -> Preview -> Run**
-   - Existing preview becomes the frozen eval preview.
-   - Add a frozen banner: "Confirmed by you; scored by deterministic oracle."
-   - Once frozen, media/extraction can no longer silently mutate tasks.
-   - Primary action: "Run license eval".
+6. Plan/preview/results integration.
+   - Extend `App.tsx` state machine:
+     `landing -> capture -> understanding -> reflect -> illustrate -> preview -> results -> showcase`.
+   - Extend `buildEnvironmentPlan(req, frozen?)` backward-compatibly.
+   - Existing `preview` becomes frozen eval preview with a "Confirmed by you; scored by
+     deterministic oracle" banner.
+   - Results add safety-case provenance summary.
+   - Preserve triptych, FAR/FRR, reward-hacking trace, Signal Extractor, JSON export,
+     and Stage A evidence bridge.
 
-6. **Results = Safety Case**
-   - Existing report becomes the safety case.
-   - Add provenance summary: inputs declared, facts confirmed, eval frozen, oracle
-     scored, reference evidence persisted.
-   - Keep FAR/FRR, triptych, reward-hacking trace, and JSON export prominent.
+7. Evidence provenance.
+   - Extend warehouse reference metadata exact-field validation only as needed for:
+     `approvedFactsHash`, `inputManifestSummary`, `frozenWorkflowSummary`.
+   - Persist these under `scenario_snapshot.plan`.
+   - No schema changes, no migrations.
+   - Add tests showing these fields are digest-covered metadata and do not change
+     oracle/reward behavior.
 
-### Data And Trust Model
+8. Styling and quality.
+   - Use existing tokens and theme in `src/App.css`.
+   - Avoid decorative clutter; content-first, warm, precise, high-trust.
+   - Responsive, mobile-safe, keyboard/focus accessible, color-independent states.
 
-Claude must specify:
+### Required Tests
 
-- Client captures local file metadata only in Stage A: name, type, size, role. No
-  bytes read, no object URLs, no upload/storage.
-- AI/stub output is a draft, never trusted.
-- Human approval creates a frozen workflow snapshot.
-- Frozen workflow may select/reorder existing canonical tasks and carry descriptive
-  provenance, but cannot set labels/rewards/license.
-- Deterministic oracle/verifier remains the judge.
-- Evidence may carry provenance only after freeze; uploaded media is not proof.
+- Capture manifest stores metadata only; no `File` objects in frozen structures.
+- Draft proposer is deterministic.
+- Freeze hash is stable.
+- `frozenToPlanInput` cannot emit labels, rewards, raw battery, raw geometry, or
+  license fields.
+- `buildEnvironmentPlan(req, frozen)` uses BFS labels from the final tasks.
+- For the same embodiment and canonical task ids, frozen provenance does not alter
+  oracle labels.
+- Reference evidence metadata persists under `scenario_snapshot.plan` and remains
+  digest-valid.
+- Existing gates remain green.
 
-### Phased Implementation Plan To Produce
+### Explicit Deferrals
 
-Claude should produce a staged plan, not code:
-
-1. **Stage A, no/low spend**
-   - Real upload UX with local metadata only.
-   - Manual/assisted site mapping.
-   - Reflect-back alignment screen.
-   - Deterministic workflow animation.
-   - Existing eval unchanged except descriptive provenance.
-
-2. **Stage B, gated model spend**
-   - Vision/LLM extraction proposes drafts.
-   - Human approval still required.
-   - Manual fallback remains first-class.
-
-3. **Stage C, gated persistence**
-   - Store uploads, approved plan, and safety case.
-   - Tamper-evident evidence and no schema changes unless approved.
-
-### Deliverables For Claude
-
-Write to `.agentloop/claude.md`:
-
-1. UX narrative and annotated wireframe description for each step.
-2. Full screen/state machine extending `App.tsx`.
-3. Component inventory: new components and existing components to reuse/extend.
-4. Interaction and motion spec, including reduced-motion.
-5. Data and trust model with freeze boundary.
-6. Reuse map with file:line citations.
-7. Phased implementation plan with reviewable diffs.
-8. P0/P1/P2 risks and mitigations.
-9. Test plan to keep `npm run gates` green.
-
-### Explicit Avoids
-
-- No code yet.
-- No LLM/video model as judge.
+- No real video parsing/transcription.
+- No vision/LLM extraction.
+- No file upload/storage infrastructure.
 - No model/API spend.
-- No real upload/storage.
-- No InsForge schema changes.
-- No procedural grid-physics generation.
-- No secrets in client code.
+- No Nebius/Stage B warehouse policy.
+- No InsForge schema/migration.
+- No procedural scored grid generation.
+- No new UI test dependency unless explicitly approved later.
 
 ### Gates
 
-- Run `npm run gates` before writing the plan.
+- `npm run gates`
+
+### Publish
+
+After implementation, if gates are green and only in-scope files are staged, commit
+and push the branch directly per the publish policy. Report the commit SHA and branch.
 
 ### Report Back
 
-End with:
+Write implementation results to `.agentloop/claude.md` and end with:
 
 ```md
 ## Handoff To Codex
