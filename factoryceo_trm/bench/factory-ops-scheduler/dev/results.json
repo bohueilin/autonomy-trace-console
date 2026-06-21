@@ -10,18 +10,13 @@
       "attempts": [
         {
           "passed": false,
-          "feasible": true,
-          "hard_violations": 0,
-          "reward": -2700.0,
-          "oracle_reward": 34902.79,
-          "reward_ratio": -0.07735771266423114,
-          "quality_ok": false,
-          "errors": []
+          "feasible": false,
+          "error": "ValidationError: 7 validation errors for ActionPlan\nquote_decisions.0.accept\n  Field required [type=missing, input_value={'rfq_id': 'R17', 'decision': 'accept'}"
         },
         {
           "passed": false,
           "feasible": false,
-          "error": "ValidationError: 9 validation errors for ActionPlan\nquote_decisions.0.accept\n  Field required [type=missing, input_value={'rfq_id': 'R17', 'decisi... 'promised_"
+          "error": "ValueError: no JSON object in response"
         }
       ]
     }

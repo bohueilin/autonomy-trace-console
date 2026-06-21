@@ -58,6 +58,19 @@ feasible plan) tuple is a dense, checkable reasoning trace. Training on it impro
 schedules into feasible, economically sound ones. This is the FactoryCEO thesis
 (teacher + synthetic data + verified traces → small TRM that beats the LLM alone).
 
+## Design influence (tau-bench)
+The structure borrows from τ-bench's multi-stage recipe: (1) an LLM-generated
+domain DB (our seeded `FactoryState`), (2) an unstructured **policy doc**
+(`fixtures/policy.md`) the agent must read and apply — not just machine-readable
+fields, (3) a **user simulator** (`fixtures/user_sim.json`): a terse "CEO away for
+two weeks" who withholds the hidden constraints (M2 overheating, an absence, a rush
+order, late material) until the agent asks, enabling a multi-turn variant where
+failures are attributable to missed information-gathering, and (4) multi-model
+diversity — the fixture generator and the model runner can be pointed at several
+LLMs (GPT/Claude/Gemini via OpenRouter) to diversify both task instances and
+solver behavior. Unlike τ-bench's LLM-judged dialogue, our pass/fail stays a
+deterministic verifier, which keeps grading unambiguous.
+
 ## Time estimate
 ~3 hours end to end (engine reuse from FactoryCEO-TRM; new bench harness, fixture,
 oracle, verifier, model runner, and writeups).

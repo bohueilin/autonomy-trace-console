@@ -281,6 +281,8 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
   const W = 24 * 2 + cols * 150 + (cols - 1) * 22
   const H = 24 * 2 + rows * 96
   const svgRef = useRef<SVGSVGElement>(null)
+  const { data: fpData } = useJson('/factoryceo/floorplans/manifest.json')
+  const [fpIdx, setFpIdx] = useState(0)
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
   const [sel, setSel] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
@@ -325,6 +327,7 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
   }
 
   const dr = drag ? rect(drag) : null
+  const plan = (fpData?.plans ?? [])[fpIdx]
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
       <Label n="02">Live floor plan — calibrate toward a region/task (lasso)</Label>
@@ -333,6 +336,7 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
       </p>
       <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: W, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', userSelect: 'none' }}
         onPointerDown={down} onPointerMove={move} onPointerUp={up}>
+        {plan && <image href={plan.file} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" opacity={0.16} />}
         {machines.map((m) => {
           const b = pos[m.id], on = sel.includes(m.id)
           return (
@@ -350,8 +354,12 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
       </svg>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
         <button className="btn primary" onClick={optimize} disabled={busy || !sel.length}>{busy ? 'Optimizing…' : `▶ Optimize region (${sel.length})`}</button>
+        {(fpData?.plans ?? []).length > 1 && (
+          <button className="btn ghost" onClick={() => setFpIdx((i) => (i + 1) % (fpData?.plans?.length || 1))}>⟳ floor plan</button>
+        )}
         {sel.length > 0 && <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--muted)' }}>selected: {sel.join(', ')}</span>}
       </div>
+      {plan && <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--muted)', marginTop: 8 }}>backdrop: {fpData?.attribution}</div>}
       {err && <div style={{ marginTop: 10, color: 'var(--neg)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
     </div>
   )

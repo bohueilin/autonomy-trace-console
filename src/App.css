@@ -2668,3 +2668,12 @@ select.field-input {
     animation-duration: 0.001ms !important;
   }
 }
+
+/* ── stronger type: heavier headings + UI text (matches a bold grotesk feel) ── */
+h1, h2, h3, h4 { font-weight: 800; letter-spacing: -0.015em; }
+body { font-weight: 450; }
+.btn { font-weight: 700; }
+.section-title, .panel-kicker, .flow-kicker, .navlink, .mut-label, .chip-eyebrow { font-weight: 700; }
+.landing-headline { font-weight: 900; }
+.appbrand-name { font-weight: 900; }
+.landing-steps strong, .pilot-grid strong, .market-panel h2 { font-weight: 800; }

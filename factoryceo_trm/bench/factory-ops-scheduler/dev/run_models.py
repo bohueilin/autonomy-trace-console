@@ -70,7 +70,11 @@ def main() -> None:
 
     state = load_state()
     meta = json.loads((TASK / "fixtures" / "meta.json").read_text())
-    user = f"{meta['messy_prompt']}\n\nFactory state (JSON):\n{json.dumps(state.model_dump(mode='json'))}\n\nReturn the ActionPlan JSON."
+    policy_path = TASK / "fixtures" / "policy.md"
+    policy = policy_path.read_text() if policy_path.exists() else ""
+    user = (f"{meta['messy_prompt']}\n\nOperating policy (must follow):\n{policy}\n\n"
+            f"Factory state (JSON):\n{json.dumps(state.model_dump(mode='json'))}\n\n"
+            "Return the ActionPlan JSON.")
     call = _call_openrouter if args.provider == "openrouter" else _call_fireworks
     models = OPENROUTER_MODELS if args.provider == "openrouter" else FIREWORKS_MODELS
 

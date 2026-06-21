@@ -1,0 +1,12 @@
+{
+  "note": "Real CAD floor plans used as the lasso backdrop. Source: FloorPlanCAD via Hugging Face (Voxel51/FloorPlanCAD), licensed CC BY-SA 4.0 — attribution + share-alike required; keep the credit line visible. Downscaled to <=1000px.",
+  "source": "https://huggingface.co/datasets/Voxel51/FloorPlanCAD",
+  "license": "CC BY-SA 4.0",
+  "attribution": "FloorPlanCAD (Voxel51) — CC BY-SA 4.0",
+  "plans": [
+    { "id": "plan-1", "file": "/factoryceo/floorplans/floorplan-1.png" },
+    { "id": "plan-2", "file": "/factoryceo/floorplans/floorplan-2.png" },
+    { "id": "plan-3", "file": "/factoryceo/floorplans/floorplan-3.png" },
+    { "id": "plan-0", "file": "/factoryceo/floorplans/floorplan-0.png" }
+  ]
+}
