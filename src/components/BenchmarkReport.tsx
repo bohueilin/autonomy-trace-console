@@ -40,13 +40,21 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
         Verifier-gated planning for autonomous shop-floor operations.
       </h1>
       <p style={prose}>
-        We evaluate autonomous operations brains on multi-day manufacturing scheduling: a brain must
-        turn a messy floor into an executable plan that schedules every operation without violating a
-        single hard constraint — machine overlap, capability, operator availability, material arrival,
+        FactoryBench is built from our own procedurally-generated <strong>hard instances</strong> and
+        <strong> long-horizon builds</strong> (14–60 day floors with breakdowns, absences, and late
+        material). Each is an executable-plan task: schedule every operation without violating a single
+        hard constraint — machine overlap, capability, operator availability, material arrival,
         maintenance, or precedence — while maximizing a profit-and-safety objective. Plans are graded
-        by a <strong>deterministic verifier</strong>, not an LLM judge. A frontier LLM alone emits
-        infeasible or value-destroying plans; a recursive verify→repair loop, distilled into a
-        ~3K-parameter TRM, reaches zero violations on every horizon.
+        by a <strong>deterministic verifier</strong>, not an LLM judge. Frontier models (Claude, GPT)
+        can be run on the same instances; a frontier LLM alone emits infeasible or value-destroying
+        plans, while a recursive verify→repair loop, distilled into a ~3K-parameter TRM, reaches zero
+        violations on every horizon.
+      </p>
+      <p style={{ ...prose, color: 'var(--muted)', fontSize: 14 }}>
+        Framing follows the "LLM as robot brain" view (Butter-Bench, Andon Labs): the LLM is the
+        high-level <strong>orchestrator</strong>, paired with an <strong>executor</strong> for control.
+        FactoryBench measures the orchestrator's practical intelligence — and the verifier is what
+        closes the planning gap that orchestrator LLMs leave open.
       </p>
 
       {/* results */}
