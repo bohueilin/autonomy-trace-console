@@ -50,34 +50,23 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           </p>
         </div>
 
-        {/* Hero thesis: preview the OUTCOME — the license artifact the customer earns.
-            Non-interactive (decorative) so it never reads as a clickable control. */}
-        <aside className="hero-artifact" aria-hidden="true">
-          <div className="ha-card">
-            <span className="ha-ribbon">Sample license</span>
-            <div className="ha-seal">
-              <span className="ha-tier">L4</span>
-              <span className="ha-seal-sub">LICENSE</span>
-            </div>
-            <div className="ha-eyebrow">Autonomy License · readiness evidence pack</div>
-            <div className="ha-title">Limited Autonomy</div>
-            <div className="ha-meta">Issued for Manufacturing floor · Humanoid</div>
-            <div className="ha-op">
-              <span>FAR 0%</span>
-              <span>FRR 0%</span>
-              <span>Reward-hack 0.00</span>
-            </div>
-            <div className="ha-chain">
-              <span>Declared</span>
-              <span className="ha-arrow">→</span>
-              <span>Confirmed</span>
-              <span className="ha-arrow">→</span>
-              <span>Frozen</span>
-              <span className="ha-arrow">→</span>
-              <span className="ha-scored">Oracle-scored</span>
-            </div>
+        {/* Hero vision film — autoplaying muted loop, non-interactive (no controls,
+            no enlarge). pointer-events disabled in CSS so it reads as ambient media. */}
+        <aside className="hero-video" aria-hidden="true">
+          <div className="hv-frame">
+            <video
+              src="/vision-film.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              disablePictureInPicture
+              controls={false}
+            />
+            <span className="hv-tag">Vision film</span>
           </div>
-          <p className="ha-caption">What you earn at the end — issued for one specific site.</p>
+          <p className="hv-caption">Physical AI, working safely alongside people.</p>
         </aside>
       </div>
 
