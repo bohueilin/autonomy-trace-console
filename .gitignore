@@ -46,3 +46,9 @@ dist-ssr
 # agentloop transient logs
 .agentloop/loop.log
 .agentloop/gates.log
+
+factoryceo_trm/.env
+factoryceo_trm/.venv/
+factoryceo_trm/.venv-hud/
+factoryceo_trm/**/__pycache__/
+factoryceo_trm/distill/trm-student/

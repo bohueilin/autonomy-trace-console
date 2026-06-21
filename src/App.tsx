@@ -38,6 +38,7 @@ import { WorkflowIllustration } from './components/WorkflowIllustration'
 import { EnvironmentPreview } from './components/EnvironmentPreview'
 import { LicenseResults } from './components/LicenseResults'
 import { MatrixMini, TriptychCard } from './components/warehouseViz'
+import { FactoryCeoPanel } from './components/FactoryCeoPanel'
 import { actionTrace, pct } from './format'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
@@ -51,6 +52,7 @@ type View =
   | 'preview'
   | 'results'
   | 'showcase'
+  | 'factoryceo'
 
 function App() {
   // Product journey: landing -> capture -> understanding -> reflect -> illustrate -> preview -> results, with the
@@ -237,6 +239,12 @@ function App() {
           >
             Sample eval
           </button>
+          <button
+            className={`navlink ${view === 'factoryceo' ? 'on' : ''}`}
+            onClick={() => setView('factoryceo')}
+          >
+            FactoryCEO
+          </button>
           <button className="btn primary navlink-cta" onClick={() => setView('capture')}>
             Describe site
           </button>
@@ -289,6 +297,12 @@ function App() {
           onRestart={() => setView('capture')}
           onSample={() => setView('showcase')}
         />
+      )}
+
+      {view === 'factoryceo' && (
+        <div className="console" style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 20px' }}>
+          <FactoryCeoPanel />
+        </div>
       )}
 
       {view === 'showcase' && (
