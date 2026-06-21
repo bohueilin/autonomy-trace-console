@@ -635,10 +635,10 @@ export function FactoryCeoPanel({ initial, onRestart, onRun }: { initial?: Brain
 
   return (
     <div>
-      <div style={{ ...card, borderColor: 'var(--accent)', background: 'transparent' }}>
-        <Label n="—">FactoryCEO-TRM · brain decides → verifier gates → humanoid executes</Label>
-        <h2 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 500 }}>The CEO leaves for two weeks. The brain runs operations.</h2>
-        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6 }}>Messy context → compiled state → proposed plan → recursive TRM repair to a verified, safe solution → humanoid executes it. Any operational task plugs into the same loop.</p>
+      <div style={{ ...card, borderColor: 'var(--brand)', background: 'transparent' }}>
+        <Label n="—">Operations studio</Label>
+        <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600 }}>Plan → verify → repair → execute</h2>
+        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6 }}>The brain compiles your floor, proposes a plan, and a deterministic verifier with recursive TRM repair drives it to zero violations before the humanoid runs it.</p>
         {onRestart && <button className="btn ghost" style={{ marginTop: 14 }} onClick={onRestart}>↻ Describe a different site</button>}
       </div>
 

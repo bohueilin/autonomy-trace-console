@@ -43,7 +43,7 @@ function App() {
     <div className="console">
       <nav className="appnav">
         <button className="appbrand" onClick={() => setView('landing')} aria-label="FactoryCEO home">
-          <span className="appbrand-mark">AL</span>
+          <span className="appbrand-mark">FC</span>
           <span className="appbrand-text">
             <span className="appbrand-name">FactoryCEO</span>
             <span className="appbrand-sub">verifiable operations brain</span>
