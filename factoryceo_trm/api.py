@@ -458,6 +458,45 @@ def pipeline(req: PipelineReq):
     return out
 
 
+_LIBRARY_CACHE: dict = {}
+
+
+@app.get("/library")
+def library():
+    """Hosted floor library: pre-built manufacturing-floor archetypes, each already
+    verified (and trainable per-floor). A new user matches/picks one and gets a
+    0-violation plan with no input. Cached after first build."""
+    if _LIBRARY_CACHE.get("floors"):
+        return _LIBRARY_CACHE
+    from src.generator import load_seeds, amplify_seed
+    seeds = load_seeds()
+    label = {"automotive_clips_brackets": "Automotive clips & brackets",
+             "consumer_electronics_enclosures": "Electronics enclosures",
+             "medical_devices_eval": "Medical devices"}
+    floors = []
+    for i, s in enumerate(seeds):
+        try:
+            st = amplify_seed(s, variant=i + 1, horizon_days=30, n_jobs=16)
+            final, _ = repair_loop(st, greedy(st), K=120)
+            res = evaluate(st, final)
+            m = res.metrics
+            floors.append({
+                "id": s["id"], "label": label.get(s["id"], s["id"]),
+                "industry": s["id"], "split": s.get("split", "train"),
+                "machines": [mm.id for mm in st.machines], "n_jobs": len(st.jobs),
+                "metrics": {"reward": round(res.reward), "hard_violations": res.n_hard,
+                            "on_time": round(m["on_time_rate"], 3),
+                            "utilization": round(m["utilization"], 3)},
+                "trained": (CKPT_ROOT / _safe_id(s["id"])).exists(),
+                "verified": res.n_hard == 0,
+            })
+        except Exception:
+            continue
+    _LIBRARY_CACHE.update({"floors": floors, "count": len(floors),
+                           "note": "pre-built, verified floor archetypes; pick one to start with zero input"})
+    return _LIBRARY_CACHE
+
+
 @app.get("/eval_report")
 def eval_report():
     """Long-horizon manufacturing eval: run naive / greedy / TRM across the HUD

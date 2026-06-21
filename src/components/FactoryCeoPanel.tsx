@@ -66,6 +66,53 @@ export async function extractFrames(src: string, count = 2): Promise<string[]> {
   })
 }
 
+// Hosted floor library: pre-built, pre-verified archetype floors. A user opens one
+// and gets a 0-violation plan with zero input (the "no input required" path).
+function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
+  const { data } = useJson(`${BRAIN}/library`)
+  const floors: Json[] = data?.floors ?? []
+  const [busy, setBusy] = useState<string | null>(null)
+  if (!floors.length) return null
+  async function open(f: Json) {
+    setBusy(f.id)
+    try {
+      const r = await fetch(`${BRAIN}/plan_from_input`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: `${f.label} factory, ${f.n_jobs} jobs` }),
+      })
+      if (r.ok) onResult(await r.json())
+    } finally { setBusy(null) }
+  }
+  return (
+    <div style={{ ...card, borderColor: 'var(--brand)' }}>
+      <Label n="00">Pre-trained floor library — open one, zero input</Label>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        Hosted floor archetypes, already compiled and verified. Open one and the brain's plan is ready instantly — no description needed.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+        {floors.map((f) => (
+          <div key={f.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 16, background: 'var(--bg)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>{f.label}</span>
+              {f.verified && <span style={{ fontFamily: mono, fontSize: 10, color: 'var(--pos)' }}>✓ verified</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 14, marginBottom: 12, flexWrap: 'wrap' }}>
+              {[['reward', f.metrics?.reward?.toLocaleString()], ['violations', f.metrics?.hard_violations], ['on-time', `${Math.round((f.metrics?.on_time ?? 0) * 100)}%`]].map(([l, v]) => (
+                <div key={l as string}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: l === 'violations' ? 'var(--pos)' : 'var(--text)' }}>{v as any}</div>
+                  <div style={{ fontFamily: mono, fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase' }}>{l as string}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--muted)', marginBottom: 10 }}>{(f.machines ?? []).join(' · ')} · {f.n_jobs} jobs</div>
+            <button className="btn primary" style={{ width: '100%' }} disabled={busy === f.id} onClick={() => open(f)}>{busy === f.id ? 'Opening…' : 'Open floor'}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Stock manufacturing-task clips (CC, from Wikimedia Commons) for initial runs.
 // Picking one samples frames in-browser and hands {text, files} to the brain.
 export function StockGallery({ onPick, busyId }: { onPick: (clip: Json, input: BrainInput) => void; busyId?: string | null }) {
@@ -981,6 +1028,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
       {autoBusy && <div style={{ ...card, color: 'var(--accent)', fontFamily: mono, fontSize: 13 }}>▶ Brain compiling your captured input…</div>}
       {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
 
+      <FloorLibrary onResult={applyRun} />
       <StockGallery onPick={pickStock} busyId={pickBusy} />
       <FactoryInput onResult={applyRun} />
 
