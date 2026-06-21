@@ -42,3 +42,10 @@ dist-ssr
 .roo
 .trae
 .windsurf
+
+# FactoryCEO brain
+factoryceo_trm/.env
+factoryceo_trm/.venv/
+factoryceo_trm/.venv-hud/
+factoryceo_trm/**/__pycache__/
+factoryceo_trm/distill/trm-student/

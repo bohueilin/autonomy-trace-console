@@ -20,6 +20,7 @@ import { VerifierCard } from './components/VerifierCard'
 import { LicenseSummary } from './components/LicenseSummary'
 import { TraceViewer } from './components/TraceViewer'
 import { EvidencePanel } from './components/EvidencePanel'
+import { FactoryCeoPanel } from './components/FactoryCeoPanel'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
 
@@ -29,6 +30,7 @@ function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const [mode, setMode] = useState<AgentSource>('mock')
   const [running, setRunning] = useState(false)
+  const [view, setView] = useState<'gym' | 'factoryceo'>('gym')
 
   // Server-owned evidence state.
   const [persistenceStatus, setPersistenceStatus] = useState<PersistenceStatus>('idle')
@@ -172,6 +174,14 @@ function App() {
           <h1>Autonomy Trace Console</h1>
           <p className="tagline">Agents should earn autonomy before they exercise it.</p>
           <p className="future">warm-up for → Autonomy License Gym</p>
+          <div className="mode-toggle" role="group" aria-label="View" style={{ marginTop: 8 }}>
+            <button className={view === 'gym' ? 'on' : ''} aria-pressed={view === 'gym'} onClick={() => setView('gym')}>
+              Autonomy Gym
+            </button>
+            <button className={view === 'factoryceo' ? 'on' : ''} aria-pressed={view === 'factoryceo'} onClick={() => setView('factoryceo')}>
+              FactoryCEO
+            </button>
+          </div>
         </div>
 
         <div
@@ -255,6 +265,15 @@ function App() {
 
       {notice && <div className="notice">{notice}</div>}
 
+      {view === 'factoryceo' && (
+        <div className="layout">
+          <main className="main-col">
+            <FactoryCeoPanel />
+          </main>
+        </div>
+      )}
+
+      {view === 'gym' && (
       <div className="layout">
         <main className="main-col">
           <section className="episode-flow">
@@ -308,6 +327,7 @@ function App() {
           </div>
         </aside>
       </div>
+      )}
     </div>
   )
 }
