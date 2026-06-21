@@ -6,6 +6,18 @@ RL-environment / RSI hackathon project).
 
 > **Core thesis: agents should earn autonomy before they exercise it.**
 
+## YC submission note
+
+This repository (`bohueilin/autonomy-trace-console`) is the end-to-end working
+console for the project: deterministic verifier, license gate, server-owned
+evaluation path, model-under-test boundary, and evidence persistence.
+
+The latest public website and visual product narrative live in the companion
+repo [`bohueilin/physical-ai-demo-test`](https://github.com/bohueilin/physical-ai-demo-test)
+and are deployed at [`https://cortex-physical-ai.pages.dev/`](https://cortex-physical-ai.pages.dev/).
+Use this repository as the working evaluation system, and use the public Cortex
+site for the newest YC-facing web design and story.
+
 Every episode runs the same loop:
 
 ```
