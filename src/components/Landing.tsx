@@ -1,9 +1,9 @@
 // Landing — minimal. Hero + the decision triad + CTA + a 4-step flow. Nothing else.
 const FLOW = [
-  { n: '01', t: 'Capture the floor', d: 'Video, photos, a stock clip, or a few notes.' },
-  { n: '02', t: 'Brain plans, you approve', d: 'Verifier + recursive TRM repair to zero violations.' },
-  { n: '03', t: 'Baseline → train', d: 'See where an LLM alone fails; distil a per-task TRM.' },
-  { n: '04', t: 'Execute + license', d: 'Humanoid runs the verified plan; you get the evidence.' },
+  { n: '01', t: 'Open a floor', d: 'Pick a floor from the camera library — already compiled.' },
+  { n: '02', t: 'Verifier gates it', d: 'Recursive TRM repair drives it to zero hard violations.' },
+  { n: '03', t: 'See what it fixed', d: 'The exact constraints the raw plan broke, now resolved.' },
+  { n: '04', t: 'Humanoid runs it', d: 'The optimal, verified actions execute on the floor.' },
 ]
 
 export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample: () => void }) {
@@ -14,25 +14,18 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <span className="landing-eyebrow">FactoryCEO · verifiable operations brain</span>
           <h1 className="landing-headline">The CEO leaves for two weeks. The brain keeps the floor running, safely.</h1>
           <p className="landing-sub">
-            Turn a walkthrough into a verified operations plan: the brain proposes, a deterministic
-            verifier decides when each step may <strong>finish</strong>, must <strong>escalate</strong>,
-            or must <strong>refuse</strong>, and recursive repair drives it to zero violations before
-            anything executes.
+            Your floors are already streaming from the factory cameras. Open the library: the brain has
+            compiled each one, the deterministic verifier drove it to zero violations, and the optimal
+            actions are ready to run.
           </p>
-
-          <div className="decision-triad" role="img" aria-label="The licensed calls: finish, escalate, refuse">
-            <span className="dt-seg dt-finish">Finish</span>
-            <span className="dt-seg dt-escalate">Escalate</span>
-            <span className="dt-seg dt-refuse">Refuse</span>
-          </div>
 
           <div className="landing-cta">
             <button className="btn primary hero-action" onClick={onCreate}>
-              <span aria-hidden="true">↑</span> Describe your floor
+              <span aria-hidden="true">▦</span> Open the floor library
             </button>
-            <button className="btn ghost" onClick={onSample}>Start from a stock floor</button>
+            <button className="btn ghost" onClick={onSample}>Describe your own floor</button>
           </div>
-          <p className="landing-trust">AI proposes; the deterministic verifier judges. Frames are read locally; nothing is uploaded.</p>
+          <p className="landing-trust">AI proposes; the deterministic verifier judges. Every floor is pre-verified.</p>
         </div>
 
         <aside className="hero-video" aria-hidden="true">

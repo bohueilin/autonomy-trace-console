@@ -59,7 +59,10 @@ function App() {
       </nav>
 
       {view === 'landing' && (
-        <Landing onCreate={() => setView('capture')} onSample={() => setView('capture')} />
+        <Landing
+          onCreate={() => { setBrain(null); setView('studio') }}
+          onSample={() => setView('capture')}
+        />
       )}
 
       {view === 'capture' && (

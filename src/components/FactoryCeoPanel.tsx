@@ -1013,9 +1013,15 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
   const [autoErr, setAutoErr] = useState<string | null>(null)
   const [pickBusy, setPickBusy] = useState<string | null>(null)
   const [adv, setAdv] = useState(false)
+  const resultRef = useRef<HTMLDivElement>(null)
 
   // Set the live run and persist it to the current floor (profile store).
   function applyRun(j: Json | null) { setLive(j); if (j) onRun?.(j) }
+
+  // When a floor is opened/compiled, jump to the result so the change is obvious.
+  useEffect(() => {
+    if (live) setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+  }, [live])
 
   // Real backend call on the captured input (messy inputs / video frames).
   useEffect(() => {
@@ -1114,6 +1120,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
         </div>
       ) : (
         <>
+          <div ref={resultRef} />
           {/* compiled floor (concise) */}
           <div style={card}>
             <Label n="01">{isLive ? `Compiled floor · ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled floor'}</Label>
