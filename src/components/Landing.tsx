@@ -33,7 +33,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
               <span aria-hidden="true">↑</span> Upload workflow video
             </button>
             <button className="btn ghost" onClick={onSample}>
-              See sample safety case
+              See sample evaluation report
             </button>
           </div>
 
@@ -50,30 +50,34 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           </p>
         </div>
 
-        {/* Product-preview mockup: a media intake console the user can recognize instantly. */}
-        <aside className="landing-preview" aria-hidden="true">
-          <div className="lp-window">
-            <div className="lp-bar">
-              <span className="lp-dot" />
-              <span className="lp-dot" />
-              <span className="lp-dot" />
-              <span className="lp-title">Capture · workflow media</span>
+        {/* Hero thesis: preview the OUTCOME — the license artifact the customer earns.
+            Non-interactive (decorative) so it never reads as a clickable control. */}
+        <aside className="hero-artifact" aria-hidden="true">
+          <div className="ha-card">
+            <span className="ha-ribbon">Sample license</span>
+            <div className="ha-seal">
+              <span className="ha-tier">L4</span>
+              <span className="ha-seal-sub">LICENSE</span>
             </div>
-            <div className="lp-drop">
-              <div className="lp-orb">↑</div>
-              <div className="lp-drop-title">Upload workflow video</div>
-              <div className="lp-drop-sub">MP4 · MOV · WebM · images · PDF</div>
-              <div className="lp-btn">Select video or files</div>
-              <div className="lp-drive">
-                <span className="lp-link">▢ Paste Google Drive link</span>
-                <span className="lp-add">Add</span>
-              </div>
+            <div className="ha-eyebrow">Autonomy License · readiness evidence pack</div>
+            <div className="ha-title">Limited Autonomy</div>
+            <div className="ha-meta">Issued for Manufacturing floor · Humanoid</div>
+            <div className="ha-op">
+              <span>FAR 0%</span>
+              <span>FRR 0%</span>
+              <span>Reward-hack 0.00</span>
             </div>
-            <div className="lp-cards">
-              <span className="lp-file"><span className="lp-ic">▤</span> dad_floor.mp4 · video</span>
-              <span className="lp-file"><span className="lp-ic">▦</span> floor_plan.pdf · plan</span>
+            <div className="ha-chain">
+              <span>Declared</span>
+              <span className="ha-arrow">→</span>
+              <span>Confirmed</span>
+              <span className="ha-arrow">→</span>
+              <span>Frozen</span>
+              <span className="ha-arrow">→</span>
+              <span className="ha-scored">Oracle-scored</span>
             </div>
           </div>
+          <p className="ha-caption">What you earn at the end — issued for one specific site.</p>
         </aside>
       </div>
 
@@ -87,43 +91,65 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <li><span className="lb-step">4 · Safety case</span><p>FAR/FRR, reward-hack trace, evidence pack.</p></li>
       </ol>
 
-      <section className="media-showcase" aria-label="Physical AI media">
-        <article className="media-card brain-card">
-          <div className="media-frame">
-            <img src="/physical-ai-brain.png" alt="Physical AI humanoid brain concept" loading="lazy" />
+      <section className="brain-feature" aria-label="Build the Physical AI brain for this site">
+        <div className="bf-media">
+          <img src="/physical-ai-brain.png" alt="Physical AI humanoid brain concept" loading="lazy" />
+        </div>
+        <div className="bf-body">
+          <div className="panel-kicker">Build the Physical AI brain for this site</div>
+          <h2>A robot that’s safe in one workplace can be dangerous in yours.</h2>
+          <p>
+            Capture the real workplace and we shape the deployment context the robot must reason
+            about — the routes, the hazards, the people — before it ever moves near someone.
+          </p>
+          <ul className="bf-benefits">
+            <li>
+              <strong>Know before you deploy.</strong> See exactly which tasks a robot may finish,
+              must escalate, or must refuse on your floor.
+            </li>
+            <li>
+              <strong>Footage in, eval out.</strong> Turn a walkthrough video into a safety test in
+              minutes — no sensors, no instrumentation.
+            </li>
+            <li>
+              <strong>Catch the dangerous error first.</strong> Acting when it should stop is the
+              failure that hurts people; we measure it head-on.
+            </li>
+            <li>
+              <strong>Share proof, not promises.</strong> An auditable readiness report for safety,
+              ops, and insurers.
+            </li>
+          </ul>
+          <button className="btn primary hero-action" onClick={onCreate}>
+            Build your site eval →
+          </button>
+        </div>
+      </section>
+
+      <section className="footage-card" aria-label="Manufacturing reference footage">
+        <div className="phone-shell">
+          <div className="phone">
+            <span className="phone-notch" aria-hidden="true" />
+            <iframe
+              src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
+              title="Manufacturing reference footage"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
           </div>
-          <div className="media-body">
-            <div className="panel-kicker">Build the Physical AI brain for this site</div>
-            <p>
-              Capture the real workplace, and we shape the deployment context the robot must reason
-              about — before it ever moves near a person.
-            </p>
-          </div>
-        </article>
-        <article className="media-card video-card">
-          <div className="phone-shell">
-            <div className="phone">
-              <span className="phone-notch" aria-hidden="true" />
-              <iframe
-                src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
-                title="Manufacturing reference footage"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-                loading="lazy"
-              />
-            </div>
-          </div>
-          <div className="media-body">
-            <div className="panel-kicker">Manufacturing reference footage</div>
-            <p>
-              Placeholder reference footage — illustration only, not parsed evidence.{' '}
-              <a href="https://www.youtube.com/shorts/h4SQUglSsH4" target="_blank" rel="noreferrer">
-                Open the Short
-              </a>{' '}
-              if the embed is blocked.
-            </p>
-          </div>
-        </article>
+        </div>
+        <div className="footage-body">
+          <div className="panel-kicker">Manufacturing reference footage</div>
+          <p>
+            The kind of real-world footage you’d bring in. Placeholder reference only — illustration,
+            not parsed evidence.{' '}
+            <a href="https://www.youtube.com/shorts/h4SQUglSsH4" target="_blank" rel="noreferrer">
+              Open the Short
+            </a>{' '}
+            if the embed is blocked.
+          </p>
+        </div>
       </section>
 
       <ol className="landing-steps" aria-label="Workflow stages">

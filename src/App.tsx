@@ -3,7 +3,7 @@ import './App.css'
 import { decide, toMockView } from './agent'
 import { fetchEvidenceStatus } from './serverEpisodeClient'
 import { buildGymTrace, gymLicenseToState, runReferenceGymEpisode } from './gymClient'
-import { computeLicense } from './license'
+import { computeLicense, computeLicenseFromVerdicts, LICENSE_LEVELS } from './license'
 import { seedScenarios, trainScenarios } from './seedScenarios'
 import { verify } from './verifier'
 import { WAREHOUSE_TOOLS, buildWarehouseDemo, buildWarehouseDemoForTasks } from './warehouse'
@@ -106,6 +106,19 @@ function App() {
   const traceLicense = useMemo(() => computeLicense(traces), [traces])
   const warehouseDemo = useMemo(() => buildWarehouseDemo(), [])
   const oracleBaseline = warehouseDemo.baselines.find((b) => b.name === 'calibrated oracle')!
+  // The readiness level the SAMPLE'S calibrated oracle earns (so the ladder marks the
+  // level this worked example reaches, not the live console's pre-run L0).
+  const sampleLevel = useMemo(
+    () =>
+      computeLicenseFromVerdicts(
+        oracleBaseline.rollouts.map((r) => ({
+          passed: r.passed,
+          reward: r.reward,
+          catastrophic: r.category === 'unsafe_zone' || r.falseAccept,
+        })),
+      ),
+    [oracleBaseline],
+  )
   const license = gymLicense ?? traceLicense
   const active = traces.length > 0 ? traces[traces.length - 1] : null
 
@@ -236,7 +249,7 @@ function App() {
             className={`navlink ${view === 'showcase' ? 'on' : ''}`}
             onClick={() => setView('showcase')}
           >
-            Sample eval
+            Sample report
           </button>
           <button className="btn primary navlink-cta" onClick={() => setView('capture')}>
             Upload workflow video
@@ -296,11 +309,68 @@ function App() {
 
       {view === 'showcase' && (
         <>
+          <section className="showcase-intro">
+            <div className="si-head">
+              <span className="panel-kicker">Sample evaluation report</span>
+              <h1>How a robot earns each readiness level</h1>
+              <p>
+                A worked example. The deterministic oracle scores an agent’s{' '}
+                <strong>finish / escalate / refuse</strong> calls on a symbolic warehouse, then the
+                FAR/FRR calibration decides which readiness level it has earned. This is the shape of
+                the report a customer gets for their own site.
+              </p>
+            </div>
+
+            <ol className="readiness-ladder" aria-label="Readiness levels">
+              {Object.values(LICENSE_LEVELS).map((lvl) => (
+                <li
+                  key={lvl.id}
+                  className={`rl-step ${lvl.id === sampleLevel.level.id ? 'rl-here' : ''}`}
+                  style={lvl.id === sampleLevel.level.id ? { borderColor: lvl.color } : undefined}
+                >
+                  <span className="rl-badge" style={{ background: lvl.color }}>
+                    {lvl.id}
+                  </span>
+                  <span className="rl-text">
+                    <strong>{lvl.name}</strong>
+                    <span>{lvl.permission}</span>
+                  </span>
+                  {lvl.id === sampleLevel.level.id && <span className="rl-tag">sample earns this</span>}
+                </li>
+              ))}
+            </ol>
+
+            <div className="si-legend" aria-label="What you are looking at">
+              <div>
+                <strong>Triptych</strong>
+                <span>
+                  Three agent archetypes: capable-but-reckless fails (false-accept),
+                  cautious-but-useless fails (false-reject), calibrated passes.
+                </span>
+              </div>
+              <div>
+                <strong>FAR / FRR</strong>
+                <span>
+                  The headline safety metric. FAR = acted when it should have refused/escalated (the
+                  dangerous error). FRR = refused a doable task.
+                </span>
+              </div>
+              <div>
+                <strong>Reward-hacking trace</strong>
+                <span>A faked finish scores 0 — shaping can never rescue a wrong outcome.</span>
+              </div>
+              <div>
+                <strong>Signal Extractor</strong>
+                <span>Every rollout becomes training data: failure tags, preference pairs, reward rows.</span>
+              </div>
+            </div>
+          </section>
+
           <header className="topbar">
         <div className="brand">
-          <h1>Autonomy License — sample warehouse eval</h1>
-          <p className="tagline">Agents should earn autonomy before they exercise it.</p>
-          <p className="future">prebuilt Calibrated Autonomy Gym demo</p>
+          <h1>Sample warehouse evaluation</h1>
+          <p className="tagline">Run a live episode, or read the worked example below.</p>
+          <p className="future">deterministic Calibrated Autonomy Gym · no model spend</p>
         </div>
 
         <div

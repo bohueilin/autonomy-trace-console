@@ -3420,3 +3420,356 @@ select.field-input {
     gap: 10px;
   }
 }
+
+/* ============================================================ */
+/* WORLD-CLASS LANDING PASS: hero artifact, brain feature,      */
+/* footage card, sample-report intro + readiness ladder.        */
+/* ============================================================ */
+
+/* Hero right column previews the OUTCOME (license artifact). Non-interactive. */
+.hero-artifact {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.ha-card {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff, #f3f7ff);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--pos);
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  padding: 22px 22px 20px;
+}
+.ha-ribbon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 9px;
+}
+.ha-seal {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: var(--pos);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+}
+.ha-tier {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+.ha-seal-sub {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.ha-eyebrow {
+  margin-top: 14px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.ha-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--pos);
+  line-height: 1.1;
+}
+.ha-meta {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.ha-op {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.ha-op span {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 9px;
+}
+.ha-chain {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.ha-chain span {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-soft);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+.ha-chain .ha-arrow {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  padding: 0;
+}
+.ha-chain .ha-scored {
+  color: #fff;
+  background: var(--pos);
+  border-color: var(--pos);
+}
+.ha-caption {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Brain feature: a full-width, ~2x-presence section with benefit bullets. */
+.brain-feature {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 28px;
+  align-items: center;
+  margin: 48px 0 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.bf-media {
+  align-self: stretch;
+  min-height: 360px;
+  background: #0f172a;
+}
+.bf-media img {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  object-fit: cover;
+  display: block;
+}
+.bf-body {
+  padding: 28px 30px 30px;
+}
+.bf-body h2 {
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.bf-body > p {
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+.bf-benefits {
+  list-style: none;
+  margin: 18px 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bf-benefits li {
+  position: relative;
+  padding-left: 28px;
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.bf-benefits li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: rgba(15, 157, 110, 0.14);
+  color: var(--pos);
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bf-benefits strong {
+  color: var(--text);
+}
+@media (max-width: 860px) {
+  .brain-feature {
+    grid-template-columns: 1fr;
+  }
+  .bf-media,
+  .bf-media img {
+    min-height: 220px;
+  }
+}
+
+/* Manufacturing footage card (phone frame already styled). Font +2 here. */
+.footage-card {
+  margin: 22px 0 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  max-width: 560px;
+}
+.footage-card .phone-shell {
+  background: linear-gradient(180deg, #eef3fb, #ffffff);
+}
+.footage-body {
+  padding: 16px 20px 20px;
+}
+.footage-body .panel-kicker {
+  font-size: 13px;
+}
+.footage-body p {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.footage-body a {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+/* Sample evaluation report intro + readiness ladder. */
+.showcase-intro {
+  margin: 18px 0 8px;
+}
+.si-head h1 {
+  margin: 6px 0 0;
+  font-size: 34px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.si-head p {
+  margin: 12px 0 0;
+  max-width: 760px;
+  font-size: 15px;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+.readiness-ladder {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.rl-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.rl-step.rl-here {
+  border-width: 2px;
+  background: linear-gradient(180deg, #ffffff, #f3fbf7);
+}
+.rl-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: #fff;
+  font-weight: 900;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rl-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.rl-text strong {
+  font-size: 14px;
+}
+.rl-text span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.rl-tag {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pos);
+  background: rgba(15, 157, 110, 0.14);
+  border: 1px solid rgba(15, 157, 110, 0.32);
+  border-radius: 999px;
+  padding: 4px 9px;
+}
+.si-legend {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 22px 0 6px;
+}
+.si-legend div {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+.si-legend strong {
+  display: block;
+  font-size: 13px;
+}
+.si-legend span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+@media (max-width: 860px) {
+  .si-legend {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .si-legend {
+    grid-template-columns: 1fr;
+  }
+  .rl-tag {
+    display: none;
+  }
+}
