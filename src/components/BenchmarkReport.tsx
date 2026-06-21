@@ -17,6 +17,17 @@ function useGet(path: string) {
   return d
 }
 
+// Static artifact under public/ (precomputed; no brain needed). Returns null if absent.
+function useStaticJson(path: string) {
+  const [d, setD] = useState<Json | null>(null)
+  useEffect(() => {
+    let on = true
+    fetch(path).then((r) => (r.ok ? r.json() : null)).then((j) => { if (on) setD(j) }).catch(() => {})
+    return () => { on = false }
+  }, [path])
+  return d
+}
+
 const wrap: React.CSSProperties = { maxWidth: 880, margin: '0 auto', padding: '8px 20px 80px' }
 const h2: React.CSSProperties = { fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, letterSpacing: '-0.02em', margin: '40px 0 6px' }
 const kicker: React.CSSProperties = { fontFamily: mono, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--brand)' }
@@ -257,6 +268,60 @@ function RLChart() {
   )
 }
 
+// The HUD-hosted counterpart: an LLM dispatch policy trained on HUD boxes via
+// GRPO (TrainingClient), same env + reward as the tiny policy above. Reward is
+// banked profit / EDD-greedy (1.0 = greedy). Loads the precomputed run JSON.
+function HudRLChart() {
+  const d = useStaticJson('/factoryceo/hud_rl_curve.json')
+  if (!d) return null
+  const curve = (d.curve ?? []).filter((p: Json) => typeof p.reward === 'number')
+  if (!curve.length) return null
+  const steps = curve.map((p: Json) => p.step)
+  const maxStep = Math.max(1, ...steps)
+  const rewards = curve.map((p: Json) => p.reward)
+  const lo = Math.min(1.0, ...rewards) - 0.02, hi = Math.max(1.0, ...rewards) + 0.02
+  const W = 820, H = 230, padL = 56, padB = 28, padT = 14
+  const x = (s: number) => padL + (s / maxStep) * (W - padL - 14)
+  const y = (v: number) => padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB)
+  const path = curve.map((p: Json, i: number) => `${i ? 'L' : 'M'}${x(p.step).toFixed(1)} ${y(p.reward).toFixed(1)}`).join(' ')
+  const last = curve[curve.length - 1]
+  const lift = d.lift_vs_greedy_pct ?? 0
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+        Same decision, trained on HUD (GRPO over a gateway LLM)
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 12 }}>
+        {[lo, 1.0, hi].map((v, i) => { const yy = y(v); const isG = Math.abs(v - 1) < 1e-6
+          return <g key={i}><line x1={padL} y1={yy} x2={W - 14} y2={yy} stroke={isG ? 'var(--muted)' : 'var(--line)'} strokeWidth={isG ? 1.2 : 0.6} strokeDasharray={isG ? '5 4' : undefined} />
+            <text x={padL - 8} y={yy + 3} textAnchor="end" fontFamily={mono} fontSize={10} fill="var(--muted)">{v.toFixed(2)}</text>
+            {isG && <text x={W - 16} y={yy - 5} textAnchor="end" fontFamily={mono} fontSize={10} fill="var(--muted)">EDD-greedy 1.00</text>}</g> })}
+        <path d={path} fill="none" stroke="var(--brand)" strokeWidth={2.6} />
+        {curve.map((p: Json, i: number) => <circle key={i} cx={x(p.step)} cy={y(p.reward)} r={3} fill={p.trained ? 'var(--brand)' : 'var(--muted)'} />)}
+        <text x={x(last.step) - 6} y={y(last.reward) - 9} textAnchor="end" fontFamily={mono} fontSize={11} fill="var(--brand)">LLM policy {last.reward.toFixed(3)}</text>
+        <text x={padL} y={H - 8} fontFamily={mono} fontSize={10} fill="var(--muted)">step 0 (untrained fork)</text>
+        <text x={W - 14} y={H - 8} textAnchor="end" fontFamily={mono} fontSize={10} fill="var(--muted)">{maxStep} GRPO steps</text>
+      </svg>
+      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12 }}>
+        <Stat label="reward vs greedy" value={`${lift >= 0 ? '+' : ''}${lift}%`} good={lift >= 0} />
+        <Stat label="baseline → final" value={`${d.baseline_reward} → ${d.final_reward}`} />
+        <Stat label="checkpoints promoted" value={`${d.steps}`} />
+        <Stat label="trainable model" value="Qwen3.5-4B" />
+      </div>
+      <p style={{ ...prose, fontSize: 13, color: 'var(--muted)', margin: '10px 0 0' }}>
+        A forked <strong>Qwen3.5-4B</strong> trained with <code>hud.TrainingClient</code> (on-policy GRPO,
+        importance-sampling loss) on HUD's remote boxes — rollouts on the same <code>dispatch</code> env,
+        graded by the same verifier-profit reward, {d.steps} weight-promoting checkpoints landed.
+        <strong> Honest read:</strong> at this small budget the 4B plateaus at ~{d.final_reward} — just under
+        greedy, no lift. The env is a <em>real</em> HUD training target (the loop runs end-to-end), but
+        improving a 26-job ordering needs a bigger model / many more GRPO steps. The tiny analytic policy
+        above gets +32% in CPU-minutes with zero credits — far more sample-efficient on this narrow
+        decision. HUD's edge is the harness + leaderboard + the path to scale, not a toy-budget win.
+      </p>
+    </div>
+  )
+}
+
 function Stat({ label, value, good }: { label: string; value: string; good?: boolean }) {
   return (
     <div style={{ flex: '1 1 150px', minWidth: 130, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 10, background: 'var(--panel)' }}>
@@ -391,6 +456,7 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
         This is the figure the continual loop was missing: training <em>does</em> lift profit, on the
         decision the verifier doesn't already settle.
       </p>
+      <HudRLChart />
 
       {/* standard instances */}
       <div style={{ ...kicker, marginTop: 36 }}>05 · Grounding</div>
