@@ -31,6 +31,7 @@ import { LicenseSummary } from './components/LicenseSummary'
 import { TraceViewer } from './components/TraceViewer'
 import { EvidencePanel } from './components/EvidencePanel'
 import { Landing } from './components/Landing'
+import { FlowStepper } from './components/FlowStepper'
 import { CaptureConsole } from './components/CaptureConsole'
 import { UnderstandingProgress } from './components/UnderstandingProgress'
 import { ReflectAlign } from './components/ReflectAlign'
@@ -238,10 +239,12 @@ function App() {
             Sample eval
           </button>
           <button className="btn primary navlink-cta" onClick={() => setView('capture')}>
-            Describe site
+            Upload workflow video
           </button>
         </div>
       </nav>
+
+      <FlowStepper view={view} />
 
       {view === 'landing' && (
         <Landing onCreate={() => setView('capture')} onSample={() => setView('showcase')} />

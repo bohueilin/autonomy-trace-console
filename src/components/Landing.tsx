@@ -18,39 +18,77 @@ const WHY_US = [
 export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample: () => void }) {
   return (
     <section className="landing">
-      <div className="landing-hero">
-        <span className="landing-eyebrow">Autonomy License for Physical AI</span>
-        <h1 className="landing-headline">
-          Before a robot works beside someone you love, it should earn a license.
-        </h1>
-        <p className="landing-sub">
-          The training, evaluation, and certification layer for embodied robots in human spaces.
-          Upload workflow video, floor plans, SOPs, and forbidden examples. Confirm what the
-          system understood, then run a deterministic license eval that proves what a robot can safely <strong>finish</strong>, when it must{' '}
-          <strong>escalate</strong>, and when it has to <strong>refuse</strong> — then issue the
-          autonomy license it has earned for a specific environment.
-        </p>
-        <p className="landing-oneliner">The driving test for Physical AI.</p>
+      <div className="landing-top">
+        <div className="landing-hero">
+          <span className="landing-eyebrow">Autonomy License for Physical AI</span>
+          <h1 className="landing-headline">Turn factory footage into a robot safety eval.</h1>
+          <p className="landing-sub">
+            Upload workflow video, floor plans, SOPs, and forbidden examples. Confirm what the
+            system understood, then run a deterministic eval that proves what a robot can safely{' '}
+            <strong>finish</strong>, when it must <strong>escalate</strong>, and when it has to{' '}
+            <strong>refuse</strong> — and earn the autonomy license for that specific site.
+          </p>
 
-        <div className="landing-domains">
-          {DOMAINS.map((d) => (
-            <span key={d} className="landing-domain-chip">
-              {d}
-            </span>
-          ))}
+          <div className="landing-cta">
+            <button className="btn primary hero-action" onClick={onCreate}>
+              <span aria-hidden="true">↑</span> Upload workflow video
+            </button>
+            <button className="btn ghost" onClick={onSample}>
+              See sample safety case
+            </button>
+          </div>
+
+          <div className="landing-domains">
+            {DOMAINS.map((d) => (
+              <span key={d} className="landing-domain-chip">
+                {d}
+              </span>
+            ))}
+          </div>
+          <p className="landing-trust">
+            Deterministic oracle decides finish / escalate / refuse — never an LLM. Demo captures
+            local metadata only; nothing is uploaded or parsed.
+          </p>
         </div>
 
-        <div className="landing-cta">
-          <button className="btn primary" onClick={onCreate}>
-            <span aria-hidden="true">＋</span> Describe your site
-          </button>
-          <button className="btn ghost" onClick={onSample}>
-            See sample safety case
-          </button>
-        </div>
+        {/* Product-preview mockup: a media intake console the user can recognize instantly. */}
+        <aside className="landing-preview" aria-hidden="true">
+          <div className="lp-window">
+            <div className="lp-bar">
+              <span className="lp-dot" />
+              <span className="lp-dot" />
+              <span className="lp-dot" />
+              <span className="lp-title">Capture · workflow media</span>
+            </div>
+            <div className="lp-drop">
+              <div className="lp-orb">↑</div>
+              <div className="lp-drop-title">Upload workflow video</div>
+              <div className="lp-drop-sub">MP4 · MOV · WebM · images · PDF</div>
+              <div className="lp-btn">Select video or files</div>
+              <div className="lp-drive">
+                <span className="lp-link">▢ Paste Google Drive link</span>
+                <span className="lp-add">Add</span>
+              </div>
+            </div>
+            <div className="lp-cards">
+              <span className="lp-file"><span className="lp-ic">▤</span> dad_floor.mp4 · video</span>
+              <span className="lp-file"><span className="lp-ic">▦</span> floor_plan.pdf · plan</span>
+            </div>
+          </div>
+        </aside>
       </div>
 
-      <ol className="landing-steps" aria-label="How it works">
+      <ol className="landing-bento" aria-label="How it works">
+        <li><span className="lb-step">1 · Media intake</span><p>Video, photos, floor plan, SOPs, Drive links.</p></li>
+        <li className="lb-arrow" aria-hidden="true">→</li>
+        <li><span className="lb-step">2 · Understood workflow</span><p>Site map, storyboard, finish/escalate/refuse rules you approve.</p></li>
+        <li className="lb-arrow" aria-hidden="true">→</li>
+        <li><span className="lb-step">3 · Deterministic oracle</span><p>BFS oracle + hard-gated reward score the agent.</p></li>
+        <li className="lb-arrow" aria-hidden="true">→</li>
+        <li><span className="lb-step">4 · Safety case</span><p>FAR/FRR, reward-hack trace, evidence pack.</p></li>
+      </ol>
+
+      <ol className="landing-steps" aria-label="Workflow stages">
         <li>
           <span className="ls-num">1</span>
           <div>
