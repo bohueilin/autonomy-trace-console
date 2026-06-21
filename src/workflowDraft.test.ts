@@ -38,6 +38,10 @@ describe('workflowDraft', () => {
     expect(input.domain).toBe('manufacturing')
     expect(input.selectedTaskIds?.length).toBeGreaterThan(0)
     expect(text).not.toMatch(/reward|license|battery|maxSteps|hazards|humanOnly|label/i)
+    // Trust boundary: descriptive deployment intent (robots) and the full site map
+    // must NOT cross into the plan lever payload.
+    expect(text).not.toMatch(/robots/i)
+    expect(text).not.toMatch(/siteMap/i)
   })
 
   it('keeps oracle labels derived from BFS over selected tasks', () => {

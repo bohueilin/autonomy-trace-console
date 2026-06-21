@@ -102,14 +102,17 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           </div>
         </article>
         <article className="media-card video-card">
-          <div className="video-frame">
-            <iframe
-              src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
-              title="Manufacturing reference footage"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
+          <div className="phone-shell">
+            <div className="phone">
+              <span className="phone-notch" aria-hidden="true" />
+              <iframe
+                src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
+                title="Manufacturing reference footage"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
           </div>
           <div className="media-body">
             <div className="panel-kicker">Manufacturing reference footage</div>

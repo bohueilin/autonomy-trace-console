@@ -232,6 +232,14 @@ export function CaptureConsole({
           </div>
         </div>
 
+        <div className="capture-guidance">
+          <span className="cg-badge" aria-hidden="true">TIP</span>
+          <div>
+            <strong>Good workflow footage shows</strong>
+            <p>start area, item, drop-off, hazards, human-only zones, and the robot path.</p>
+          </div>
+        </div>
+
         <div className="capture-items">
           {items.length === 0 ? (
             <div className="empty-upload">No inputs yet. You can still map the workflow manually.</div>
