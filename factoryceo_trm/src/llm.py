@@ -215,11 +215,13 @@ def chat_json(system: str, user: str, max_tokens: int = 4000) -> Optional[dict]:
     if key:
         try:
             body = json.dumps({
-                # intake needs a SERVERLESS model (Gemma-31B isn't); Qwen3.7 is
+                # intake needs a SERVERLESS model (Gemma-31B isn't); Qwen3.7 is.
+                # NOTE: do NOT set response_format=json_object — this reasoning model
+                # returns an empty {} under that mode. Ask for JSON in the prompt and
+                # pull it out of the prose with _extract_json instead.
                 "model": os.environ.get("FIREWORKS_CHAT_MODEL",
                                         "accounts/fireworks/models/qwen3p7-plus"),
                 "max_tokens": max_tokens, "temperature": 0.2,
-                "response_format": {"type": "json_object"},
                 "messages": [{"role": "system", "content": system},
                              {"role": "user", "content": user}],
             }).encode()
