@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   CAPTURE_ROLES,
   createCaptureManifest,
@@ -65,6 +65,11 @@ export function CaptureConsole({
   const [voiceFilled, setVoiceFilled] = useState(false)
   const [highlight, setHighlight] = useState(false)
   const fillTimer = useRef<number | null>(null)
+  // Clear the highlight timer on unmount so a fast Back/route change can't setState
+  // after the component is gone.
+  useEffect(() => () => {
+    if (fillTimer.current) window.clearTimeout(fillTimer.current)
+  }, [])
 
   const theme = getDomainTheme(domain)
   const profile = getEmbodimentProfile(embodiment)

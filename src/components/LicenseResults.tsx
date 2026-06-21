@@ -10,6 +10,7 @@ import { buildPhysicalAiLicenseReport } from '../licenseReport'
 import { persistWarehouseReference } from '../serverEpisodeClient'
 import type { FrozenWorkflow } from '../workflowDraft'
 import { MatrixMini, TriptychCard } from './warehouseViz'
+import { TrustChain } from './TrustChain'
 import { actionTrace, pct } from '../format'
 
 function toVerdicts(rollouts: readonly WarehouseRollout[]): LicenseVerdict[] {
@@ -161,6 +162,14 @@ export function LicenseResults({
         </div>
       </div>
 
+      <div className="agent-under-test" role="note">
+        <span className="aut-badge">Agent under test</span>
+        <p>
+          Integration pending — the reference oracle is shown as the bar to clear, not a robot’s
+          actual score. A model-under-test plugs in here and re-certifies on every change.
+        </p>
+      </div>
+
       <div className="results-summary">
         <div className="results-license" style={{ borderColor: license.level.color }}>
           <span className="chip-badge" style={{ background: license.level.color }}>
@@ -205,6 +214,8 @@ export function LicenseResults({
           </ul>
         </div>
       </div>
+
+      <TrustChain compact />
 
       <div className="report-strip">
         <div className="report-card">
@@ -357,11 +368,11 @@ export function LicenseResults({
             <span>{demo.signal.preferencePairs.length}</span>
             <span>preference pairs</span>
             <span>{demo.signal.rewardViews.length}</span>
-            <span>GRPO/RFT reward rows</span>
+            <span>reward rows</span>
           </div>
           <p className="signal-note">
-            {demo.signal.failureTags[0]?.tags.join(', ') ?? 'no failures'} {'->'}{' '}
-            {demo.signal.preferencePairs[0]?.reason ?? 'oracle replay clean'}
+            A training starter set for the next RL pass — failure-derived rows and preference pairs.
+            Not used to train anything here.
           </p>
         </div>
 

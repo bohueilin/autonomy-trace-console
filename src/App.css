@@ -4137,3 +4137,130 @@ select.field-input {
   text-decoration-style: dotted;
   cursor: help;
 }
+
+/* ---------- Trust chain (how the verdict is earned) ---------- */
+.trust-chain {
+  margin: 28px 0;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  box-shadow: var(--shadow-sm);
+}
+.trust-chain .panel-kicker {
+  margin-bottom: 14px;
+}
+.tc-flow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.tc-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: #fff;
+}
+.tc-k {
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+.tc-d {
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.tc-you {
+  border-left-color: var(--accent);
+}
+.tc-ai {
+  border-left-color: #a855f7;
+}
+.tc-oracle {
+  border-left-color: #0ea371;
+}
+.tc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.tc-leg {
+  position: relative;
+  padding-left: 16px;
+}
+.tc-leg::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.tc-leg-ai::before {
+  background: #a855f7;
+}
+.tc-leg-you::before {
+  background: var(--accent);
+}
+.tc-leg-oracle::before {
+  background: #0ea371;
+}
+/* Compact variant for the live results page */
+.tc-compact {
+  margin: 18px 0;
+  padding: 16px 18px;
+}
+.tc-compact .tc-flow {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 6px;
+}
+.tc-compact .tc-node {
+  padding: 9px 11px;
+}
+.tc-compact .tc-k {
+  font-size: 0.82rem;
+}
+
+/* ---------- Agent-under-test banner (live results) ---------- */
+.agent-under-test {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--accent);
+  border-radius: 14px;
+  background: rgba(47, 109, 246, 0.05);
+}
+.agent-under-test .aut-badge {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.agent-under-test p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--text);
+}

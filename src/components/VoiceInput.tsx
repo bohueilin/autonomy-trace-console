@@ -71,7 +71,8 @@ export function VoiceInput({
       )}
 
       <p className="voice-note">
-        Your words pre-fill the form. AI proposes; you approve; the deterministic oracle still judges.
+        Your browser does the speech-to-text; the server receives text only. AI proposes; you
+        approve; the deterministic oracle still judges.
       </p>
     </div>
   )

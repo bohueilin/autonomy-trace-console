@@ -187,7 +187,9 @@ export async function handleVoiceStructure(body: unknown, cfg: MinimaxConfig): P
     return { ok: true, fields, model }
   } catch (err) {
     const aborted = (err as { name?: string } | undefined)?.name === 'AbortError'
-    console.error('[minimax] request failed:', aborted ? 'timeout' : err)
+    // Log a category only — never the raw error object, which sits on a secret-bearing
+    // request. (Fetch errors don't include headers, but this is belt-and-suspenders.)
+    console.error('[minimax] request failed:', aborted ? 'timeout' : 'network_error')
     return aborted
       ? { ok: false, code: 'timeout', error: 'The voice service took too long to respond.' }
       : { ok: false, code: 'unknown', error: 'Could not reach the voice service.' }

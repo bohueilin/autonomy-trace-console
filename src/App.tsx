@@ -39,6 +39,7 @@ import { WorkflowIllustration } from './components/WorkflowIllustration'
 import { EnvironmentPreview } from './components/EnvironmentPreview'
 import { LicenseResults } from './components/LicenseResults'
 import { MatrixMini, TriptychCard } from './components/warehouseViz'
+import { TrustChain } from './components/TrustChain'
 import { actionTrace, pct } from './format'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
@@ -390,6 +391,7 @@ function App() {
                 </div>
               </dl>
             </div>
+            <TrustChain />
           </section>
 
           <header className="topbar">

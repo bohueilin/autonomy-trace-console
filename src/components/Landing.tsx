@@ -36,8 +36,8 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
             Robots are moving into factories, hospitals, and homes faster than anyone can prove
             they’re safe. Upload how the work really happens, confirm what we understood, and run a
             deterministic eval that decides when a robot may <strong>finish</strong>, must{' '}
-            <strong>escalate</strong>, or must <strong>refuse</strong> — then issue the autonomy
-            license it earned for that exact site.
+            <strong>escalate</strong>, or must <strong>refuse</strong> — then issue the readiness
+            license it earned for that exact site, re-checked every time the agent learns.
           </p>
 
           {/* Signature device: the three calls we license. */}
@@ -56,8 +56,9 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
             </button>
           </div>
           <p className="landing-trust">
-            AI proposes; the deterministic oracle judges. Demo captures local metadata only —
-            nothing is uploaded or parsed.
+            An operational readiness gate — re-earned each time the agent learns, not a regulatory
+            certification. A deterministic oracle judges, never an LLM. Demo captures local metadata
+            only; nothing is uploaded or parsed.
           </p>
         </div>
 
@@ -163,8 +164,8 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
               must escalate, or must refuse on your floor.
             </li>
             <li>
-              <strong>Footage in, eval out.</strong> Turn a walkthrough video into a safety test in
-              minutes — no sensors, no instrumentation.
+              <strong>Footage in, eval out.</strong> Describe the site in your words or a quick
+              video — you confirm what we understood. (We don’t parse the footage yet.)
             </li>
             <li>
               <strong>Catch the dangerous error first.</strong> Acting when it should stop is the
@@ -250,7 +251,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           ))}
         </div>
         <div className="credibility">
-          <span>Aligned with the emerging AIUC-1 standard</span>
+          <span>Designed to map toward AIUC-1</span>
           <span>OWASP agentic-risk crosswalk</span>
           <span className="cred-pilot">In pilot — talk to us</span>
         </div>

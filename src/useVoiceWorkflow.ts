@@ -1,9 +1,8 @@
-// Voice intake controller: capture speech with the browser's SpeechRecognition,
-// then ask our server-side MiniMax proxy to structure the transcript into capture
-// fields. Degrades gracefully — if the browser can't transcribe we report
-// `unsupported`; if the server can't structure we still hand back the raw words so
-// the mic always does something useful. No audio leaves the device beyond the
-// browser's own recognition; the MiniMax key stays server-side.
+// Voice intake controller: the browser does speech-to-text; the server receives
+// TEXT ONLY; MiniMax only structures that text into capture fields. Degrades
+// gracefully — if the browser can't transcribe we report `unsupported`; if the
+// server can't structure we still hand back the raw words so the mic always does
+// something useful. The MiniMax key stays server-side; no audio is uploaded by us.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -180,11 +179,20 @@ export function useVoiceWorkflow(onFields: (fields: VoiceFields, opts: { fallbac
   }, [state, clearTimers, finalize, stop])
 
   const reset = useCallback(() => {
+    clearTimers()
+    try {
+      recRef.current?.abort()
+    } catch {
+      /* noop */
+    }
+    recRef.current = null
+    finalizedRef.current = false
+    transcriptRef.current = ''
     setState('idle')
     setTranscript('')
     setError(null)
     setSeconds(0)
-  }, [])
+  }, [clearTimers])
 
   useEffect(() => {
     return () => {

@@ -702,3 +702,223 @@ Gates:
 Preview URL tested:
 Questions:
 ```
+
+## Codex Read-Only Review — Voice Intake + Clarity Layer
+
+Reviewed HEAD: `88fbd41` on `codex/physical-ai-license` after `git pull --ff-only`.
+
+Scope reviewed: landing rebuild, MiniMax voice intake, plain-English clarity layer,
+FAR/FRR honesty fix, server boot/import fix, and Claude's latest handoff.
+
+Verification:
+
+- `npm run gates` green: build, lint, `verify:evidence` 40 checks, 133 tests across 17 files.
+- Brief server boot on `PORT=8899` succeeded after sandbox port approval, then was stopped. This confirms the current Node-native `.ts` runtime import graph boots.
+- No live MiniMax, Nebius, or other model spend was triggered.
+
+### Findings
+
+P0: none found.
+
+P1 — sanitize the MiniMax catch log before production demo. `server/minimaxHandler.ts:188-193`
+returns a generic client error and does not echo the key, which is good. The only
+remaining hardening is `console.error('[minimax] request failed:', ... err)`: raw fetch
+errors normally do not include request headers, but logging arbitrary error objects is
+unnecessary risk around a secret-bearing request. Log only `timeout` vs `network_error`
+and maybe `err.name`, never the object.
+
+P1 — clean up the Capture voice highlight timer on unmount. `src/components/CaptureConsole.tsx:67`
+and `src/components/CaptureConsole.tsx:96-110` set a delayed `setHighlight(false)` after
+voice fill. There is no unmount cleanup, so a fast Back/route transition can leave a
+state update after unmount. Small fix: import `useEffect` and clear `fillTimer.current`
+in cleanup.
+
+P1 — add route-level tests for `/api/voice/structure`. `server/minimaxHandler.test.ts:35-43`
+covers missing-key and bad-transcript behavior at the handler level, but `server/app.test.ts`
+has no voice route coverage. Add a server route test that a missing MiniMax key returns
+the expected non-2xx status/body and never includes config details or `apiKey`. This keeps
+the trust-boundary claim locked to the public API, not only the helper.
+
+P2 — make `useVoiceWorkflow.reset()` a full reset. `src/useVoiceWorkflow.ts:182-187`
+only resets React state. In normal UI it appears after success, so this is not currently
+dangerous, but a robust reset should also clear timers, abort/stop any active recognition,
+clear `recRef`, and reset `finalizedRef`.
+
+P2 — tighten voice privacy copy. `src/useVoiceWorkflow.ts:1-6` says no audio leaves the
+device beyond the browser's own recognition. That is technically nuanced, but users may
+read it as "local speech recognition." Prefer UI/docs copy like: "Your browser handles
+speech recognition; the server receives text only; MiniMax only structures that text."
+
+P2 — reduce remaining product over-claims before judges see it. `src/components/Landing.tsx:34-40`
+still says "robot safety license" and "issue the autonomy license it earned"; the results
+page is more honest with "readiness evidence pack" and "not a regulatory certification"
+at `src/components/LicenseResults.tsx:129-160`. Bring the hero wording down to the same
+standard. Also soften `src/components/Landing.tsx:166-167` ("Footage in, eval out ...
+no sensors, no instrumentation") because Stage A declares media metadata and operator
+approval; it does not parse video yet. Finally, `src/components/Landing.tsx:252-255`
+claims AIUC-1 / OWASP alignment; keep it only if the report visibly maps to those terms,
+or reword as "designed to map toward..." for the demo.
+
+P2 — keep the native ESM import lesson codified. The current server value imports use
+`.ts` where needed, including `server/minimaxHandler.ts:15-20`, `server/app.ts:24-39`,
+and `server/main.ts:9-12`. Browser/test extensionless imports are fine under Vite/Vitest.
+The branch now boots; consider a future tiny CI check or keeping server boot in gates if
+this risk returns.
+
+### Trust Boundary Audit
+
+Held.
+
+- MiniMax key remains server-side: loaded only through `server/config.ts:77-80`, with
+`.env` / `.env.*` ignored and `.env.example` explicitly allowed in `.gitignore:13-18`.
+- Vite does not read secret env vars; it only has a non-secret backend proxy origin in
+`vite.config.ts:6-13` and proxies `/api`/`/v1` at `vite.config.ts:23-27`.
+- The browser calls only `/api/voice/structure` with a transcript at
+`src/useVoiceWorkflow.ts:83-91`.
+- The server voice route at `server/app.ts:395-400` delegates to MiniMax and returns typed
+JSON; it does not call the oracle, reward, license, or evidence persistence.
+- MiniMax output is clamped and enum-coerced in `server/minimaxHandler.ts:84-115`, then
+used only to pre-fill human-reviewed fields in `src/components/CaptureConsole.tsx:96-110`.
+- Capture builds normal requirement/manifest data at `src/components/CaptureConsole.tsx:73-93`;
+that data still flows through the existing deterministic plan/oracle path.
+
+### Product / YC Positioning
+
+The journey is coherent and demoable:
+
+`landing -> Capture/voice -> Understand -> Align -> Illustrate -> Freeze -> License + Sample report`.
+
+Strongest pieces:
+
+- The "AI proposes; you approve; deterministic oracle judges" line is repeated in the
+right places and is easy to explain live.
+- FAR/FRR language is now much more credible: the landing FAQ says no blanket accuracy
+claims, and results label the metrics as a reference-oracle operating point at
+`src/components/LicenseResults.tsx:137-140`.
+- The voice intake is a real user empathy win for the dad/factory story. It makes the
+product feel designed for non-technical operators, not only ML engineers.
+
+Remaining positioning risk:
+
+- The hero should sell "readiness evidence for a site" more than "license/certification"
+until the certification authority claim is legally/product-ready.
+- The Stage A video story should be explicit: media helps author the workflow; it is not
+parsed evidence yet. This honesty is not weakness; it makes the deterministic verifier
+feel more trustworthy.
+- Reduce acronyms on the first screen. FAR/FRR belongs after the user understands the
+problem; the hero should stay human: "Can this robot help my dad safely here?"
+
+### Ranked Next Tasks
+
+P0, 30-45 min, low risk:
+
+- Fix the two trust-hardening items: sanitize MiniMax error logging and add voice route
+tests that the key/config never leaks.
+- Clean up the capture highlight timer on unmount.
+- Re-run `npm run gates`.
+
+P1, 1-2 hours, medium-low risk:
+
+- Tighten landing/product claims to "readiness evidence pack" / "site readiness report"
+and soften "Footage in, eval out" to match the metadata-only Stage A truth.
+- Make voice privacy copy precise about browser speech recognition and transcript-only
+server handling.
+- Add one "What is real in this demo?" micro-panel near Capture or Results.
+
+P1, 2-4 hours, medium risk:
+
+- Add a small sample-report walkthrough mode that highlights the trust chain:
+input declared -> AI draft -> human approval -> frozen workflow -> oracle labels ->
+FAR/FRR -> evidence digest. This is high YC-demo value because it turns the architecture
+into a story judges can repeat.
+
+P2, 2-3 hours, low risk:
+
+- Make `useVoiceWorkflow.reset()` abort active recognition/timers and clear refs.
+- Add a tiny server-boot smoke script to CI/gates if runtime `.ts` import regressions
+keep appearing.
+- Audit all first-screen acronyms and replace with plain-English labels plus tooltips.
+
+### Non-Negotiables
+
+Confirmed held:
+
+- Determinism remains sacred.
+- The BFS oracle/verifier is still the source of truth.
+- No LLM/model is used as judge.
+- MiniMax voice is authoring-only and cannot set labels, rewards, or license outcomes.
+- Voice and multi-robot/site-map inputs are descriptive/authoring only in this stage.
+- Secrets stay server-side and `.env.local` remains untracked.
+- No live model spend was used during this review.
+
+### Top 3 Things To Change Before The Next Build
+
+1. Sanitize MiniMax logging, add `/api/voice/structure` route leak tests, and clean the
+   capture highlight timer. This closes the trust-boundary polish loop.
+2. Rewrite the hero and "Footage in, eval out" copy so the product is unmistakably a
+   readiness evidence pack today, not a regulatory certification or real video parser.
+3. Add a guided "trust chain" sample-report walkthrough so judges can understand the
+   full story in 30 seconds without reading architecture notes.
+
+## Codex Review Of Claude's 3-Scope Plan
+
+Status: approved with refinements.
+
+Claude's three groups are the right next build:
+
+1. Trust-hardening: accept.
+2. License framing and honest copy: accept, but tighten wording.
+3. Trust-chain walkthrough plus readiness-report shaping: accept, with scope guardrails.
+
+### Refinements For Claude Before Implementation
+
+1. Route leak tests should include a sentinel key path, not only the no-key path.
+   - The no-key route test is useful, but it cannot prove a configured key stays hidden.
+   - Add one mocked-fetch test with `MINIMAX_API_KEY` equivalent set to a sentinel string,
+     no real network/model call, and assert the response body does not include the sentinel,
+     `apiKey`, upstream body text, or config details.
+   - Keep the blank transcript `400` test.
+
+2. Keep "Autonomy License" as the product thesis, but avoid bare certification claims.
+   - Good: "Autonomy License is an operational readiness gate / readiness evidence pack."
+   - Good: "License level earned for this reference environment."
+   - Avoid: "certification report", "certified robot", or "certification level" unless the
+     sentence immediately says "not regulatory certification."
+   - Prefer "license level", "readiness tier", "readiness report", and "evidence pack."
+
+3. Be careful with "training dataset to close the gap."
+   - The Signal Extractor is a strong wedge, but it is not yet a full training dataset.
+   - Phrase it as "failure-derived training rows", "preference pairs", "reward rows", or
+     "training starter set for the next RL pass."
+   - Do not imply the app already trains the model or closes the gap automatically.
+
+4. Trust-chain walkthrough should be shared, compact, and non-invasive.
+   - `TrustChain.tsx` should be presentational only.
+   - Place it on both sample report and live results, but keep the live results version
+     compact so it does not bury the license tier, FAR/FRR, triptych, reward-hack trace,
+     Signal Extractor, or evidence bridge.
+   - No new state machine, no new API, no schema changes.
+
+5. The "agent under test" slot is valuable, but must stay honest.
+   - Copy should say: "Agent under test: integration pending; reference oracle shown."
+   - Do not fabricate model score, model version, timestamp, or improvement gap for a real
+     agent until Stage B exists.
+   - The reference oracle can be labeled as the bar/ceiling, not the robot's actual score.
+
+6. Keep implementation small and publish cleanly.
+   - Expected product-code files are fine: MiniMax handler/test, CaptureConsole,
+     useVoiceWorkflow, VoiceInput, Landing, LicenseResults/App/CSS as needed, and new
+     `TrustChain.tsx`.
+   - Run `npm run gates` before and after.
+   - Fresh browser verification should include landing, capture/voice copy, sample report,
+     live results, desktop, mobile, and console errors.
+   - If committing/pushing, stage only in-scope implementation files and the intended
+     `.agentloop/claude.md` report; avoid accidentally staging unrelated handoff edits.
+
+### Final Green Light
+
+Proceed with the build after applying the refinements above.
+
+The most important product judgment: keep the ambition of "Autonomy License" while making
+the trust boundary painfully clear. The demo should feel bold to YC and boringly honest to
+a safety buyer.

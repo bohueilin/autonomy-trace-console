@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.ts'
 import type { AppConfig } from './config.ts'
 
@@ -354,5 +354,57 @@ describe('createApp /v1/warehouse embodiment + reference (Stage A)', () => {
     expect(
       (await post('/v1/warehouse/reference-episodes', { taskId: 'wh-l1-01', runId: 'client-chosen' })).status,
     ).toBe(400)
+  })
+})
+
+describe('createApp /api/voice/structure (voice intake trust boundary)', () => {
+  it('no key configured -> 503 no_key and never leaks config', async () => {
+    const resp = await post('/api/voice/structure', { transcript: 'a robot for my dad’s factory' })
+    expect(resp.status).toBe(503)
+    const body = (await resp.json()) as { ok: boolean; code: string }
+    expect(body.ok).toBe(false)
+    expect(body.code).toBe('no_key')
+    expect(JSON.stringify(body)).not.toMatch(/apiKey/i)
+  })
+
+  it('blank transcript -> 400', async () => {
+    const resp = await post('/api/voice/structure', { transcript: ' ' })
+    expect(resp.status).toBe(400)
+  })
+
+  it('with a configured key, the response never echoes the key/config (mocked fetch)', async () => {
+    const SENTINEL = 'SENTINEL-MINIMAX-KEY-do-not-leak'
+    const mmBody = {
+      choices: [
+        {
+          message: {
+            content:
+              '{"outcome":"move totes safely","description":"carry to packing","safetyRules":["never enter operator-only cells"],"domain":"manufacturing","embodiment":"humanoid"}',
+          },
+        },
+      ],
+      base_resp: { status_code: 0 },
+    }
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => mmBody })))
+    try {
+      const keyedApp = createApp({
+        ...config,
+        minimax: { apiKey: SENTINEL, baseUrl: 'https://example.test/v1', model: 'test-model' },
+      })
+      const resp = await keyedApp.request('/api/voice/structure', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ transcript: 'um carry totes over to packing please' }),
+      })
+      expect(resp.status).toBe(200)
+      const body = (await resp.json()) as { ok: boolean; fields: { outcome: string } }
+      expect(body.ok).toBe(true)
+      expect(body.fields.outcome).toBe('move totes safely')
+      const text = JSON.stringify(body)
+      expect(text).not.toContain(SENTINEL)
+      expect(text).not.toMatch(/apiKey/i)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
