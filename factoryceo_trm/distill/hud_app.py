@@ -35,7 +35,8 @@ async def operate(seed: int = 0, horizon_days: int = 30, n_jobs: int = 14,
 
 
 @env.template(id="operate_floor")
-async def operate_floor(floor_id: str, seed: int = 0, reward_mode: str = "strict"):
+async def operate_floor(floor_id: str = "staer_crossdock", seed: int = 0,
+                        reward_mode: str = "strict", teacher_answer: str = ""):
     """Staer/RAFS/SOAR-backed ShiftBench task for HUD training.
 
     The symbolic verifier still grades an ActionPlan, but the prompt includes the
@@ -43,5 +44,14 @@ async def operate_floor(floor_id: str, seed: int = 0, reward_mode: str = "strict
     summary so a trainable gateway model learns on the same context the UI shows.
     """
     prompt, state = floor_prompt_and_state(floor_id, seed)
+    if teacher_answer:
+        prompt += (
+            "\n\nJSON format hint from Claude teacher for this task:\n"
+            "The snippet below is only an output-format example. Do not explain it, "
+            "do not derive a schedule in prose, and do not include any text before "
+            "or after JSON. Your first response character must be {.\n"
+            f"{teacher_answer}\n\n"
+            "Now return one complete ActionPlan JSON object only."
+        )
     answer = yield prompt
     yield reward_for_mode(state, str(answer), reward_mode)

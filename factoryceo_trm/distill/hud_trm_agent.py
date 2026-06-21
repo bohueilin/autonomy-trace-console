@@ -24,6 +24,7 @@ from hud.agents.types import AgentStep
 
 from src.schemas import FactoryState
 from src.baselines import base_plan
+from src.hud_env import extract_json_object
 from src.repair_loop import repair_loop
 
 
@@ -95,8 +96,10 @@ def make_trm_agent(model: str = "claude"):
         async def get_response(self, state, *, system_prompt=None, citations_enabled=False):
             text = _prompt_text(state)
             tail = text.split("Canonical state:")[-1]
-            st = FactoryState.model_validate(
-                json.loads(tail[tail.find("{"): tail.rfind("}") + 1]))
+            raw_state = extract_json_object(tail)
+            if raw_state is None:
+                raise ValueError("Could not extract canonical FactoryState JSON from HUD prompt")
+            st = FactoryState.model_validate(raw_state)
             plan, _ = repair_loop(st, base_plan(st), K=60, op_selector=trm.pick_op)
             return AgentStep(source="agent", content=plan.model_dump_json(), done=True)
 

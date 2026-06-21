@@ -13,9 +13,11 @@ from .job_sources import build_job_stream
 from .library import ARCHETYPES, feasible_state
 
 JSON_SYSTEM_PROMPT = (
-    "You are a JSON-only planning API. Do not explain, do not show reasoning, "
-    "do not use markdown. Respond with exactly one JSON ActionPlan object: the "
-    "first character must be { and the last character must be }."
+    "You are a strict JSON-only planning API. Do not explain, do not show "
+    "reasoning, do not summarize the task, and do not use markdown. Keep any "
+    "reasoning internal. Respond with exactly one complete JSON ActionPlan "
+    "object: the first character must be { and the last character must be }. "
+    "If space is limited, schedule fewer rows but still return valid JSON."
 )
 
 

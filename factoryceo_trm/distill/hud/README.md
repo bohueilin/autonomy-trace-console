@@ -31,7 +31,7 @@ HUD_BASELINE_MODEL=gemma ./.venv-hud/bin/python distill/hud_run.py
 ```
 
 **Real HUD TrainingClient RL** (preferred — [HUD rl-training cookbook](https://github.com/hud-evals/hud-python/tree/main/cookbooks/rl-training)) —
-roll out golden floor tasks, `trainer.step()` promotes weights on the same model string:
+roll out golden floor tasks and promote weights on the trainable model string:
 
 ```bash
 HUD_TRAIN_MODEL=shiftbench-qwen36-27b \
@@ -44,9 +44,15 @@ HUD_TRAIN_MODEL=shiftbench-qwen36-27b \
 Measured rollouts only (no training):
 
 ```bash
+HUD_EVAL_MODEL=claude-opus-4-8 \
 ./.venv-hud/bin/python distill/hud_floor_eval.py \
-  --model shiftbench-qwen36-27b --max-floors 12 --group 6
+  --max-floors 12 --group 6 --max-tokens 12000
 ```
+
+Use `HUD_EVAL_MODEL=claude-opus-4-8` (or another stronger HUD gateway model)
+for the measured report when the trainable Qwen head violates JSON-only output
+or runs out of completion tokens. Keep `HUD_TRAIN_MODEL` separate for GRPO
+weight updates, because TrainingClient requires a trainable gateway model.
 
 Fireworks managed RL (`distill/hud_train_fireworks.py`) provisions B200 and is slow;
 use only if HUD TrainingClient is unavailable.

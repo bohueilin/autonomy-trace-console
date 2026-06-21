@@ -19,9 +19,16 @@ _MEASURED_PATH = Path(os.environ.get(
     str(Path(__file__).resolve().parents[1] / "results" / "floor_hud_runs.json"),
 ))
 
+_SECONDARY_MEASURED_PATH = Path(os.environ.get(
+    "FLOOR_HUD_RUNS_GPTOSS",
+    str(Path(__file__).resolve().parents[1] / "results" / "floor_hud_runs_gptoss.json"),
+))
+
 _TRAINING_EVIDENCE_PATHS = [
     Path(p) for p in os.environ.get("HUD_TRAINING_EVIDENCE", "").split(os.pathsep) if p
 ] or [
+    Path(__file__).resolve().parents[1] / "results" / "hud_gptoss20b_self_grpo.json",
+    Path(__file__).resolve().parents[1] / "results" / "hud_qwen_teacher_demo_bump.json",
     Path(__file__).resolve().parents[1] / "results" / "hud_floor_grpo_long.json",
     Path(__file__).resolve().parents[1] / "results" / "hud_floor_grpo_run.json",
     Path(__file__).resolve().parents[1] / "results" / "hud_floor_grpo_all.json",
@@ -48,59 +55,120 @@ def _measured_runs() -> dict:
 
 
 @lru_cache(maxsize=1)
-def _training_evidence() -> dict:
-    """Load the latest HUD TrainingClient before/after samples.
-
-    Training artifacts are global model evidence, not per-order labels. Attach
-    them only to floors included in the run so the UI can show real rollout text
-    without inventing model conversations.
-    """
-    status = {}
+def _secondary_measured_runs() -> dict:
+    """Load alternate measured HUD runs (e.g. GPT-OSS student below Gemma eval)."""
     try:
-        status = json.loads(_TRAINING_STATUS_PATH.read_text(encoding="utf-8"))
+        return json.loads(_SECONDARY_MEASURED_PATH.read_text(encoding="utf-8")).get("runs", {})
     except Exception:
-        status = {}
+        return {}
+
+
+def _model_aliases(model: str | None) -> set[str]:
+    if not model:
+        return set()
+    m = model.strip().lower()
+    aliases = {m, m.split("/")[-1]}
+    if "gpt-oss" in m:
+        aliases.update({"openai/gpt-oss-20b", "gpt-oss-20b", "gpt-oss"})
+    if "gemma" in m:
+        aliases.update({"gemma-4-31b-it", "gemma"})
+    if "qwen" in m:
+        aliases.update({"qwen", "qwen3"})
+    return aliases
+
+
+def _models_match(left: str | None, right: str | None) -> bool:
+    if not left or not right:
+        return False
+    la, ra = _model_aliases(left), _model_aliases(right)
+    return bool(la & ra)
+
+
+def _training_status() -> dict:
+    try:
+        return json.loads(_TRAINING_STATUS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _evidence_from_training_data(data: dict, *, status: dict) -> dict:
+    phases = data.get("phase_results") or []
+    if not phases:
+        return {}
+    first = phases[0]
+    last = phases[-1]
+    return {
+        "source_path": str(data.get("_source_path", "")),
+        "model": data.get("model"),
+        "teacher_demos": data.get("teacher_demos"),
+        "reward_mode_compared": data.get("reward_mode_compared") or last.get("phase"),
+        "baseline_reward": data.get("baseline_reward", last.get("baseline_reward")),
+        "final_reward": data.get("final_reward", last.get("final_reward")),
+        "lift": data.get("lift", last.get("lift")),
+        "phase_lifts": data.get("phase_lifts") or {p.get("phase"): p.get("lift") for p in phases},
+        "before_samples": first.get("baseline_samples", [])[:2],
+        "after_samples": last.get("final_samples", [])[:2],
+        "steps": [
+            {
+                "phase": p.get("phase"),
+                "baseline_reward": p.get("baseline_reward"),
+                "final_reward": p.get("final_reward"),
+                "lift": p.get("lift"),
+                "optim_steps": [
+                    s.get("optim_step") for s in p.get("steps", [])
+                    if s.get("optim_step") is not None
+                ],
+            }
+            for p in phases
+        ],
+        "latest_hud_job_id": status.get("latest_job_id"),
+        "latest_hud_job_url": status.get("latest_job_url"),
+        "hud_jobs_dashboard_url": status.get("dashboard_url"),
+        "task_coverage": status.get("task_coverage"),
+        "training_status": status.get("status"),
+    }
+
+
+@lru_cache(maxsize=1)
+def _training_evidence_by_model() -> dict[str, dict]:
+    """Return {model_name: {floor_id: evidence}} for all training artifacts."""
+    status = _training_status()
+    out: dict[str, dict] = {}
     for path in _TRAINING_EVIDENCE_PATHS:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             continue
-        phases = data.get("phase_results") or []
-        if not phases:
+        data = {**data, "_source_path": str(path)}
+        evidence = _evidence_from_training_data(data, status=status)
+        if not evidence:
             continue
-        first = phases[0]
-        last = phases[-1]
-        evidence = {
-            "source_path": str(path),
-            "model": data.get("model"),
-            "reward_mode_compared": data.get("reward_mode_compared") or last.get("phase"),
-            "baseline_reward": data.get("baseline_reward", last.get("baseline_reward")),
-            "final_reward": data.get("final_reward", last.get("final_reward")),
-            "lift": data.get("lift", last.get("lift")),
-            "phase_lifts": data.get("phase_lifts") or {p.get("phase"): p.get("lift") for p in phases},
-            "before_samples": first.get("baseline_samples", [])[:2],
-            "after_samples": last.get("final_samples", [])[:2],
-            "steps": [
-                {
-                    "phase": p.get("phase"),
-                    "baseline_reward": p.get("baseline_reward"),
-                    "final_reward": p.get("final_reward"),
-                    "lift": p.get("lift"),
-                    "optim_steps": [
-                        s.get("optim_step") for s in p.get("steps", [])
-                        if s.get("optim_step") is not None
-                    ],
-                }
-                for p in phases
-            ],
-            "latest_hud_job_id": status.get("latest_job_id"),
-            "latest_hud_job_url": status.get("latest_job_url"),
-            "hud_jobs_dashboard_url": status.get("dashboard_url"),
-            "task_coverage": status.get("task_coverage"),
-            "training_status": status.get("status"),
-        }
+        model = str(evidence.get("model") or path.stem)
         floors = data.get("floors") or []
-        return {fid: evidence for fid in floors} if floors else {"*": evidence}
+        floor_map = {fid: evidence for fid in floors} if floors else {"*": evidence}
+        out[model] = floor_map
+    return out
+
+
+def _training_evidence_for(*, model: str | None, floor_id: str | None) -> dict | None:
+    if not model:
+        return None
+    for ev_model, floor_map in _training_evidence_by_model().items():
+        if not _models_match(model, ev_model):
+            continue
+        if floor_id and floor_id in floor_map:
+            return floor_map[floor_id]
+        if "*" in floor_map:
+            return floor_map["*"]
+    return None
+
+
+@lru_cache(maxsize=1)
+def _training_evidence() -> dict:
+    """Backward-compatible flat map: first training artifact keyed by floor id."""
+    for floor_map in _training_evidence_by_model().values():
+        if floor_map:
+            return floor_map
     return {}
 
 
@@ -676,12 +744,28 @@ def build_job_stream(arch: dict, base: int) -> dict:
     families = sorted({j.family for j in jobs})
     coherence = _coherence_report(jobs, profile)
     due_times = [j.due_time for j in jobs]
-    measured_raw = _measured_runs().get(arch.get("id"))
+    floor_id = arch.get("id")
+    measured_raw = _measured_runs().get(floor_id)
     measured = dict(measured_raw) if isinstance(measured_raw, dict) else measured_raw
-    train_ev = _training_evidence().get(arch.get("id")) or _training_evidence().get("*")
-    if isinstance(measured, dict) and train_ev:
-        measured["training_evidence"] = train_ev
-    hud_rollout = {"provenance": "measured", "measured": measured} if measured else None
+    if isinstance(measured, dict):
+        train_ev = _training_evidence_for(model=measured.get("model"), floor_id=floor_id)
+        if train_ev:
+            measured["training_evidence"] = train_ev
+    student_rollouts: list[dict] = []
+    secondary_raw = _secondary_measured_runs().get(floor_id)
+    if isinstance(secondary_raw, dict):
+        secondary = dict(secondary_raw)
+        sec_ev = _training_evidence_for(model=secondary.get("model"), floor_id=floor_id)
+        if sec_ev:
+            secondary["training_evidence"] = sec_ev
+        student_rollouts.append(secondary)
+    hud_rollout = None
+    if measured or student_rollouts:
+        hud_rollout = {
+            "provenance": "measured",
+            **({"measured": measured} if measured else {}),
+            **({"student_rollouts": student_rollouts} if student_rollouts else {}),
+        }
     stream = {
         "source": source,
         "adapter": meta["label"],

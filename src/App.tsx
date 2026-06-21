@@ -36,12 +36,23 @@ function App() {
     setView('studio')
   }
 
-  function openSavedFloor(factoryId: string, floorId: string) {
+  async function openSavedFloor(factoryId: string, floorId: string) {
     fac.openFloor(factoryId, floorId)
     const f = fac.state.factories.find((x) => x.id === factoryId)
     const fl = f?.floors.find((x) => x.id === floorId)
     setBrain(fl?.brainInput ?? null)
     setCachedRun(fl?.run ?? null)
+    const summary = fl?.run?.intake?.summary
+    if (summary) {
+      try {
+        const catalog = await fetch('/factoryceo/library.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null)
+        const match = catalog?.floors?.find((row: Json) => row.label === summary)
+        if (match?.id) {
+          const latest = await fetch(`/factoryceo/library/${match.id}.json`, { cache: 'no-store' }).then((r) => r.ok ? r.json() : null)
+          if (latest) setCachedRun(latest)
+        }
+      } catch { /* keep saved run */ }
+    }
     setView('studio')
   }
 

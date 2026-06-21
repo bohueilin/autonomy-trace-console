@@ -1,0 +1,120 @@
+{
+  "kind": "hud_trainingclient_open_student",
+  "model": "openai/gpt-oss-20b",
+  "floors": [
+    "staer_crossdock"
+  ],
+  "generic_env": true,
+  "curriculum": false,
+  "phases": [
+    {
+      "mode": "format",
+      "steps": 2
+    }
+  ],
+  "group": 4,
+  "learning_rate": 1e-05,
+  "loss_fn": "importance_sampling",
+  "curriculum_jobs": 4,
+  "teacher_demos": null,
+  "dry_run": false,
+  "ok": true,
+  "reward_mode_compared": "format",
+  "baseline_reward": 0.5,
+  "final_reward": 0.4625,
+  "lift": -0.0375,
+  "lift_pct": -7.5,
+  "phase_lifts": {
+    "format": -0.0375
+  },
+  "phase_results": [
+    {
+      "phase": "format",
+      "baseline_reward": 0.5,
+      "final_reward": 0.4625,
+      "lift": -0.0375,
+      "steps": [
+        {
+          "phase": "format",
+          "step": 0,
+          "reward": 0.6,
+          "reward_std": 0.0,
+          "rewards": [
+            0.6,
+            0.6,
+            0.6,
+            0.6
+          ],
+          "runs": 4,
+          "tokens": 9924,
+          "rollout_s": 70.04,
+          "train_s": 0.0,
+          "loss": null,
+          "optim_step": null,
+          "skipped_optim": true
+        },
+        {
+          "phase": "format",
+          "step": 1,
+          "reward": 0.6,
+          "reward_std": 0.0,
+          "rewards": [
+            0.6,
+            0.6,
+            0.6,
+            0.6
+          ],
+          "runs": 4,
+          "tokens": 11220,
+          "rollout_s": 80.689,
+          "train_s": 0.0,
+          "loss": null,
+          "optim_step": null,
+          "skipped_optim": true
+        }
+      ],
+      "baseline_samples": [
+        {
+          "reward": 0.2,
+          "has_json": true,
+          "chars": 11449,
+          "snippet": "<|channel|>analysis<|message|>We need to produce an ActionPlan with fields: quote_decisions, procurement, schedule, quality, customer_messages, safety. Must be feasible, profitable, and safe. Let's analyze.\n\nWe have RFQ R17: need 10,000 units of ABS by day 6, target price $0.20/unit. Material ABS inventory 220kg. Need 10,000 units of ABS product. Need to know unit weight? Not given. Material kg per unit? Not provided. We have material_kg per job. For J101: material_kg 70.1 for quantity 4961 unit"
+        },
+        {
+          "reward": 0.6,
+          "has_json": true,
+          "chars": 1446,
+          "snippet": "{\"quote_decisions\":[{\"id\":\"R17\",\"decision\":\"refuse\",\"reason\":\"Target price below cost\"},{\"id\":\"R18\",\"decision\":\"refuse\",\"reason\":\"Target price below cost\"}],\"procurement\":[],\"schedule\":[{\"job_id\":\"J101\",\"op_id\":\"op0\",\"start\":0,\"end\":2,\"machine\":\"M3\",\"operator\":\"R1\"},{\"job_id\":\"J101\",\"op_id\":\"op1\",\"start\":2,\"end\":4,\"machine\":\"M4\",\"operator\":\"R1\"},{\"job_id\":\"J103\",\"op_id\":\"op0\",\"start\":4,\"end\":6,\"machine\":\"M1\",\"operator\":\"R1\"},{\"job_id\":\"J100\",\"op_id\":\"op0\",\"start\":6,\"end\":10,\"machine\":\"M1\",\"opera"
+        },
+        {
+          "reward": 0.6,
+          "has_json": true,
+          "chars": 4381,
+          "snippet": "{\"quote_decisions\":[{\"rfq_id\":\"R17\",\"status\":\"accepted\",\"price_per_unit\":0.2},{\"rfq_id\":\"R18\",\"status\":\"rejected\",\"reason\":\"price below cost\"}],\"procurement\":[{\"material\":\"ABS\",\"quantity_kg\":18.9,\"supplier\":\"DefaultSupplier\",\"lead_time_days\":2,\"cost_per_kg\":3.0}],\"schedule\":[{\"job_id\":\"J101\",\"operation_id\":\"op0\",\"machine\":\"R1\",\"start_day\":0,\"start_hour\":0,\"end_day\":0,\"end_hour\":2},{\"job_id\":\"J101\",\"operation_id\":\"op1\",\"machine\":\"R1\",\"start_day\":0,\"start_hour\":2,\"end_day\":0,\"end_hour\":4},{\"job_id"
+        }
+      ],
+      "final_samples": [
+        {
+          "reward": 0.6,
+          "has_json": true,
+          "chars": 1139,
+          "snippet": "{\"quote_decisions\":[{\"id\":\"R17\",\"decision\":\"reject\"},{\"id\":\"R18\",\"decision\":\"reject\"}],\"procurement\":[],\"schedule\":[{\"job_id\":\"J100\",\"operation_id\":\"op0\",\"start_time\":0,\"end_time\":4,\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"material\":\"PP\"},{\"job_id\":\"J100\",\"operation_id\":\"op1\",\"start_time\":4,\"end_time\":10,\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"material\":\"PP\"},{\"job_id\":\"J100\",\"operation_id\":\"op2\",\"start_time\":10,\"end_time\":12,\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"material\":\"PP\"},{\"job_id\":\"J101\",\"ope"
+        },
+        {
+          "reward": 0.6,
+          "has_json": true,
+          "chars": 1525,
+          "snippet": "{ \"quote_decisions\": [ { \"id\": \"R17\", \"decision\": \"reject\", \"reason\": \"Insufficient capacity to meet 10,000 units by day 6\" } ], \"procurement\": [], \"schedule\": [ { \"job_id\": \"J100\", \"op_id\": \"op0\", \"machine_id\": \"M1\", \"operator_id\": \"O3\", \"start\": 0, \"duration\": 4 }, { \"job_id\": \"J101\", \"op_id\": \"op0\", \"machine_id\": \"M3\", \"operator_id\": \"O2\", \"start\": 4, \"duration\": 2 }, { \"job_id\": \"J101\", \"op_id\": \"op1\", \"machine_id\": \"M2\", \"operator_id\": \"O1\", \"start\": 6, \"duration\": 2 }, { \"job_id\": \"J100\", "
+        },
+        {
+          "reward": 0.6,
+          "has_json": true,
+          "chars": 1329,
+          "snippet": "{\"quote_decisions\":[{\"id\":\"R17\",\"decision\":\"accept\",\"price_per_unit\":0.2},{\"id\":\"R18\",\"decision\":\"decline\"}],\"procurement\":[],\"schedule\":[{\"job_id\":\"J100\",\"operations\":[{\"id\":\"op0\",\"start\":0,\"duration\":240},{\"id\":\"op1\",\"start\":240,\"duration\":360},{\"id\":\"op2\",\"start\":720,\"duration\":120}],\"machine\":\"R1\",\"operator\":\"R1\"},{\"job_id\":\"J101\",\"operations\":[{\"id\":\"op0\",\"start\":840,\"duration\":120},{\"id\":\"op1\",\"start\":960,\"duration\":120}],\"machine\":\"R1\",\"operator\":\"R1\"},{\"job_id\":\"J102\",\"operations\":[{\"id\""
+        }
+      ]
+    }
+  ],
+  "elapsed_s": 302.913,
+  "note": "Lift is within the last reward mode; per-phase lifts in phase_lifts. TrainingClient promoted a checkpoint whenever a step had reward variance."
+}

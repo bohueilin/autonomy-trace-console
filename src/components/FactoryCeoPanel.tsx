@@ -31,7 +31,7 @@ function useJson(url: string) {
   const [data, setData] = useState<Json | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
-    fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then(setData).catch((e) => setErr(String(e)))
+    fetch(url, { cache: 'no-store' }).then((r) => (r.ok ? r.json() : Promise.reject(r.status))).then(setData).catch((e) => setErr(String(e)))
   }, [url])
   return { data, err }
 }
@@ -121,6 +121,13 @@ function TrainingBeforeAfter({ evidence }: { evidence?: Json | null }) {
   if (!before.length && !after.length) return null
   const lift = Number(evidence.lift ?? 0)
   const improved = lift > 0
+  const modelLabel = String(evidence.model ?? 'student model')
+  const samples = [...before, ...after]
+  const noJsonSamples = samples.filter((s) => s.has_json === false || Number(s.reward ?? 1) <= 0.05)
+  const jsonOnlyFailure = noJsonSamples.length > 0 && !improved
+  const teacherStudent = evidence.teacher_demos
+    ? `Claude teacher demos → ${modelLabel} student`
+    : `${modelLabel} self-GRPO`
   return (
     <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', marginBottom: 8 }}>
@@ -131,6 +138,7 @@ function TrainingBeforeAfter({ evidence }: { evidence?: Json | null }) {
         <Chip tone={improved ? 'var(--pos)' : 'var(--warn)'}>
           {lift >= 0 ? '+' : ''}{lift.toFixed(3)} lift
         </Chip>
+        <Chip tone="var(--brand)">{teacherStudent}</Chip>
       </div>
       {(evidence.latest_hud_job_url || evidence.hud_jobs_dashboard_url || evidence.task_coverage) && (
         <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, background: 'var(--bg)', marginBottom: 10, fontSize: 12, lineHeight: 1.5 }}>
@@ -149,9 +157,28 @@ function TrainingBeforeAfter({ evidence }: { evidence?: Json | null }) {
           )}
         </div>
       )}
+      {evidence.source_path && (
+        <div style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', marginBottom: 8 }}>
+          Evidence artifact: {String(evidence.source_path).split('/').slice(-2).join('/')}
+        </div>
+      )}
       <p style={{ margin: '0 0 10px', fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted)' }}>
         This is real HUD TrainingClient evidence from the saved rollout artifact. The optimizer reinforces higher-advantage samples, but the panel reports the observed reward movement directly; if lift is negative, the run did not improve that reward mode yet.
+        {evidence.teacher_demos ? ` In this run, the student prompt includes saved Claude teacher trajectories for the same floor task, then ${modelLabel} is updated by verifier reward.` : ` This is a self-GRPO run on ${modelLabel}: the same trainable model samples a group, the verifier scores each rollout, and GRPO updates when reward variance appears.`}
       </p>
+      {jsonOnlyFailure && (
+        <div style={{ border: '1px solid var(--warn)', borderRadius: 10, padding: 10, background: 'color-mix(in srgb, var(--warn) 8%, var(--bg))', marginBottom: 10, fontSize: 12.5, lineHeight: 1.5 }}>
+          <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--warn)', marginBottom: 6 }}>
+            Why this {modelLabel} run failed
+          </div>
+          <p style={{ margin: '0 0 8px', color: 'var(--text)' }}>
+            The run failed because the student produced a verbose reasoning trace instead of the strictly required JSON-only ActionPlan. The verifier expects a parseable object with <code style={{ fontFamily: mono }}>quote_decisions</code>, <code style={{ fontFamily: mono }}>procurement</code>, <code style={{ fontFamily: mono }}>schedule</code>, <code style={{ fontFamily: mono }}>quality</code>, <code style={{ fontFamily: mono }}>customer_messages</code>, and <code style={{ fontFamily: mono }}>safety</code>.
+          </p>
+          <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)' }}>
+            Evidence: {noJsonSamples.length}/{samples.length} shown samples were non-JSON or near-zero reward. First failing sample starts: “{String(noJsonSamples[0]?.snippet ?? '').slice(0, 120).replace(/\s+/g, ' ')}…”
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: 10 }}>
         <ModelRolloutMethodCard model={evidence.model} evidence={evidence} compact />
       </div>
@@ -184,10 +211,10 @@ const VERIFIER_CHECKS = [
 ]
 
 const MODEL_ROLLOUT_STEPS = [
-  ['Gateway model', 'Qwen trainable HUD model: shiftbench-qwen36-27b'],
+  ['Gateway model', 'HUD gateway model selected by HUD_EVAL_MODEL or HUD_TRAIN_MODEL'],
   ['Prompt/context', 'floor fixture, real job stream, canonical factory state, required job_id/operation_id targets, JSON-only ActionPlan schema'],
   ['Sampling group', 'HUD runs repeated sampled rollouts R01/R02/... on the same task so different candidate plans can be compared'],
-  ['Reward scoring', 'each Qwen candidate is scored by the same verifier reward mode: format, shaped, or strict'],
+  ['Reward scoring', 'each model candidate is scored by the same verifier reward mode: format, shaped, or strict'],
   ['GRPO advantage', 'reward minus group mean becomes the training signal: positive samples are reinforced, negative samples are discouraged'],
   ['Weight update', 'HUD TrainingClient runs forward_backward + optim_step, then promotes the checkpoint behind the same model string'],
   ['Evidence shown', 'before/after snippets and reward movement are real rollout artifacts; if lift is negative, the model did not improve yet'],
@@ -219,7 +246,7 @@ function ModelRolloutMethodCard({ model, evidence, compact = false }: { model?: 
     <div style={{ border: '1px solid var(--line)', borderRadius: 12, padding: compact ? 10 : 12, background: 'var(--panel)' }}>
       <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Model rollout used</div>
       <p style={{ margin: '0 0 10px', fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted)' }}>
-        This is how the Qwen model side works, before any verifier repair view. Qwen generates candidate plans, HUD records the rollout traces, the verifier scores those candidates, and GRPO uses the within-group advantage to update the trainable model.
+        This is how the model side works, before any verifier repair view. The selected HUD gateway model generates candidate plans, HUD records the rollout traces, the verifier scores those candidates, and GRPO uses the within-group advantage to update the trainable model when the selected model is trainable.
       </p>
       {(evidence?.latest_hud_job_url || evidence?.hud_jobs_dashboard_url) && (
         <div style={{ margin: '0 0 10px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -447,7 +474,7 @@ function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
     setBusy(f.id)
     try {
       // exact precomputed run for this floor
-      const s = await fetch(`/factoryceo/library/${f.id}.json`)
+      const s = await fetch(`/factoryceo/library/${f.id}.json`, { cache: 'no-store' })
       if (s.ok) { onResult(await s.json()); return }
       throw new Error(String(s.status))
     } catch {
@@ -734,7 +761,7 @@ function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false, annotat
       if (kind === 'added') return C.added
       return C.changed
     }
-    const queues = tasks.robot_queues ?? {}
+    const queues = executionQueues(tasks)
     const ids = stationIds
     const W = el.clientWidth || 640, H = height
     const scene = new THREE.Scene()
@@ -871,8 +898,18 @@ type QueueDiff = {
   label: string
 }
 
+function executionQueues(tasks: Json): Record<string, Json[]> {
+  const robotQueues = tasks.robot_queues ?? {}
+  if (Object.values(robotQueues).some((q) => Array.isArray(q) && q.length > 0)) return robotQueues
+  return tasks.all_queues ?? robotQueues
+}
+
+function queueOpCount(tasks: Json) {
+  return Object.values(executionQueues(tasks)).flat().length
+}
+
 function flattenRobotQueue(tasks: Json): QueueOp[] {
-  return Object.entries(tasks.robot_queues ?? {}).flatMap(([robot, q]) =>
+  return Object.entries(executionQueues(tasks)).flatMap(([robot, q]) =>
     (q as Json[]).map((t) => ({
       ...t,
       robot,
@@ -922,7 +959,7 @@ function computeQueueDiff(naive: Json, verified: Json): QueueDiff[] {
 
 function maxQueueHorizon(...taskSets: Json[]) {
   const ends = taskSets.flatMap((t) =>
-    Object.values(t.robot_queues ?? {}).flatMap((q) => (q as Json[]).map((op) => op.end_hr as number)))
+    Object.values(executionQueues(t)).flatMap((q) => (q as Json[]).map((op) => op.end_hr as number)))
   return Math.max(1, ...ends, 1)
 }
 
@@ -939,16 +976,22 @@ function stationDiffsAtTime(diffs: QueueDiff[], simHr: number, side: 'before' | 
 }
 
 function activeOpsAtTime(tasks: Json, simHr: number) {
-  return Object.entries(tasks.robot_queues ?? {}).flatMap(([robot, q]) =>
+  return Object.entries(executionQueues(tasks)).flatMap(([robot, q]) =>
     (q as Json[]).filter((t) => simHr >= t.start_hr && simHr < t.end_hr).map((t) => ({ ...t, robot })))
 }
 
 // Tagged shift replay — synced timeline, pause/scrub, diff highlights.
-function ShiftSimulation({ naive, verified, naiveHard, qwenCandidate }: { naive: Json; verified: Json; naiveHard?: number; qwenCandidate?: Json }) {
+function ShiftSimulation({ naive, verified, naiveHard, modelCandidate, secondaryModelCandidate }: { naive: Json; verified: Json; naiveHard?: number; modelCandidate?: Json; secondaryModelCandidate?: Json }) {
   const naiveMeta = naive.meta ?? {}
   const verifiedMeta = verified.meta ?? {}
-  const qwenTasks = qwenCandidate?.ok ? qwenCandidate.isaac_tasks : null
-  const maxHr = useMemo(() => qwenTasks ? maxQueueHorizon(naive, qwenTasks, verified) : maxQueueHorizon(naive, verified), [naive, qwenTasks, verified])
+  const modelTasks = modelCandidate?.ok ? modelCandidate.isaac_tasks : null
+  const modelName = String(modelCandidate?.model ?? 'model')
+  const secondaryTasks = secondaryModelCandidate?.ok ? secondaryModelCandidate.isaac_tasks : null
+  const secondaryName = String(secondaryModelCandidate?.model ?? 'student model')
+  const maxHr = useMemo(() => {
+    const tasks = [naive, verified, modelTasks, secondaryTasks].filter(Boolean) as Json[]
+    return tasks.length ? maxQueueHorizon(...tasks) : 1
+  }, [naive, verified, modelTasks, secondaryTasks])
   const diffs = useMemo(() => computeQueueDiff(naive, verified), [naive, verified])
   const [simHr, setSimHr] = useState(0)
   const [playing, setPlaying] = useState(false)
@@ -963,7 +1006,8 @@ function ShiftSimulation({ naive, verified, naiveHard, qwenCandidate }: { naive:
   const beforeDiffs = useMemo(() => stationDiffsAtTime(diffs, simHr, 'before'), [diffs, simHr])
   const afterDiffs = useMemo(() => stationDiffsAtTime(diffs, simHr, 'after'), [diffs, simHr])
   const beforeActive = useMemo(() => activeOpsAtTime(naive, simHr), [naive, simHr])
-  const qwenActive = useMemo(() => qwenTasks ? activeOpsAtTime(qwenTasks, simHr) : [], [qwenTasks, simHr])
+  const modelActive = useMemo(() => modelTasks ? activeOpsAtTime(modelTasks, simHr) : [], [modelTasks, simHr])
+  const secondaryActive = useMemo(() => secondaryTasks ? activeOpsAtTime(secondaryTasks, simHr) : [], [secondaryTasks, simHr])
   const afterActive = useMemo(() => activeOpsAtTime(verified, simHr), [verified, simHr])
 
   useEffect(() => {
@@ -1023,9 +1067,9 @@ function ShiftSimulation({ naive, verified, naiveHard, qwenCandidate }: { naive:
 
   return (
     <div>
-      <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Shift simulation — raw adapter vs Qwen rollout vs verifier gate</div>
+      <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Shift simulation — raw adapter vs measured model rollout vs verifier gate</div>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.55 }}>
-        All panels share one timeline. <strong style={{ color: 'var(--text)' }}>Before</strong> is the raw adapter output ({naiveMeta.hard_violations ?? naiveHard ?? '?'} hard violations); <strong style={{ color: 'var(--text)' }}>Qwen rollout</strong> is the actual best measured HUD answer converted into the same simulator queue; <strong style={{ color: 'var(--text)' }}>After</strong> is the verifier-repaired operating plan ({verifiedMeta.hard_violations ?? 0} violations). Qwen is model evidence; the after panel is verifier/repair evidence.
+        All panels share one timeline. <strong style={{ color: 'var(--text)' }}>Before</strong> is the raw adapter output ({naiveMeta.hard_violations ?? naiveHard ?? '?'} hard violations); <strong style={{ color: 'var(--text)' }}>Measured model rollout</strong> is the best HUD answer from {modelName} converted into the same simulator queue; {secondaryTasks ? <><strong style={{ color: 'var(--text)' }}>{secondaryName}</strong> is the trainable open-student rollout below Gemma; </> : null}<strong style={{ color: 'var(--text)' }}>After</strong> is the verifier-repaired operating plan ({verifiedMeta.hard_violations ?? 0} violations). Middle panels are model evidence; the after panel is verifier/repair evidence.
       </p>
       <VerifierMethodCard compact />
 
@@ -1086,32 +1130,53 @@ function ShiftSimulation({ naive, verified, naiveHard, qwenCandidate }: { naive:
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
-        {panel('Before · raw adapter', `${naiveMeta.hard_violations ?? naiveHard ?? '?'} hard violations · ${Object.values(naive.robot_queues ?? {}).flat().length} ops`, 'var(--neg)', naive, '--neg', beforeDiffs, beforeActive)}
-        {qwenTasks
+        {panel('Before · raw adapter', `${naiveMeta.hard_violations ?? naiveHard ?? '?'} hard violations · ${queueOpCount(naive)} ops`, 'var(--neg)', naive, '--neg', beforeDiffs, beforeActive)}
+        {modelTasks
           ? panel(
-            'Qwen · measured HUD rollout',
-            `${qwenCandidate?.hard_violations ?? qwenTasks.meta?.hard_violations ?? '?'} hard violations · ${Object.values(qwenTasks.robot_queues ?? {}).flat().length} ops`,
+            `${modelName} · measured HUD rollout`,
+            `${modelCandidate?.hard_violations ?? modelTasks.meta?.hard_violations ?? '?'} hard violations · ${queueOpCount(modelTasks)} ops`,
             'var(--brand)',
-            qwenTasks,
+            modelTasks,
             '--brand',
             {},
-            qwenActive,
-            qwenCandidate?.trace_url ? (
-              <a href={String(qwenCandidate.trace_url)} target="_blank" rel="noreferrer" style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--brand)' }}>
-                HUD trace: best Qwen rollout
+            modelActive,
+            modelCandidate?.trace_url ? (
+              <a href={String(modelCandidate.trace_url)} target="_blank" rel="noreferrer" style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--brand)' }}>
+                HUD trace: best model rollout
               </a>
             ) : null,
           )
           : (
             <div style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 12, padding: 12 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, marginBottom: 8 }}>Qwen · measured HUD rollout</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, marginBottom: 8 }}>Measured model rollout</div>
               <p style={{ margin: 0, color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
-                No parseable Qwen ActionPlan is attached for this floor yet. Re-run <code style={{ fontFamily: mono, fontSize: 11 }}>distill/hud_floor_eval.py</code> to attach a simulator queue from the best HUD trace.
+                No parseable model ActionPlan is attached for this floor yet. Re-run <code style={{ fontFamily: mono, fontSize: 11 }}>distill/hud_floor_eval.py</code> to attach a simulator queue from the best HUD trace.
               </p>
             </div>
           )}
-        {panel('After · verifier-gated', `${verifiedMeta.hard_violations ?? 0} hard violations · ${Object.values(verified.robot_queues ?? {}).flat().length} ops`, 'var(--pos)', verified, '--pos', afterDiffs, afterActive)}
+        {panel('After · verifier-gated', `${verifiedMeta.hard_violations ?? 0} hard violations · ${queueOpCount(verified)} ops`, 'var(--pos)', verified, '--pos', afterDiffs, afterActive)}
       </div>
+      {secondaryTasks && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
+            Trainable student below Gemma — {secondaryName}
+          </div>
+          {panel(
+            `${secondaryName} · measured HUD rollout`,
+            `${secondaryModelCandidate?.hard_violations ?? secondaryTasks.meta?.hard_violations ?? '?'} hard violations · ${queueOpCount(secondaryTasks)} ops`,
+            'var(--accent)',
+            secondaryTasks,
+            '--accent',
+            {},
+            secondaryActive,
+            secondaryModelCandidate?.trace_url ? (
+              <a href={String(secondaryModelCandidate.trace_url)} target="_blank" rel="noreferrer" style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--accent)' }}>
+                HUD trace: {secondaryName} rollout
+              </a>
+            ) : null,
+          )}
+        </div>
+      )}
       <div style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.45 }}>
         Legend: <span style={{ color: 'var(--neg)' }}>red ring</span> = op dropped · <span style={{ color: 'var(--pos)' }}>green ring</span> = op inserted · <span style={{ color: 'var(--warn)' }}>orange ring</span> = retimed or moved. Scrub the timeline or pause on a marker to inspect side-by-side.
       </div>
@@ -1428,7 +1493,7 @@ export function Baseline({ b, n }: { b: Json; n: string }) {
 }
 
 function Humanoid({ tasks, n }: { tasks: Json; n: string }) {
-  const rq = tasks.robot_queues ?? {}
+  const rq = executionQueues(tasks)
   const entries = Object.entries(rq) as [string, Json[]][]
   if (!entries.length) return null
   const all = entries.flatMap(([, q]) => q)
@@ -1828,7 +1893,7 @@ function EvidenceAndTraining({ live, ep, tasks, baseline, run, n }: { live: Json
           <EvidenceStat label="hard violations" value={`${beforeHard} → ${afterHard}`} tone={afterHard === 0 ? 'var(--pos)' : 'var(--neg)'} />
           <EvidenceStat label="repair decisions" value={ep?.repair_trace?.length ?? 0} tone={currentHadRepair ? 'var(--brand)' : 'var(--muted)'} />
           <EvidenceStat label="reward delta" value={`${Math.round(afterReward - beforeReward) >= 0 ? '+' : ''}${Math.round(afterReward - beforeReward).toLocaleString()}`} tone={afterReward >= beforeReward ? 'var(--pos)' : 'var(--neg)'} />
-          <EvidenceStat label="symbolic queue" value={`${Object.values(tasks?.robot_queues ?? {}).flat().length}`} />
+          <EvidenceStat label="symbolic queue" value={`${queueOpCount(tasks ?? {})}`} />
         </div>
         <p style={{ margin: '12px 0 0', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
           {repaired > 0
@@ -1858,7 +1923,7 @@ function EvidenceAndTraining({ live, ep, tasks, baseline, run, n }: { live: Json
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Chip tone={tasks?.meta?.verified ? 'var(--pos)' : 'var(--warn)'}>symbolic verified: {String(tasks?.meta?.verified ?? false)}</Chip>
           <Chip>safety incidents: {tasks?.meta?.safety_incidents ?? 0}</Chip>
-          <Chip>humanoid tasks: {Object.values(tasks?.robot_queues ?? {}).flat().length}</Chip>
+          <Chip>execution tasks: {queueOpCount(tasks ?? {})}</Chip>
         </div>
       </div>
     </div>
@@ -1992,7 +2057,7 @@ function ArchitectureCard({ live, ep, n }: { live: Json; ep: Json; n: string }) 
     ['FactoryState', `${fs.jobs?.length ?? info.n_jobs ?? '?'} jobs · ${fs.machines?.length ?? '?'} resources`, 'var(--line)'],
     ['Brain proposal', live.planner?.actual ?? (isWarehouseFixture(live) ? 'cached fixture' : 'deterministic'), 'var(--accent)'],
     ['Verifier/repair', `${beforeHard} → ${afterHard} hard violations`, afterHard === 0 ? 'var(--pos)' : 'var(--warn)'],
-    ['Verified queue', `${Object.values(live.isaac_tasks?.robot_queues ?? {}).flat().length} execution tasks`, 'var(--warn)'],
+    ['Verified queue', `${queueOpCount(live.isaac_tasks ?? {})} execution tasks`, 'var(--warn)'],
     ['Execution QA', 'MuJoCo/Isaac + V-JEPA when enabled', 'var(--brand)'],
   ]
   return (
@@ -2562,9 +2627,18 @@ function WarehouseFixtureReport({ live, n }: { live: Json; n: string }) {
 function OperatorBehavior({ live, n }: { live: Json; n: string }) {
   const jobSource = live.intake?.job_source ?? live.job_source
   const measuredRun = jobSource?.hud_rollout?.measured
+  const studentRollouts: Json[] = jobSource?.hud_rollout?.student_rollouts ?? []
+  const modelCandidate = measuredRun?.model_candidate ?? measuredRun?.qwen_candidate
+  const labeledModelCandidate = modelCandidate ? { ...modelCandidate, model: modelCandidate.model ?? measuredRun?.model } : undefined
+  const secondaryRun = studentRollouts[0]
+  const secondaryCandidateRaw = secondaryRun?.model_candidate ?? secondaryRun?.qwen_candidate
+  const labeledSecondaryCandidate = secondaryCandidateRaw
+    ? { ...secondaryCandidateRaw, model: secondaryCandidateRaw.model ?? secondaryRun?.model }
+    : undefined
   const naiveHard = live.naive_verdict?.hard_violations
   const hasMujoco = !!live.isaac_tasks
-  if (!measuredRun && !hasMujoco && !jobSource) return null
+  const hasRollouts = !!(measuredRun || studentRollouts.length)
+  if (!hasRollouts && !hasMujoco && !jobSource) return null
   return (
     <div style={{ ...card, borderColor: 'var(--brand)' }}>
       <Label n={n}>Operator behavior — input → model rollouts</Label>
@@ -2594,11 +2668,20 @@ function OperatorBehavior({ live, n }: { live: Json; n: string }) {
               </p>
             </div>
           )}
+          {studentRollouts.map((studentRun, idx) => (
+            <MeasuredGrpoTable key={String(studentRun.model ?? idx)} measuredRun={studentRun} />
+          ))}
         </div>
       </div>
       {hasMujoco && live.naive_isaac_tasks && (
         <div style={{ marginTop: 14, borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-          <ShiftSimulation naive={live.naive_isaac_tasks} verified={live.isaac_tasks} naiveHard={naiveHard} qwenCandidate={measuredRun?.qwen_candidate} />
+          <ShiftSimulation
+            naive={live.naive_isaac_tasks}
+            verified={live.isaac_tasks}
+            naiveHard={naiveHard}
+            modelCandidate={labeledModelCandidate}
+            secondaryModelCandidate={labeledSecondaryCandidate}
+          />
         </div>
       )}
     </div>
@@ -2632,6 +2715,41 @@ export function FactoryCeoPanel({ initial, initialRun, onRestart, onRun }: Facto
 
   // Set the live run and persist it to the current floor (profile store).
   function applyRun(j: Json | null) { setLive(j); if (j) onRun?.(j) }
+
+  // Static library artifacts can be rebuilt while the Studio is already open.
+  // Refresh mounted warehouse fixtures in-place so the panel does not keep showing
+  // a stale localStorage/React copy of an older HUD rollout.
+  useEffect(() => {
+    const summary = live?.intake?.summary
+    if (!summary || autoBusy) return
+    let cancelled = false
+    async function refreshStaticFloor() {
+      try {
+        const catalog = await fetch('/factoryceo/library.json', { cache: 'no-store' }).then((r) => r.ok ? r.json() : null)
+        const match = catalog?.floors?.find((row: Json) => row.label === summary)
+        if (!match?.id) return
+        const latest = await fetch(`/factoryceo/library/${match.id}.json`, { cache: 'no-store' }).then((r) => r.ok ? r.json() : null)
+        if (!latest || cancelled) return
+        const currentMeasured = live?.intake?.job_source?.hud_rollout?.measured ?? live?.job_source?.hud_rollout?.measured
+        const latestMeasured = latest?.intake?.job_source?.hud_rollout?.measured ?? latest?.job_source?.hud_rollout?.measured
+        const currentSig = JSON.stringify({
+          model: currentMeasured?.model,
+          reward: currentMeasured?.hud_reward,
+          trace: currentMeasured?.model_candidate?.trace_id ?? currentMeasured?.qwen_candidate?.trace_id,
+          evidence: currentMeasured?.training_evidence?.source_path,
+        })
+        const latestSig = JSON.stringify({
+          model: latestMeasured?.model,
+          reward: latestMeasured?.hud_reward,
+          trace: latestMeasured?.model_candidate?.trace_id ?? latestMeasured?.qwen_candidate?.trace_id,
+          evidence: latestMeasured?.training_evidence?.source_path,
+        })
+        if (currentSig !== latestSig) applyRun(latest)
+      } catch { /* keep current run */ }
+    }
+    refreshStaticFloor()
+    return () => { cancelled = true }
+  }, [live?.intake?.summary, autoBusy])
 
   // When a floor is opened/compiled, jump to the result so the change is obvious.
   useEffect(() => {

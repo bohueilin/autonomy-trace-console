@@ -92,6 +92,24 @@ def _load_golden(path: str) -> list[dict]:
     return data.get("tasks", [])
 
 
+def _load_teacher_demos(path: str | None) -> dict[tuple[str, int], str]:
+    if not path:
+        return {}
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    rows = data.get("demos", data if isinstance(data, list) else [])
+    demos: dict[tuple[str, int], str] = {}
+    for row in rows:
+        try:
+            floor_id = str(row["floor_id"])
+            seed = int(row["seed"])
+            answer = str(row.get("answer") or row.get("teacher_answer") or "")
+        except Exception:
+            continue
+        if answer:
+            demos[(floor_id, seed)] = answer
+    return demos
+
+
 def _sample_golden(golden: list[dict], n: int, seed: int) -> list[dict]:
     """Stratified, deterministic sample: round-robin across floors by descending
     golden_score, so each step trains on a balanced slice of the hardest tasks."""
@@ -125,11 +143,17 @@ def _build_taskset(args: argparse.Namespace, reward_mode: str, floors: list[str]
 
     The HUD reward is decided inside the template, so a curriculum phase needs its
     own taskset with the phase's reward_mode."""
+    teacher_demos = _load_teacher_demos(getattr(args, "teacher_demos", None))
     if getattr(args, "golden_tasks", None):
         golden = _load_golden(args.golden_tasks)
         sample = _sample_golden(golden, args.golden_sample, args.seed)
-        tasks = [operate_floor(floor_id=t["floor_id"], seed=int(t["seed"]), reward_mode=reward_mode)
-                 for t in sample]
+        tasks = [
+            operate_floor(
+                floor_id=t["floor_id"], seed=int(t["seed"]), reward_mode=reward_mode,
+                teacher_answer=teacher_demos.get((t["floor_id"], int(t["seed"])), ""),
+            )
+            for t in sample
+        ]
         return Taskset(f"shiftbench-golden-{reward_mode}", tasks)
     if args.generic_env:
         tasks = [
@@ -142,8 +166,13 @@ def _build_taskset(args: argparse.Namespace, reward_mode: str, floors: list[str]
             for i in range(max(1, args.max_floors))
         ]
         return Taskset(f"shiftbench-generic-{reward_mode}", tasks)
-    tasks = [operate_floor(floor_id=fid, seed=args.seed + i, reward_mode=reward_mode)
-             for i, fid in enumerate(floors)]
+    tasks = [
+        operate_floor(
+            floor_id=fid, seed=args.seed + i, reward_mode=reward_mode,
+            teacher_answer=teacher_demos.get((fid, args.seed + i), ""),
+        )
+        for i, fid in enumerate(floors)
+    ]
     return Taskset(f"shiftbench-floor-{reward_mode}", tasks)
 
 
@@ -268,6 +297,7 @@ async def main(args: argparse.Namespace) -> dict:
         "learning_rate": args.learning_rate,
         "loss_fn": args.loss_fn,
         "curriculum_jobs": args.curriculum_jobs,
+        "teacher_demos": args.teacher_demos,
         "dry_run": args.dry_run or not model,
     }
 
@@ -348,6 +378,8 @@ if __name__ == "__main__":
                         help="Path to a curated golden-hard taskset (results/golden_hard_tasks.json). "
                              "When set, each phase trains on a stratified sample of these hard tasks "
                              "instead of one task per floor.")
+    parser.add_argument("--teacher-demos", default=None,
+                        help="Optional JSON file of Claude teacher trajectories keyed by floor_id/seed.")
     parser.add_argument("--golden-sample", type=int, default=4,
                         help="Golden tasks sampled per taskset build (keeps rollouts/step bounded).")
     parser.add_argument("--curriculum", action="store_true", help="Run a format -> shaped -> strict reward curriculum.")
@@ -359,7 +391,7 @@ if __name__ == "__main__":
     parser.add_argument("--reward-scale", type=float, default=1.0)
     parser.add_argument("--max-concurrent", type=int, default=1,
                         help="Concurrent rollouts (1 avoids 504 bursts on 27B golden tasks).")
-    parser.add_argument("--max-tokens", type=int, default=3500,
+    parser.add_argument("--max-tokens", type=int, default=8000,
                         help="Output cap; must fit reasoning + the JSON plan or rollouts truncate before the answer.")
     parser.add_argument("--json-mode", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--no-think", action=argparse.BooleanOptionalAction, default=True,

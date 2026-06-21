@@ -13,10 +13,10 @@ it and attaches it to the stream as ``hud_rollout.measured`` so the UI can show
 projected (and are labelled as such).
 
     # one floor, group of 4 (smoke)
-    python distill/hud_floor_eval.py --model shiftbench-qwen36-27b --max-floors 1 --group 4
+    python distill/hud_floor_eval.py --model claude --max-floors 1 --group 4
 
     # all floors
-    python distill/hud_floor_eval.py --model shiftbench-qwen36-27b --max-floors 99 --group 6
+    HUD_EVAL_MODEL=claude-opus-4-8 python distill/hud_floor_eval.py --max-floors 99 --group 6
 """
 
 from __future__ import annotations
@@ -92,11 +92,12 @@ def _hud_model_id(name: str) -> str | None:
     return None
 
 
-def _qwen_candidate_from_answer(*, floor_id: str, seed: int, answer: str,
-                                trace_id: str | None = None) -> dict:
-    """Convert the best measured Qwen ActionPlan into the simulator task schema."""
+def _model_candidate_from_answer(*, floor_id: str, seed: int, model: str, answer: str,
+                                 trace_id: str | None = None) -> dict:
+    """Convert the best measured model ActionPlan into the simulator task schema."""
     candidate = {
         "source": "best_measured_hud_rollout",
+        "model": model,
         "floor_id": floor_id,
         "seed": seed,
         "trace_id": trace_id,
@@ -131,7 +132,7 @@ def _floor_ids(max_floors: int, requested: list[str]) -> list[str]:
 
 
 async def eval_floor(runtime: LocalRuntime, agent, *, floor_id: str, seed: int,
-                     group: int, reward_mode: str, max_concurrent: int) -> dict:
+                     group: int, reward_mode: str, max_concurrent: int, model: str) -> dict:
     """Run one GRPO group (``group`` samples of the same floor task) and measure it."""
     task = operate_floor(floor_id=floor_id, seed=seed, reward_mode=reward_mode)
     taskset = Taskset(f"floor-eval-{floor_id}", [task])
@@ -176,15 +177,21 @@ async def eval_floor(runtime: LocalRuntime, agent, *, floor_id: str, seed: int,
             "dashboard_url": "https://hud.ai/jobs",
         },
         "rollout_samples": samples,
-        "qwen_candidate": _qwen_candidate_from_answer(
-            floor_id=floor_id, seed=seed, answer=best_text, trace_id=best_trace_id,
+        "model_candidate": _model_candidate_from_answer(
+            floor_id=floor_id, seed=seed, model=model, answer=best_text, trace_id=best_trace_id,
         ),
     }
 
 
 async def main(args: argparse.Namespace) -> dict:
     load_dotenv(ROOT / ".env")
-    model = args.model or os.environ.get("HUD_TRAIN_MODEL") or os.environ.get("HUD_BASELINE_MODEL")
+    model = (
+        args.model
+        or os.environ.get("HUD_EVAL_MODEL")
+        or os.environ.get("HUD_BASELINE_MODEL")
+        or os.environ.get("HUD_TRAIN_MODEL")
+        or "claude-opus-4-8"
+    )
     floors = _floor_ids(args.max_floors, args.floor_id)
     hud_model_id = _hud_model_id(model) if model else None
     hud_model_url = f"https://hud.ai/models/{hud_model_id}" if hud_model_id else None
@@ -241,8 +248,9 @@ async def main(args: argparse.Namespace) -> dict:
         group = await eval_floor(
             runtime, agent, floor_id=fid, seed=args.seed + i,
             group=args.group, reward_mode=args.reward_mode, max_concurrent=args.max_concurrent,
+            model=model,
         )
-        qwen_candidate = group.pop("qwen_candidate", None)
+        model_candidate = group.pop("model_candidate", None)
         runs[fid] = {
             "measured": True,
             "model": model,
@@ -252,7 +260,8 @@ async def main(args: argparse.Namespace) -> dict:
             "reward_mode": args.reward_mode,
             "hud_reward": group["mean_reward"],
             "grpo": group,
-            "qwen_candidate": qwen_candidate,
+            "model_candidate": model_candidate,
+            "qwen_candidate": model_candidate,
             "measured_at": datetime.now(timezone.utc).isoformat(),
             "rollout_s": round(time.perf_counter() - rs, 2),
         }
@@ -285,7 +294,7 @@ async def main(args: argparse.Namespace) -> dict:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", default=None, help="HUD gateway model to roll out (e.g. a forked trainable or open student).")
+    parser.add_argument("--model", default=None, help="HUD gateway model to roll out; defaults to HUD_EVAL_MODEL/HUD_BASELINE_MODEL/HUD_TRAIN_MODEL, then claude.")
     parser.add_argument("--max-floors", type=int, default=1)
     parser.add_argument("--floor-id", action="append", default=[])
     parser.add_argument("--group", type=int, default=4, help="Rollouts per floor (the GRPO group size).")
@@ -294,7 +303,8 @@ if __name__ == "__main__":
     parser.add_argument("--out", default=str(OUT), help="Output file (use distinct paths for A/B checkpoint comparisons).")
     parser.add_argument("--seed", type=int, default=7000)
     parser.add_argument("--max-concurrent", type=int, default=1)
-    parser.add_argument("--max-tokens", type=int, default=3500)
+    parser.add_argument("--max-tokens", type=int, default=12000,
+                        help="Output cap for the JSON ActionPlan. Long floor tasks need enough room to finish valid JSON.")
     parser.add_argument("--json-mode", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--no-think", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dry-run", action="store_true")

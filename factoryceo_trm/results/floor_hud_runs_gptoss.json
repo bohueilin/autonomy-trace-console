@@ -1,0 +1,2478 @@
+{
+  "kind": "measured_floor_hud_runs",
+  "model": "openai/gpt-oss-20b",
+  "hud_model_id": null,
+  "hud_model_url": null,
+  "checkpoint": null,
+  "reward_mode": "shaped",
+  "group": 2,
+  "updated_at": "2026-06-21T22:39:41.952145+00:00",
+  "runs": {
+    "staer_crossdock": {
+      "measured": true,
+      "model": "openai/gpt-oss-20b",
+      "hud_model_id": null,
+      "hud_model_url": null,
+      "checkpoint": null,
+      "reward_mode": "shaped",
+      "hud_reward": 0.402,
+      "grpo": {
+        "n_rollouts": 2,
+        "group_size": 2,
+        "rollout_rewards": [
+          0.01,
+          0.794
+        ],
+        "advantages": [
+          -0.392,
+          0.392
+        ],
+        "mean_reward": 0.402,
+        "best_rollout": "R02",
+        "hud_job_id": "168d4ece58c349d583789cb297e7165e",
+        "hud_job_url": "https://hud.ai/jobs/168d4ece58c349d583789cb297e7165e",
+        "task_coverage": {
+          "platform_percent": 0,
+          "reason": "local Taskset/LocalRuntime run has no deployed HUD taskset_id; rewards/traces are real, but platform task coverage requires hud sync/deployed tasksets",
+          "dashboard_url": "https://hud.ai/jobs"
+        },
+        "rollout_samples": [
+          {
+            "rollout": "R01",
+            "reward": 0.01,
+            "advantage": -0.392,
+            "trace_id": "6f4da233230c4f8c9a7084b335b48689",
+            "has_json": false,
+            "chars": 22767,
+            "response_excerpt": "<|channel|>analysis<|message|>We have a huge planning problem. Need to produce a schedule for all operations of all jobs, plus decisions. We must meet constraints: all operations must be scheduled, using machines and operators with availability, respecting maintenance windows, precedence. Also must handle inventory and procurement decisions. Also quote decision: we have an RFQ for 10,000 ABS units by day 12 at $0.20/unit. We need to decide to accept or not. We also have a maintenance issue M4 rough; might need maintenance. We have inventory: ABS 220kg, Nylon 80kg, PP 40kg. Each job has material_kg per job. If inventory insufficient, need procurement. Also we must schedule all operations of 120 orders? Wait: The jobs list contains 120? Actually many jobs from J100 to J123, but not all 120. Maybe we just schedule these jobs. They appear to be 24 jobs. We need to schedule all operations of each job. We need to decide whether to accept RFQ. We have 10,000 ABS units, each unit presumably one unit of product? But our jobs produce quantities like 3929 etc. The RFQ wants 10,000 units of ABS. The inventory of ABS is 220kg. Each job uses material_kg. Need to compute if we can produce 10k units. But we have a lot of jobs producing ABS. The RFQ may be separate. We need to schedule production to meet order streams plus RFQ? The requirement: \"Schedule as many as possible, preferably all.\" So we must schedule all operations of all listed jobs. And we must decide on quote for RFQ. The customer wants 10,000 units by day 12 at $0.20/unit. We need to see if we have capacity and material to pr"
+          },
+          {
+            "rollout": "R02",
+            "reward": 0.794,
+            "advantage": 0.392,
+            "trace_id": "7eec4599002846b0b1b9cad72595b8bb",
+            "has_json": true,
+            "chars": 6260,
+            "response_excerpt": "{\"quote_decisions\":[{\"rfq_id\":\"R17\",\"accept\":true,\"price_per_unit\":0.2,\"promised_day\":12},{\"rfq_id\":\"R18\",\"accept\":false}],\"procurement\":[{\"material\":\"ABS\",\"quantity_kg\":1449.2,\"expedite\":false},{\"material\":\"Nylon\",\"quantity_kg\":529.2,\"expedite\":false},{\"material\":\"PP\",\"quantity_kg\":363.9,\"expedite\":false}],\"schedule\":[{\"job_id\":\"J103\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":0,\"end\":5,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":5,\"end\":11,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":11,\"end\":15,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":15,\"end\":18,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":18,\"end\":24,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":24,\"end\":29,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":29,\"end\":33,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":33,\"end\":36,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":36,\"end\":39,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":39,\"end\":42,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":42,\"end\":48,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op1\",\""
+          }
+        ]
+      },
+      "model_candidate": {
+        "source": "best_measured_hud_rollout",
+        "model": "openai/gpt-oss-20b",
+        "floor_id": "staer_crossdock",
+        "seed": 7000,
+        "trace_id": "7eec4599002846b0b1b9cad72595b8bb",
+        "trace_url": "https://hud.ai/trace/7eec4599002846b0b1b9cad72595b8bb",
+        "answer_excerpt": "{\"quote_decisions\":[{\"rfq_id\":\"R17\",\"accept\":true,\"price_per_unit\":0.2,\"promised_day\":12},{\"rfq_id\":\"R18\",\"accept\":false}],\"procurement\":[{\"material\":\"ABS\",\"quantity_kg\":1449.2,\"expedite\":false},{\"material\":\"Nylon\",\"quantity_kg\":529.2,\"expedite\":false},{\"material\":\"PP\",\"quantity_kg\":363.9,\"expedite\":false}],\"schedule\":[{\"job_id\":\"J103\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":0,\"end\":5,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":5,\"end\":11,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":11,\"end\":15,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":15,\"end\":18,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":18,\"end\":24,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":24,\"end\":29,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":29,\"end\":33,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":33,\"end\":36,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":36,\"end\":39,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":39,\"end\":42,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":42,\"end\":48,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":48,\"end\":54,\"overtime\":false},{\"job_id\":\"J102\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":54,\"end\":56,\"overtime\":false},{\"job_id\":\"J122\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":56,\"end\":59,\"overtime\":false},{\"job_id\":\"J122\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":59,\"end\":63,\"overtime\":false},{\"job_id\":\"J118\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":63,\"end\":66,\"overtime\":false},{\"job_id\":\"J118\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\"",
+        "ok": true,
+        "hard_violations": 47,
+        "verifier_reward": -20466.48,
+        "metrics": {
+          "profit": -20466.5,
+          "on_time_rate": 0.958,
+          "n_hard_violations": 47,
+          "completed_jobs": 23,
+          "total_jobs": 24,
+          "utilization": 0.089,
+          "customer_trust": 0,
+          "overtime_ops": 0,
+          "safety_incidents": 0
+        },
+        "isaac_tasks": {
+          "meta": {
+            "verified": false,
+            "hard_violations": 47,
+            "safety_incidents": 0,
+            "horizon_hours": 504,
+            "machines": {
+              "M1": [
+                0.0,
+                0.0
+              ],
+              "M2": [
+                2.0,
+                0.0
+              ],
+              "M3": [
+                0.0,
+                2.0
+              ],
+              "M4": [
+                2.0,
+                2.0
+              ]
+            }
+          },
+          "safety_controls": [
+            {
+              "target": "M4",
+              "control": "inspect"
+            }
+          ],
+          "robot_queues": {
+            "R1": [
+              {
+                "job": "J103",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 0,
+                "end_hr": 5,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 5,
+                "end_hr": 11,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 11,
+                "end_hr": 15,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 15,
+                "end_hr": 18,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 18,
+                "end_hr": 24,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 24,
+                "end_hr": 29,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 29,
+                "end_hr": 33,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 33,
+                "end_hr": 36,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 36,
+                "end_hr": 39,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 39,
+                "end_hr": 42,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 42,
+                "end_hr": 48,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 48,
+                "end_hr": 54,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J102",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 54,
+                "end_hr": 56,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 56,
+                "end_hr": 59,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 59,
+                "end_hr": 63,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 63,
+                "end_hr": 66,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 66,
+                "end_hr": 71,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 71,
+                "end_hr": 75,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 75,
+                "end_hr": 77,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 77,
+                "end_hr": 80,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J101",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 80,
+                "end_hr": 83,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 83,
+                "end_hr": 89,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 89,
+                "end_hr": 93,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J108",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 93,
+                "end_hr": 98,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 98,
+                "end_hr": 104,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 104,
+                "end_hr": 110,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 110,
+                "end_hr": 113,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 113,
+                "end_hr": 119,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 119,
+                "end_hr": 122,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 122,
+                "end_hr": 126,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 126,
+                "end_hr": 129,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J109",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 129,
+                "end_hr": 131,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J114",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 131,
+                "end_hr": 137,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 137,
+                "end_hr": 141,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 141,
+                "end_hr": 144,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 144,
+                "end_hr": 149,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 149,
+                "end_hr": 151,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 151,
+                "end_hr": 155,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 155,
+                "end_hr": 161,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 161,
+                "end_hr": 165,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 165,
+                "end_hr": 170,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J119",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 170,
+                "end_hr": 176,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 176,
+                "end_hr": 178,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 178,
+                "end_hr": 180,
+                "embodiment": "humanoid"
+              }
+            ]
+          },
+          "all_queues": {
+            "R1": [
+              {
+                "job": "J103",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 0,
+                "end_hr": 5,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 5,
+                "end_hr": 11,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 11,
+                "end_hr": 15,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 15,
+                "end_hr": 18,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 18,
+                "end_hr": 24,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 24,
+                "end_hr": 29,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 29,
+                "end_hr": 33,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 33,
+                "end_hr": 36,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 36,
+                "end_hr": 39,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 39,
+                "end_hr": 42,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 42,
+                "end_hr": 48,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 48,
+                "end_hr": 54,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J102",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 54,
+                "end_hr": 56,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 56,
+                "end_hr": 59,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 59,
+                "end_hr": 63,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 63,
+                "end_hr": 66,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 66,
+                "end_hr": 71,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 71,
+                "end_hr": 75,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 75,
+                "end_hr": 77,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 77,
+                "end_hr": 80,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J101",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 80,
+                "end_hr": 83,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 83,
+                "end_hr": 89,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 89,
+                "end_hr": 93,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J108",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 93,
+                "end_hr": 98,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 98,
+                "end_hr": 104,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 104,
+                "end_hr": 110,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 110,
+                "end_hr": 113,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 113,
+                "end_hr": 119,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 119,
+                "end_hr": 122,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 122,
+                "end_hr": 126,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 126,
+                "end_hr": 129,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J109",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 129,
+                "end_hr": 131,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J114",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 131,
+                "end_hr": 137,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 137,
+                "end_hr": 141,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 141,
+                "end_hr": 144,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 144,
+                "end_hr": 149,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 149,
+                "end_hr": 151,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 151,
+                "end_hr": 155,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 155,
+                "end_hr": 161,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 161,
+                "end_hr": 165,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 165,
+                "end_hr": 170,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J119",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 170,
+                "end_hr": 176,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 176,
+                "end_hr": 178,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 178,
+                "end_hr": 180,
+                "embodiment": "humanoid"
+              }
+            ]
+          }
+        }
+      },
+      "qwen_candidate": {
+        "source": "best_measured_hud_rollout",
+        "model": "openai/gpt-oss-20b",
+        "floor_id": "staer_crossdock",
+        "seed": 7000,
+        "trace_id": "7eec4599002846b0b1b9cad72595b8bb",
+        "trace_url": "https://hud.ai/trace/7eec4599002846b0b1b9cad72595b8bb",
+        "answer_excerpt": "{\"quote_decisions\":[{\"rfq_id\":\"R17\",\"accept\":true,\"price_per_unit\":0.2,\"promised_day\":12},{\"rfq_id\":\"R18\",\"accept\":false}],\"procurement\":[{\"material\":\"ABS\",\"quantity_kg\":1449.2,\"expedite\":false},{\"material\":\"Nylon\",\"quantity_kg\":529.2,\"expedite\":false},{\"material\":\"PP\",\"quantity_kg\":363.9,\"expedite\":false}],\"schedule\":[{\"job_id\":\"J103\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":0,\"end\":5,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":5,\"end\":11,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":11,\"end\":15,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":15,\"end\":18,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":18,\"end\":24,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":24,\"end\":29,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":29,\"end\":33,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":33,\"end\":36,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":36,\"end\":39,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":39,\"end\":42,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":42,\"end\":48,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":48,\"end\":54,\"overtime\":false},{\"job_id\":\"J102\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":54,\"end\":56,\"overtime\":false},{\"job_id\":\"J122\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":56,\"end\":59,\"overtime\":false},{\"job_id\":\"J122\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":59,\"end\":63,\"overtime\":false},{\"job_id\":\"J118\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":63,\"end\":66,\"overtime\":false},{\"job_id\":\"J118\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\"",
+        "ok": true,
+        "hard_violations": 47,
+        "verifier_reward": -20466.48,
+        "metrics": {
+          "profit": -20466.5,
+          "on_time_rate": 0.958,
+          "n_hard_violations": 47,
+          "completed_jobs": 23,
+          "total_jobs": 24,
+          "utilization": 0.089,
+          "customer_trust": 0,
+          "overtime_ops": 0,
+          "safety_incidents": 0
+        },
+        "isaac_tasks": {
+          "meta": {
+            "verified": false,
+            "hard_violations": 47,
+            "safety_incidents": 0,
+            "horizon_hours": 504,
+            "machines": {
+              "M1": [
+                0.0,
+                0.0
+              ],
+              "M2": [
+                2.0,
+                0.0
+              ],
+              "M3": [
+                0.0,
+                2.0
+              ],
+              "M4": [
+                2.0,
+                2.0
+              ]
+            }
+          },
+          "safety_controls": [
+            {
+              "target": "M4",
+              "control": "inspect"
+            }
+          ],
+          "robot_queues": {
+            "R1": [
+              {
+                "job": "J103",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 0,
+                "end_hr": 5,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 5,
+                "end_hr": 11,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 11,
+                "end_hr": 15,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 15,
+                "end_hr": 18,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 18,
+                "end_hr": 24,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 24,
+                "end_hr": 29,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 29,
+                "end_hr": 33,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 33,
+                "end_hr": 36,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 36,
+                "end_hr": 39,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 39,
+                "end_hr": 42,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 42,
+                "end_hr": 48,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 48,
+                "end_hr": 54,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J102",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 54,
+                "end_hr": 56,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 56,
+                "end_hr": 59,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 59,
+                "end_hr": 63,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 63,
+                "end_hr": 66,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 66,
+                "end_hr": 71,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 71,
+                "end_hr": 75,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 75,
+                "end_hr": 77,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 77,
+                "end_hr": 80,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J101",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 80,
+                "end_hr": 83,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 83,
+                "end_hr": 89,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 89,
+                "end_hr": 93,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J108",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 93,
+                "end_hr": 98,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 98,
+                "end_hr": 104,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 104,
+                "end_hr": 110,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 110,
+                "end_hr": 113,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 113,
+                "end_hr": 119,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 119,
+                "end_hr": 122,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 122,
+                "end_hr": 126,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 126,
+                "end_hr": 129,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J109",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 129,
+                "end_hr": 131,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J114",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 131,
+                "end_hr": 137,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 137,
+                "end_hr": 141,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 141,
+                "end_hr": 144,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 144,
+                "end_hr": 149,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 149,
+                "end_hr": 151,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 151,
+                "end_hr": 155,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 155,
+                "end_hr": 161,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 161,
+                "end_hr": 165,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 165,
+                "end_hr": 170,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J119",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 170,
+                "end_hr": 176,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 176,
+                "end_hr": 178,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 178,
+                "end_hr": 180,
+                "embodiment": "humanoid"
+              }
+            ]
+          },
+          "all_queues": {
+            "R1": [
+              {
+                "job": "J103",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 0,
+                "end_hr": 5,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 5,
+                "end_hr": 11,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J103",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 11,
+                "end_hr": 15,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 15,
+                "end_hr": 18,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J112",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 18,
+                "end_hr": 24,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 24,
+                "end_hr": 29,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 29,
+                "end_hr": 33,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J105",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 33,
+                "end_hr": 36,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 36,
+                "end_hr": 39,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J115",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 39,
+                "end_hr": 42,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 42,
+                "end_hr": 48,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J120",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 48,
+                "end_hr": 54,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J102",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 54,
+                "end_hr": 56,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 56,
+                "end_hr": 59,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J122",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 59,
+                "end_hr": 63,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 63,
+                "end_hr": 66,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J118",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 66,
+                "end_hr": 71,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 71,
+                "end_hr": 75,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 75,
+                "end_hr": 77,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J123",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 77,
+                "end_hr": 80,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J101",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 80,
+                "end_hr": 83,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 83,
+                "end_hr": 89,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J106",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 89,
+                "end_hr": 93,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J108",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 93,
+                "end_hr": 98,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 98,
+                "end_hr": 104,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J113",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 104,
+                "end_hr": 110,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 110,
+                "end_hr": 113,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J121",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 113,
+                "end_hr": 119,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 119,
+                "end_hr": 122,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op1",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 122,
+                "end_hr": 126,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J117",
+                "operation": "op2",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 126,
+                "end_hr": 129,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J109",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 129,
+                "end_hr": 131,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J114",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 131,
+                "end_hr": 137,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 137,
+                "end_hr": 141,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J104",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 141,
+                "end_hr": 144,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 144,
+                "end_hr": 149,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J100",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 149,
+                "end_hr": 151,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 151,
+                "end_hr": 155,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J110",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 155,
+                "end_hr": 161,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 161,
+                "end_hr": 165,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J107",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 165,
+                "end_hr": 170,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J119",
+                "operation": "op0",
+                "task": "pick_place_mold",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 170,
+                "end_hr": 176,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op0",
+                "task": "tend_cnc",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 176,
+                "end_hr": 178,
+                "embodiment": "humanoid"
+              },
+              {
+                "job": "J111",
+                "operation": "op1",
+                "task": "deburr_part",
+                "machine": "R1",
+                "machine_xy": [
+                  0,
+                  0
+                ],
+                "start_hr": 178,
+                "end_hr": 180,
+                "embodiment": "humanoid"
+              }
+            ]
+          }
+        }
+      },
+      "measured_at": "2026-06-21T22:39:41.952088+00:00",
+      "rollout_s": 128.17
+    }
+  }
+}
