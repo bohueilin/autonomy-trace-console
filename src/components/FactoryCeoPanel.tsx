@@ -293,9 +293,7 @@ function MeasuredGrpoTable({ measuredRun }: { measuredRun: Json }) {
       <p style={{ margin: '0 0 12px', fontFamily: mono, fontSize: 12, lineHeight: 1.55, color: 'var(--text)' }}>{summaryLine}</p>
       <p style={{ margin: '0 0 12px', fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted)' }}>
         Each <strong style={{ color: 'var(--text)' }}>Rxx</strong> row is one sampled rollout from the same HUD task group:
-        the model saw the same floor/job context and produced one candidate plan. Reward is the verifier score for that
-        candidate; advantage is that rollout's group-relative training signal, so positive rows reinforce behavior and
-        negative rows push against it.
+        the model saw the same floor/job context and produced one candidate plan. <strong style={{ color: 'var(--text)' }}>HUD reward</strong> uses the configured training mode (often shaped); <strong style={{ color: 'var(--text)' }}>Verifier hard</strong> is the strict symbolic constraint count on that same JSON. The MuJoCo panel uses the rollout marked <strong style={{ color: 'var(--text)' }}>sim</strong> — fewest hard violations, not necessarily the highest HUD reward.
       </p>
       <div style={{ marginBottom: 12 }}>
         <ModelRolloutMethodCard model={measuredRun.model} evidence={measuredRun.training_evidence} compact />
@@ -303,22 +301,31 @@ function MeasuredGrpoTable({ measuredRun }: { measuredRun: Json }) {
       <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10, background: 'var(--panel)', marginBottom: 12, fontSize: 12.5, lineHeight: 1.5, color: 'var(--muted)' }}>
         <strong style={{ color: 'var(--text)' }}>How to tell model vs verifier:</strong> these `Rxx` rewards are model-only rollout attempts scored by the verifier. A higher post-training reward or positive-advantage sample shows the model produced a better candidate. The separate raw-vs-verified simulation below shows verifier repair, not model improvement by itself.
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '4px 12px', paddingBottom: 6, fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '4px 12px', paddingBottom: 6, fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         <span>Rollout</span>
-        <span>Verifier reward</span>
+        <span>HUD reward</span>
+        <span>Verifier hard</span>
         <span>GRPO advantage</span>
       </div>
       {rewards.map((rw, i) => (
-        <div key={i} title={`R${String(i + 1).padStart(2, '0')} = rollout sample ${i + 1} from this measured HUD group`} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '4px 12px', alignItems: 'center', padding: '5px 0', borderTop: i ? '1px solid var(--line)' : 'none', fontFamily: mono, fontSize: 12 }}>
-          <span style={{ color: i === bestIdx ? 'var(--pos)' : 'var(--muted)' }}>R{String(i + 1).padStart(2, '0')}{i === bestIdx ? ' ★' : ''} <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--muted)' }}>sample {i + 1}</span></span>
+        <div key={i} title={`R${String(i + 1).padStart(2, '0')} = rollout sample ${i + 1} from this measured HUD group`} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '4px 12px', alignItems: 'center', padding: '5px 0', borderTop: i ? '1px solid var(--line)' : 'none', fontFamily: mono, fontSize: 12 }}>
+          <span style={{ color: i === bestIdx ? 'var(--pos)' : 'var(--muted)' }}>
+            R{String(i + 1).padStart(2, '0')}{i === bestIdx ? ' ★' : ''}
+            {grpo.sim_rollout === `R${String(i + 1).padStart(2, '0')}` ? ' · sim' : ''}
+            {' '}<span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'var(--muted)' }}>sample {i + 1}</span>
+          </span>
           <span style={{ color: 'var(--text)' }}>{rw.toFixed(2)}</span>
+          <span style={{ color: Number((grpo.rollout_samples?.[i] as Json | undefined)?.hard_violations ?? 0) > 0 ? 'var(--neg)' : 'var(--pos)' }}>
+            {(grpo.rollout_samples?.[i] as Json | undefined)?.hard_violations ?? '—'}
+          </span>
           <span style={{ color: (advs[i] ?? 0) >= 0 ? 'var(--pos)' : 'var(--neg)' }}>{advs[i] != null ? `${advs[i] >= 0 ? '+' : ''}${advs[i].toFixed(3)}` : '—'}</span>
         </div>
       ))}
-      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: '4px 12px', paddingTop: 8, marginTop: 4, borderTop: '1px solid var(--line)', fontFamily: mono, fontSize: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr 1fr', gap: '4px 12px', paddingTop: 8, marginTop: 4, borderTop: '1px solid var(--line)', fontFamily: mono, fontSize: 12 }}>
         <span style={{ color: 'var(--muted)' }}>Mean</span>
         <strong style={{ color: 'var(--text)' }}>{mean.toFixed(3)}</strong>
-        <span style={{ color: 'var(--muted)' }}>{grpo.best_rollout ? `best ${grpo.best_rollout}` : ''}</span>
+        <span style={{ color: 'var(--muted)' }}>{grpo.sim_rollout ? `sim ${grpo.sim_rollout}` : grpo.best_rollout ? `best ${grpo.best_rollout}` : ''}</span>
+        <span style={{ color: 'var(--muted)' }} />
       </div>
       <RolloutConversationSamples samples={grpo.rollout_samples ?? []} bestRollout={grpo.best_rollout} />
       <TrainingBeforeAfter evidence={measuredRun.training_evidence} />
@@ -2632,7 +2639,9 @@ function OperatorBehavior({ live, n }: { live: Json; n: string }) {
   const labeledModelCandidate = modelCandidate ? { ...modelCandidate, model: modelCandidate.model ?? measuredRun?.model } : undefined
   const secondaryRun = studentRollouts[0]
   const secondaryCandidateRaw = secondaryRun?.model_candidate ?? secondaryRun?.qwen_candidate
-  const labeledSecondaryCandidate = secondaryCandidateRaw
+  const secondaryHard = Number(secondaryCandidateRaw?.hard_violations ?? secondaryCandidateRaw?.metrics?.n_hard_violations ?? 999)
+  const secondarySimOk = Boolean(secondaryCandidateRaw?.ok) && secondaryHard <= 5
+  const labeledSecondaryCandidate = secondarySimOk && secondaryCandidateRaw
     ? { ...secondaryCandidateRaw, model: secondaryCandidateRaw.model ?? secondaryRun?.model }
     : undefined
   const naiveHard = live.naive_verdict?.hard_violations
@@ -2682,6 +2691,19 @@ function OperatorBehavior({ live, n }: { live: Json; n: string }) {
             modelCandidate={labeledModelCandidate}
             secondaryModelCandidate={labeledSecondaryCandidate}
           />
+          {secondaryRun && !secondarySimOk && (
+            <div style={{ marginTop: 14, border: '1px solid var(--warn)', borderRadius: 12, padding: 12, background: 'color-mix(in srgb, var(--warn) 8%, var(--bg))' }}>
+              <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--warn)', marginBottom: 6 }}>
+                {String(secondaryRun.model ?? 'Student model')} rollout — not sim-ready
+              </div>
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted)' }}>
+                {secondaryCandidateRaw?.ok === false
+                  ? 'Latest GPT-OSS rollouts did not finish with parseable JSON-only ActionPlan output.'
+                  : `Best parseable plan still had ${secondaryHard} verifier hard violations.`}
+                {' '}Common cause: using robot/operator IDs like <code style={{ fontFamily: mono }}>R1</code> as <code style={{ fontFamily: mono }}>machine_id</code> instead of real machines <code style={{ fontFamily: mono }}>M1</code>–<code style={{ fontFamily: mono }}>M4</code>. Shaped HUD reward can look high while strict verifier rejects the schedule — see the GRPO table above for HUD reward vs verifier hard per rollout.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

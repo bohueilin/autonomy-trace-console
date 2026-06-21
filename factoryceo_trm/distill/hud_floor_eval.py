@@ -92,6 +92,37 @@ def _hud_model_id(name: str) -> str | None:
     return None
 
 
+def _strict_hard_count(*, floor_id: str, seed: int, answer: str) -> int | None:
+    """Count verifier hard violations for a rollout answer. None when unparsable."""
+    raw = extract_json_object(answer)
+    if raw is None:
+        return None
+    try:
+        state = floor_prompt_and_state(floor_id, seed)[1]
+        plan = ActionPlan.model_validate(raw)
+        return evaluate(state, plan).n_hard
+    except Exception:
+        return None
+
+
+def _best_sim_rollout_index(runs: list, rewards: list[float], *, floor_id: str, seed: int) -> int:
+    """Pick the rollout to visualize in MuJoCo: fewest hard violations, then HUD reward."""
+    ranked: list[tuple[int, float, float, int]] = []
+    for i, run in enumerate(runs):
+        text = _response_text(run)
+        hard = _strict_hard_count(floor_id=floor_id, seed=seed, answer=text)
+        reward = rewards[i] if i < len(rewards) else 0.0
+        ranked.append((
+            hard if hard is not None else 10_000,
+            0 if hard is not None else 1,
+            -reward,
+            i,
+        ))
+    if not ranked:
+        return 0
+    return min(ranked)[3]
+
+
 def _model_candidate_from_answer(*, floor_id: str, seed: int, model: str, answer: str,
                                  trace_id: str | None = None) -> dict:
     """Convert the best measured model ActionPlan into the simulator task schema."""
@@ -144,21 +175,24 @@ async def eval_floor(runtime: LocalRuntime, agent, *, floor_id: str, seed: int,
     rewards = [round(r, 4) for r in _rewards(job.runs)]
     mean = sum(rewards) / max(1, len(rewards))
     advantages = [round(a, 4) for a in group_relative(rewards, normalize_std=False)]
-    best_idx = max(range(len(rewards)), key=lambda i: rewards[i]) if rewards else 0
+    best_reward_idx = max(range(len(rewards)), key=lambda i: rewards[i]) if rewards else 0
+    sim_idx = _best_sim_rollout_index(job.runs, rewards, floor_id=floor_id, seed=seed)
     samples = []
-    best_text = ""
-    best_trace_id = None
+    sim_text = ""
+    sim_trace_id = None
     for i, run in enumerate(job.runs):
         text = _response_text(run)
-        if i == best_idx:
-            best_text = text
-            best_trace_id = getattr(run, "trace_id", None) or getattr(getattr(run, "trace", None), "id", None)
+        hard = _strict_hard_count(floor_id=floor_id, seed=seed, answer=text)
+        if i == sim_idx:
+            sim_text = text
+            sim_trace_id = getattr(run, "trace_id", None) or getattr(getattr(run, "trace", None), "id", None)
         samples.append({
             "rollout": f"R{i + 1:02d}",
             "reward": rewards[i] if i < len(rewards) else None,
             "advantage": advantages[i] if i < len(advantages) else None,
+            "hard_violations": hard,
             "trace_id": getattr(run, "trace_id", None) or getattr(getattr(run, "trace", None), "id", None),
-            "has_json": "{" in text and "}" in text,
+            "has_json": hard is not None,
             "chars": len(text),
             "response_excerpt": text[:1600],
         })
@@ -168,7 +202,8 @@ async def eval_floor(runtime: LocalRuntime, agent, *, floor_id: str, seed: int,
         "rollout_rewards": rewards,
         "advantages": advantages,
         "mean_reward": round(mean, 4),
-        "best_rollout": f"R{best_idx + 1:02d}",
+        "best_rollout": f"R{best_reward_idx + 1:02d}",
+        "sim_rollout": f"R{sim_idx + 1:02d}",
         "hud_job_id": getattr(job, "id", None),
         "hud_job_url": f"https://hud.ai/jobs/{getattr(job, 'id', '')}" if getattr(job, "id", None) else None,
         "task_coverage": {
@@ -178,7 +213,7 @@ async def eval_floor(runtime: LocalRuntime, agent, *, floor_id: str, seed: int,
         },
         "rollout_samples": samples,
         "model_candidate": _model_candidate_from_answer(
-            floor_id=floor_id, seed=seed, model=model, answer=best_text, trace_id=best_trace_id,
+            floor_id=floor_id, seed=seed, model=model, answer=sim_text, trace_id=sim_trace_id,
         ),
     }
 
