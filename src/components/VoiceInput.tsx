@@ -59,7 +59,7 @@ export function VoiceInput({
           {state === 'idle' && 'No typing needed — just describe the workplace out loud.'}
           {listening && 'Listening… click stop when you’re done.'}
           {processing && 'Cleaning up and filling the fields below.'}
-          {state === 'success' && 'Filled from your voice — please review and edit below.'}
+          {state === 'success' && 'Done — we filled Outcome, Workflow, and Safety rules. Review them below.'}
           {state === 'error' && (error ?? 'Something went wrong — try again or type below.')}
         </span>
       </div>

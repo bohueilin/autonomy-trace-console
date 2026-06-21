@@ -62,6 +62,9 @@ export function CaptureConsole({
   const [items, setItems] = useState<CaptureItem[]>([])
   const [driveUrl, setDriveUrl] = useState('')
   const [dragging, setDragging] = useState(false)
+  const [voiceFilled, setVoiceFilled] = useState(false)
+  const [highlight, setHighlight] = useState(false)
+  const fillTimer = useRef<number | null>(null)
 
   const theme = getDomainTheme(domain)
   const profile = getEmbodimentProfile(embodiment)
@@ -100,6 +103,10 @@ export function CaptureConsole({
     if (f.embodiment && (ROBOT_EMBODIMENTS as string[]).includes(f.embodiment)) {
       setEmbodiment(f.embodiment as RobotEmbodiment)
     }
+    setVoiceFilled(true)
+    setHighlight(true)
+    if (fillTimer.current) window.clearTimeout(fillTimer.current)
+    fillTimer.current = window.setTimeout(() => setHighlight(false), 4000)
   }
 
   function addFiles(files: FileList | File[]) {
@@ -144,6 +151,16 @@ export function CaptureConsole({
         </p>
 
         <VoiceInput onFields={applyVoice} />
+
+        {voiceFilled && (
+          <div className="voice-review" role="status">
+            <span className="vr-check" aria-hidden="true">✓</span>
+            <p>
+              Filled from your voice — review fields <strong>1–3</strong> below, then press{' '}
+              <strong>Analyze workflow</strong>.
+            </p>
+          </div>
+        )}
 
         <div className="capture-layout">
           <div
@@ -190,8 +207,10 @@ export function CaptureConsole({
           </div>
 
           <div className="capture-form">
-            <label className="field">
-              <span className="field-label">Outcome requirement</span>
+            <label className={`field ${highlight ? 'field-filled' : ''}`}>
+              <span className="field-label">
+                <span className="field-num">1</span> Outcome requirement
+              </span>
               <textarea
                 className="field-input"
                 rows={3}
@@ -199,8 +218,10 @@ export function CaptureConsole({
                 onChange={(e) => setOutcome(e.target.value)}
               />
             </label>
-            <label className="field">
-              <span className="field-label">What happens in the workflow?</span>
+            <label className={`field ${highlight ? 'field-filled' : ''}`}>
+              <span className="field-label">
+                <span className="field-num">2</span> What happens in the workflow?
+              </span>
               <textarea
                 className="field-input"
                 rows={4}
@@ -208,8 +229,10 @@ export function CaptureConsole({
                 onChange={(e) => setDescription(e.target.value)}
               />
             </label>
-            <label className="field">
-              <span className="field-label">Safety rules</span>
+            <label className={`field ${highlight ? 'field-filled' : ''}`}>
+              <span className="field-label">
+                <span className="field-num">3</span> Safety rules
+              </span>
               <textarea
                 className="field-input"
                 rows={3}
@@ -248,13 +271,26 @@ export function CaptureConsole({
           </div>
         </div>
 
-        <div className="capture-guidance">
-          <span className="cg-badge" aria-hidden="true">TIP</span>
-          <div>
-            <strong>Good workflow footage shows</strong>
-            <p>start area, item, drop-off, hazards, human-only zones, and the robot path.</p>
-          </div>
-        </div>
+        <details className="tips">
+          <summary>
+            <span className="cg-badge" aria-hidden="true">TIP</span>
+            <span className="tips-primary">
+              <strong>Good footage shows</strong> start area, the item, drop-off, hazards,
+              human-only zones, and the robot’s path.
+            </span>
+            <span className="tips-more">More tips</span>
+          </summary>
+          <ul className="tips-list">
+            <li>
+              <strong>Show what’s forbidden</strong> — cells the robot must never enter, and
+              actions it must refuse.
+            </li>
+            <li>
+              <strong>Note the limits</strong> — battery / shift time, lifting limits, and when it
+              should call a person.
+            </li>
+          </ul>
+        </details>
 
         <div className="capture-items">
           {items.length === 0 ? (

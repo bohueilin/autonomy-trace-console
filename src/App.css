@@ -3934,3 +3934,164 @@ select.field-input {
     animation: none;
   }
 }
+.voice-success .voice-hint {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ============================================================ */
+/* CLARITY LAYER — voice review, numbered fields, tips, glossary  */
+/* ============================================================ */
+
+/* Numbered review fields. */
+.field-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+}
+.field.field-filled .field-input {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 109, 246, 0.16);
+  animation: field-flash 1.1s ease-out 1;
+}
+@keyframes field-flash {
+  0% {
+    box-shadow: 0 0 0 6px rgba(47, 109, 246, 0.28);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(47, 109, 246, 0.16);
+  }
+}
+
+/* "Filled from your voice — review 1–3" banner. */
+.voice-review {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 4px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #eefdf5, #ffffff);
+  border: 1px solid rgba(15, 157, 110, 0.3);
+  border-left: 4px solid var(--pos);
+  border-radius: 12px;
+}
+.voice-review .vr-check {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--pos);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+.voice-review p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+/* Tips — one primary + progressive disclosure (native details). */
+.tips {
+  margin-top: 16px;
+  background: linear-gradient(180deg, #f4f8ff, #ffffff);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.tips > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13.5px;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+.tips > summary::-webkit-details-marker {
+  display: none;
+}
+.tips-primary {
+  flex: 1;
+}
+.tips-primary strong {
+  color: var(--text);
+}
+.tips-more {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-ink);
+  background: rgba(47, 109, 246, 0.1);
+  border: 1px solid rgba(47, 109, 246, 0.28);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.tips[open] .tips-more::after {
+  content: ' ▴';
+}
+.tips:not([open]) .tips-more::after {
+  content: ' ▾';
+}
+.tips-list {
+  margin: 12px 0 2px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tips-list li {
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.tips-list strong {
+  color: var(--text);
+}
+
+/* "In plain English" glossary (sample report). */
+.glossary {
+  margin: 22px 0 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+}
+.glossary dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 24px;
+  margin: 10px 0 0;
+}
+.glossary dt {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.glossary dd {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+@media (max-width: 640px) {
+  .glossary dl {
+    grid-template-columns: 1fr;
+  }
+}

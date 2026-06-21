@@ -364,6 +364,32 @@ function App() {
                 <span>Every rollout becomes training data: failure tags, preference pairs, reward rows.</span>
               </div>
             </div>
+
+            <div className="glossary" aria-label="Plain-English glossary">
+              <div className="panel-kicker">In plain English</div>
+              <dl>
+                <div>
+                  <dt>Oracle</dt>
+                  <dd>A fixed rulebook (an algorithm), not an AI, that decides the right call — the same way every time.</dd>
+                </div>
+                <div>
+                  <dt>Finish / Escalate / Refuse</dt>
+                  <dd>Do the job · ask a human · don’t do it. The three calls we license.</dd>
+                </div>
+                <div>
+                  <dt>FAR</dt>
+                  <dd>“Acted when it should have stopped” — the dangerous mistake.</dd>
+                </div>
+                <div>
+                  <dt>FRR</dt>
+                  <dd>“Refused a job it could have safely done” — the timid mistake.</dd>
+                </div>
+                <div>
+                  <dt>Reward-hacking</dt>
+                  <dd>Faking success to score points — caught, and scored zero.</dd>
+                </div>
+              </dl>
+            </div>
           </section>
 
           <header className="topbar">
@@ -454,11 +480,11 @@ function App() {
         <div className="warehouse-head">
           <div>
             <div className="section-title">Calibrated Autonomy Gym</div>
-            <h2>Warehouse oracle: finish / escalate / refuse</h2>
+            <h2>The safety checker: finish / escalate / refuse</h2>
             <p>
-              Symbolic grid env, BFS labels, hard-gated reward, FAR/FRR matrix, and
-              Signal Extractor. A capable-but-reckless agent fails. A cautious-but-useless
-              agent fails. Only calibrated behavior earns the license.
+              A toy warehouse the robot must navigate. A fixed rulebook (the “oracle”) labels each
+              task and scores the agent — no AI judging. A capable-but-reckless agent fails; a
+              cautious-but-useless agent fails; only calibrated behavior earns the license.
             </p>
           </div>
           <div className="warehouse-badges">

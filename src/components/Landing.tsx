@@ -8,8 +8,8 @@ import { ScrollVideo } from './ScrollVideo'
 const FLOW = [
   { n: '01', t: 'Media intake', d: 'Video, photos, floor plan, SOPs, and Drive links — how the work really happens.' },
   { n: '02', t: 'Understood workflow', d: 'A site map, storyboard, and finish / escalate / refuse rules you confirm.' },
-  { n: '03', t: 'Deterministic oracle', d: 'A BFS oracle and hard-gated reward score the agent — never an LLM.' },
-  { n: '04', t: 'Autonomy license', d: 'FAR/FRR calibration, reward-hack checks, and a portable evidence pack.' },
+  { n: '03', t: 'Deterministic check', d: 'A fixed rulebook (the “oracle”) — not an AI — decides if each move was safe.' },
+  { n: '04', t: 'Autonomy license', d: 'A readiness score (FAR/FRR), cheat-checks, and a portable evidence pack.' },
 ]
 
 const PROOF = [
@@ -123,8 +123,8 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           </li>
           <li className="td-arrow" aria-hidden="true">→</li>
           <li className="td-node">
-            <span className="td-step td-oracle">Oracle scores</span>
-            <p>A BFS oracle and hard-gated reward decide finish / escalate / refuse.</p>
+            <span className="td-step td-oracle">Safety checker</span>
+            <p>A fixed algorithm (the “oracle”) decides finish / escalate / refuse — the same way every time.</p>
           </li>
         </ol>
         <p className="td-note">
