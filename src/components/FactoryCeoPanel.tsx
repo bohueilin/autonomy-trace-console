@@ -745,22 +745,39 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
         {onRestart && <button className="btn ghost" style={{ marginTop: 16 }} onClick={onRestart}>↻ Describe a different site</button>}
       </div>
 
-      {/* live stat strip — a dashboard row, not another block */}
-      {ep && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
-          {[
-            { v: ep.verifier_after?.n_hard ?? 0, l: 'HARD VIOLATIONS', c: (ep.verifier_after?.n_hard ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)', big: true },
-            { v: `${Math.round((m.on_time_rate ?? 0) * 100)}%`, l: 'ON-TIME', c: 'var(--text)' },
-            { v: Math.round(m.profit ?? 0).toLocaleString(), l: 'PROFIT', c: 'var(--accent)' },
-            { v: m.safety_incidents ?? 0, l: 'SAFETY INCIDENTS', c: (m.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' },
-          ].map((s, i) => (
-            <div key={i} style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderTop: `3px solid ${s.c}`, borderRadius: 12, padding: '16px 18px' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, color: s.c, lineHeight: 1 }}>{s.v}</div>
-              <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.08em', color: 'var(--muted)', marginTop: 8 }}>{s.l}</div>
+      {/* run-report metric bar (DragonBench-style): formula line + compact tiles */}
+      {ep && (() => {
+        const hard = ep.verifier_after?.n_hard ?? 0
+        const reward = Math.round(ep.verifier_after?.reward ?? 0)
+        const tiles = [
+          { v: reward.toLocaleString(), l: 'reward', c: 'var(--brand)', big: true },
+          { v: hard, l: 'hard violations', c: hard === 0 ? 'var(--pos)' : 'var(--neg)' },
+          { v: `${Math.round((m.on_time_rate ?? 0) * 100)}%`, l: 'on-time', c: 'var(--text)' },
+          { v: Math.round(m.profit ?? 0).toLocaleString(), l: 'profit', c: 'var(--text)' },
+          { v: `${Math.round((m.utilization ?? 0) * 100)}%`, l: 'utilization', c: 'var(--text)' },
+          { v: m.safety_incidents ?? 0, l: 'safety incidents', c: (m.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' },
+          { v: `${m.completed_jobs ?? '?'} / ${m.total_jobs ?? '?'}`, l: 'jobs done', c: 'var(--text)' },
+        ]
+        return (
+          <div style={{ ...card, padding: '18px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>Run report{isLive ? ` · ${live.intake?.industry}` : ''}</div>
+              <div style={{ fontFamily: mono, fontSize: 11, color: hard === 0 ? 'var(--pos)' : 'var(--neg)' }}>{hard === 0 ? 'VERIFIED · executable' : `${hard} hard violations`}</div>
             </div>
-          ))}
-        </div>
-      )}
+            <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>
+              reward = profit − material/overtime/expedite/scrap − lateness/trust − hard-violation penalty
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(108px, 1fr))', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+              {tiles.map((t, i) => (
+                <div key={i} style={{ background: 'var(--panel)', padding: '12px 14px' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: t.big ? 26 : 20, fontWeight: 800, color: t.c, lineHeight: 1 }}>{t.v}</div>
+                  <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--muted)', marginTop: 7, textTransform: 'uppercase' }}>{t.l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {autoBusy && <div style={{ ...card, color: 'var(--accent)', fontFamily: mono, fontSize: 13 }}>▶ Brain compiling your captured input…</div>}
       {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
@@ -805,9 +822,13 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
               {baseline && <Baseline b={baseline} n="04" />}
               {/* step 3: teacher → TRM (+Gemma) */}
               {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} taskId={isLive ? taskId : undefined} state={fs} />}
-              {/* compare baseline vs trained on the (MuJoCo) floor */}
-              {tasks && <FloorScene3D tasks={tasks} n="06" />}
-              {tasks && <MujocoFloor tasks={tasks} n="06b" />}
+              {/* execution viewers, side by side (3D + physics) */}
+              {tasks && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
+                  <FloorScene3D tasks={tasks} n="06" />
+                  <MujocoFloor tasks={tasks} n="06b" />
+                </div>
+              )}
               {tasks && <Humanoid tasks={tasks} n="07" />}
               {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="08" />}
               {/* actionable feedback → patch the humanoid */}
