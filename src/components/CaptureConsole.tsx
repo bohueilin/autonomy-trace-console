@@ -18,6 +18,8 @@ import {
   type RobotEmbodiment,
 } from '../environmentPlan'
 import { StockGallery, extractFrames, type BrainFile, type BrainInput } from './FactoryCeoPanel'
+import { VoiceInput } from './VoiceInput'
+import type { VoiceFields } from '../useVoiceWorkflow'
 
 const ROLE_LABEL: Record<CaptureRole, string> = {
   workflow_video: 'Workflow video',
@@ -140,6 +142,12 @@ export function CaptureConsole({
 
   function fileToDataUrl(f: File): Promise<string> {
     return new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(f) })
+  }
+
+  function applyVoice(f: VoiceFields) {
+    if (f.outcome) setOutcome(f.outcome)
+    if (f.description) setDescription(f.description)
+    if (f.safetyRules && f.safetyRules.length) setRules(f.safetyRules.join('\n'))
   }
 
   function pickStock(clip: any, input: BrainInput) {
@@ -274,6 +282,7 @@ export function CaptureConsole({
           </div>
         </div>
 
+        <VoiceInput onFields={applyVoice} />
         <StockGallery onPick={pickStock} />
         {stockFrames.length > 0 && (
           <div className="trust-note" style={{ marginTop: 8 }}>

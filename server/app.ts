@@ -33,12 +33,29 @@ import { PHYSICAL_DOMAINS, ROBOT_EMBODIMENTS } from '../src/environmentPlan.ts'
 import { ENVIRONMENT_NAME } from './evalVersions.ts'
 import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
+import { handleVoiceStructure, type VoiceResult } from './minimaxHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
 
 function nebiusStatus(code: NebiusErrorCode): ContentfulStatusCode {
   switch (code) {
+    case 'bad_request':
+      return 400
+    case 'no_key':
+      return 503
+    case 'timeout':
+      return 504
+    default:
+      return 502
+  }
+}
+
+// Voice structuring degrades gracefully on the client, so a missing key (503) is
+// expected, not a hard failure.
+function voiceStatus(r: VoiceResult): ContentfulStatusCode {
+  if (r.ok) return 200
+  switch (r.code) {
     case 'bad_request':
       return 400
     case 'no_key':
@@ -374,6 +391,12 @@ export function createApp(config: AppConfig): Hono {
   app.post('/api/nebius-action', async (c) => {
     const r = await handleNebiusAction(await jsonBody(c), config.nebius)
     return c.json(r, r.ok ? 200 : nebiusStatus(r.code))
+  })
+  // Voice intake: structure a speech transcript into capture-form fields via the
+  // server-side MiniMax key. Authoring only — never touches oracle/reward/license.
+  app.post('/api/voice/structure', async (c) => {
+    const r = await handleVoiceStructure(await jsonBody(c), config.minimax)
+    return c.json(r, voiceStatus(r))
   })
   app.post('/api/vapi/tools', async (c) => c.json(await handleVapiTools(await jsonBody(c), runCfg)))
 

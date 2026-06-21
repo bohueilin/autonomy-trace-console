@@ -21,11 +21,19 @@ export interface InsforgeConfig {
   apiKey?: string
 }
 
+export interface MinimaxConfig {
+  apiKey?: string
+  model?: string
+  baseUrl?: string
+}
+
 export interface AppConfig {
   port: number
   isProd: boolean
   nebius: NebiusConfig
   insforge: InsforgeConfig
+  /** MiniMax voice-intake structuring (server-side key only). */
+  minimax: MinimaxConfig
   /** HMAC secret for signing stateless episode tokens. */
   episodeSecret: string
   /** Non-fatal configuration warnings to log at startup. */
@@ -66,8 +74,14 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     baseUrl: get('INSFORGE_BASE_URL'),
     apiKey: get('INSFORGE_API_KEY'),
   }
+  const minimax: MinimaxConfig = {
+    apiKey: get('MINIMAX_API_KEY'),
+    model: get('MINIMAX_MODEL'),
+    baseUrl: get('MINIMAX_BASE_URL'),
+  }
 
   if (!nebius.apiKey) warnings.push('NEBIUS_API_KEY not set — the Nebius reference agent will be unavailable.')
+  if (!minimax.apiKey) warnings.push('MINIMAX_API_KEY not set — voice intake falls back to the raw transcript.')
   if (!insforge.baseUrl || !insforge.apiKey) {
     warnings.push('INSFORGE_* not set — per-run license history falls back to in-memory (single instance).')
   }
@@ -86,5 +100,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, episodeSecret, warnings }
+  return { port, isProd, nebius, insforge, minimax, episodeSecret, warnings }
 }
