@@ -116,6 +116,16 @@ function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
   useEffect(() => {
     const el = mount.current
     if (!el) return
+    const css = getComputedStyle(document.documentElement)
+    const hex = (name: string, fallback: number) => {
+      const v = css.getPropertyValue(name).trim()
+      try { return new THREE.Color(v || '').getHex() } catch { return fallback }
+    }
+    const C = {
+      floor: hex('--panel-2', 0xeceae5), grid: hex('--line', 0xdcd8d0),
+      station: hex('--line', 0xcfd3da), accent: hex('--accent', 0x3f5fe0),
+      head: hex('--panel', 0xffffff),
+    }
     const queues = tasks.robot_queues ?? {}
     const machineXY: Record<string, number[]> = tasks.meta?.machines ?? {}
     const ids = Object.keys(machineXY)
@@ -130,24 +140,24 @@ function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
     scene.add(new THREE.AmbientLight(0xffffff, 0.7))
     const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(5, 10, 7); scene.add(key)
     // floor
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: 0x171a23, roughness: 1 }))
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: C.floor, roughness: 1 }))
     floor.rotation.x = -Math.PI / 2; floor.position.set(2, 0, 2); scene.add(floor)
-    const grid = new THREE.GridHelper(12, 12, 0x2a2f3d, 0x2a2f3d); grid.position.set(2, 0.01, 2); scene.add(grid)
+    const grid = new THREE.GridHelper(12, 12, C.grid, C.grid); grid.position.set(2, 0.01, 2); scene.add(grid)
     // stations
     const stationMesh: Record<string, THREE.Mesh> = {}
     const pos3 = (xy: number[]) => new THREE.Vector3(xy[0] * 2, 0, xy[1] * 2)
     ids.forEach((id) => {
       const p = pos3(machineXY[id])
-      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), new THREE.MeshStandardMaterial({ color: 0x2a2f3d }))
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), new THREE.MeshStandardMaterial({ color: C.station }))
       m.position.set(p.x, 0.3, p.z); scene.add(m); stationMesh[id] = m
     })
     // humanoids (one per robot queue)
-    const accent = new THREE.Color(0x6c8cff)
+    const accent = new THREE.Color(C.accent)
     const robots = Object.entries(queues).map(([rid, q]) => {
       const g = new THREE.Group()
       const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.5, 4, 8), new THREE.MeshStandardMaterial({ color: accent }))
       body.position.y = 0.75
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffffff }))
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), new THREE.MeshStandardMaterial({ color: C.head }))
       head.position.y = 1.2
       g.add(body); g.add(head); scene.add(g)
       return { rid, q: q as Json[], g }
@@ -159,7 +169,7 @@ function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
       const t = (clock.getElapsedTime() * 0.12) % 1   // loop the whole horizon every ~8s
       const hr = t * maxHr
       // reset station colors
-      ids.forEach((id) => ((stationMesh[id].material as THREE.MeshStandardMaterial).color.setHex(0x2a2f3d)))
+      ids.forEach((id) => ((stationMesh[id].material as THREE.MeshStandardMaterial).color.setHex(C.station)))
       robots.forEach((r) => {
         const active = r.q.find((task) => hr >= task.start_hr && hr < task.end_hr)
         const target = active ?? r.q[r.q.length - 1] ?? r.q[0]
@@ -317,7 +327,7 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
   const dr = drag ? rect(drag) : null
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
-      <Label n="00b">Live floor plan — lasso a region to optimize</Label>
+      <Label n="02">Live floor plan — calibrate toward a region/task (lasso)</Label>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
         Drag a box across the stations you want the brain to focus on. The verifier + TRM optimize that region and the humanoid runs it.
       </p>
@@ -361,14 +371,14 @@ function RegionResult({ region }: { region: Json }) {
   )
 }
 
-function Baseline({ b }: { b: Json }) {
+function Baseline({ b, n }: { b: Json; n: string }) {
   const hm = b.headline_metrics ?? {}, raw = hm.frontier_llm_raw ?? {}, trm = hm.factoryceo_trm ?? {}
   const lb: Json[] = b.hud_leaderboard ?? []
   const maxR = Math.max(...lb.map((x) => x.reward), 1)
   const cell = (v: any, good: boolean) => <td style={{ padding: '7px 8px', textAlign: 'right', color: good ? 'var(--pos)' : 'var(--neg)' }}>{v}</td>
   return (
     <div style={{ ...card, borderColor: 'var(--neg)' }}>
-      <Label n="01">Baseline — why a frontier LLM alone isn't enough</Label>
+      <Label n={n}>Baseline — synthetic data shows a frontier LLM alone isn't safe</Label>
       <p style={{ margin: '0 0 18px', color: 'var(--text)', lineHeight: 1.6 }}>{b.headline}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         <div>
@@ -500,7 +510,82 @@ function Scoreboard({ rows, n }: { rows: Json[]; n: string }) {
   )
 }
 
-export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput | null; onRestart?: () => void } = {}) {
+// Step 3 of the diagram: teacher → small specialist. Shows the distillation
+// pipeline and the headline gain from the scoreboard (LLM-alone vs trained TRM).
+function TrainDistill({ rows, n }: { rows: Json[]; n: string }) {
+  const base = rows.find((r) => r.method === 'base_llm') ?? rows.find((r) => r.method === 'llm_retry')
+  const trm = rows.find((r) => r.method === 'trm')
+  const stat = (label: string, b: any, t: any, fmt: (v: number) => string) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+      <span style={{ color: 'var(--muted)' }}>{label}</span>
+      <span><span style={{ color: 'var(--neg)' }}>{fmt(b)}</span> <span style={{ color: 'var(--muted)' }}>→</span> <span style={{ color: 'var(--pos)', fontWeight: 600 }}>{fmt(t)}</span></span>
+    </div>
+  )
+  return (
+    <div style={card}>
+      <Label n={n}>Teacher → student: train a TRM (+ optional Gemma) on verified traces</Label>
+      <p style={{ margin: '0 0 14px', color: 'var(--text)', lineHeight: 1.6, fontSize: 13.5 }}>
+        The serverless teacher (Qwen3.7 on Fireworks) proposes plans; the verifier + recursive repair turn each into a <b>verified reasoning trace</b>. Those traces distill a ~3K-param <b>TRM</b> that drives the repair loop — and can fine-tune a small Gemma fallback. This is the Sillon/RATP recipe: narrow domain + synthetic data + verified traces + a real verifier ⇒ a small specialist beats the frontier LLM alone.
+      </p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, fontFamily: mono, fontSize: 11 }}>
+        {['seed corpus', 'teacher amplifies', 'verifier gates', 'verified traces', 'distill TRM', 'Gemma fallback'].map((s, i) => (
+          <span key={s} style={{ color: 'var(--muted)' }}>{i > 0 && <span style={{ margin: '0 6px', color: 'var(--line)' }}>→</span>}{s}</span>
+        ))}
+      </div>
+      {base && trm && (
+        <div>
+          {stat('invalid actions', base.invalid_actions, trm.invalid_actions, (v) => String(v))}
+          {stat('customer trust', base.customer_trust, trm.customer_trust, (v) => String(Math.round(v)))}
+          {stat('profit', base.profit, trm.profit, (v) => Math.round(v).toLocaleString())}
+          {stat('on-time', base.on_time_rate, trm.on_time_rate, (v) => `${Math.round(v * 100)}%`)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Final step: teacher gives actionable feedback the operator can use to patch the
+// humanoid for next time. Real call to the brain's /teacher_feedback (Fireworks).
+function TeacherFeedback({ live, n }: { live: Json | null; n: string }) {
+  const [fb, setFb] = useState<Json | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  async function ask() {
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetch(`${BRAIN}/teacher_feedback`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ episode: live?.episode, isaac_tasks: live?.isaac_tasks, intake: live?.intake }),
+      })
+      if (!r.ok) throw new Error(String(r.status))
+      setFb(await r.json())
+    } catch { setErr(`Brain unreachable at ${BRAIN}.`) } finally { setBusy(false) }
+  }
+  return (
+    <div style={card}>
+      <Label n={n}>Actionable feedback — patch the humanoid for next time</Label>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        The teacher reviews the verified run and writes concrete patches the operator (or the humanoid's policy) should apply next cycle.
+      </p>
+      {!fb && <button className="btn primary" onClick={ask} disabled={busy || !live}>{busy ? 'Asking the teacher…' : '▶ Get actionable feedback'}</button>}
+      {err && <div style={{ marginTop: 10, color: 'var(--neg)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
+      {fb && (
+        <div>
+          {fb.summary && <p style={{ margin: '0 0 12px', color: 'var(--text)', lineHeight: 1.6 }}>{fb.summary}</p>}
+          {(fb.patches ?? []).map((p: Json, i: number) => (
+            <div key={i} style={{ borderLeft: '2px solid var(--accent)', background: 'var(--bg)', padding: '10px 12px', marginBottom: 8, borderRadius: '0 8px 8px 0' }}>
+              <div style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--accent)', marginBottom: 3 }}>{p.target ?? `patch ${i + 1}`}</div>
+              <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5 }}>{typeof p === 'string' ? p : p.action ?? p.text}</div>
+            </div>
+          ))}
+          <button className="btn ghost" style={{ marginTop: 6 }} onClick={ask} disabled={busy}>↻ regenerate</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function FactoryCeoPanel({ initial, onRestart, onRun }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void } = {}) {
   const { data: run, err: runErr } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
   const { data: cannedTasks } = useJson('/factoryceo/isaac_tasks.json')
@@ -508,8 +593,12 @@ export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput |
   const [autoBusy, setAutoBusy] = useState(false)
   const [autoErr, setAutoErr] = useState<string | null>(null)
   const [pickBusy, setPickBusy] = useState<string | null>(null)
+  const [approved, setApproved] = useState(false)
 
-  // Real backend call on the input captured up front in the Describe-site flow.
+  // Set the live run and persist it to the current floor (profile store).
+  function applyRun(j: Json | null) { setLive(j); setApproved(false); if (j) onRun?.(j) }
+
+  // Real backend call on the captured input (messy inputs / video frames).
   useEffect(() => {
     if (!initial || (!initial.text && !initial.files?.length)) return
     let cancelled = false
@@ -519,7 +608,7 @@ export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput |
       body: JSON.stringify({ text: initial.text, files: initial.files }),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((j) => { if (!cancelled) setLive(j) })
+      .then((j) => { if (!cancelled) applyRun(j) })
       .catch(() => { if (!cancelled) setAutoErr(`Brain unreachable at ${BRAIN} — showing the prebuilt run. Start it: cd factoryceo_trm && uvicorn api:app --port 8090.`) })
       .finally(() => { if (!cancelled) setAutoBusy(false) })
     return () => { cancelled = true }
@@ -533,7 +622,7 @@ export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput |
         body: JSON.stringify(input),
       })
       if (!r.ok) throw new Error(String(r.status))
-      setLive(await r.json())
+      applyRun(await r.json())
     } catch {
       setAutoErr(`Brain unreachable at ${BRAIN}.`)
     } finally { setPickBusy(null) }
@@ -557,26 +646,19 @@ export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput |
       {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
 
       <StockGallery onPick={pickStock} busyId={pickBusy} />
-      <FactoryInput onResult={setLive} />
-      {(fs.machines ?? []).length > 0 && <FloorPlanLasso machines={fs.machines} onResult={setLive} />}
-      {live?.region && <RegionResult region={live.region} />}
-      {baseline && <Baseline b={baseline} />}
+      <FactoryInput onResult={applyRun} />
 
       {!ep ? (
         <div style={{ ...card, color: runErr ? 'var(--neg)' : 'var(--muted)' }}>
-          {runErr ? 'Load /factoryceo/run.json (run.py → public/factoryceo/) or compile your own factory above.' : 'Loading…'}
+          {runErr ? 'Load /factoryceo/run.json (run.py → public/factoryceo/) or compile a factory above.' : 'Loading…'}
         </div>
       ) : (
         <>
+          {/* ── workflow + shop-floor diagram, calibrate toward a task ── */}
           <div style={card}>
-            <Label n="02">{isLive ? `Your factory — ${live.intake?.industry} · ${live.intake?.n_jobs} jobs (intake: ${live.intake?.source})` : 'Messy context the CEO leaves behind'}</Label>
+            <Label n="01">{isLive ? `Compiled factory — ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled factory state'}</Label>
             {isLive && live.intake?.vision_caption && <p style={{ margin: '0 0 8px', color: 'var(--accent)', fontFamily: mono, fontSize: 12, lineHeight: 1.5 }}>👁 {live.intake.vision_caption}</p>}
             {isLive && live.intake?.summary && <p style={{ margin: '0 0 10px', color: 'var(--text)' }}>{live.intake.summary}</p>}
-            <pre style={{ fontFamily: mono, fontSize: 12.5, whiteSpace: 'pre-wrap', margin: 0, color: 'var(--text)' }}>{ep.observation?.messy_prompt}</pre>
-          </div>
-
-          <div style={card}>
-            <Label n="03">Compiled factory state</Label>
             <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '4px 0' }}>machines</div>
             <div>{(fs.machines ?? []).map((m: Json) => <Chip key={m.id}>{m.id} · {m.capabilities?.join('/')}</Chip>)}</div>
             <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '10px 0 4px' }}>operators (human · robot)</div>
@@ -585,12 +667,34 @@ export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput |
             <div>{(fs.jobs ?? []).map((j: Json) => <Chip key={j.id}>{j.id} · due d{j.due_day} · {j.operations?.length} ops</Chip>)}</div>
           </div>
 
-          <RepairStepper ep={ep} n="04" />
-          {tasks && <FloorScene3D tasks={tasks} n="05" />}
-          {tasks && <Humanoid tasks={tasks} n="06" />}
+          {(fs.machines ?? []).length > 0 && <FloorPlanLasso machines={fs.machines} onResult={applyRun} />}
+          {live?.region && <RegionResult region={live.region} />}
+
+          {/* ── brain plans, you approve (then the rest unlocks) ── */}
+          <RepairStepper ep={ep} n="03" />
+          {!approved ? (
+            <div style={{ ...card, borderColor: 'var(--accent)', textAlign: 'center' }}>
+              <p style={{ margin: '0 0 14px', color: 'var(--text)', lineHeight: 1.6 }}>
+                The brain repaired the plan to <b style={{ color: 'var(--pos)' }}>zero hard violations</b>. Approve it to run the baseline comparison, distillation, and execution.
+              </p>
+              <button className="btn primary" onClick={() => setApproved(true)}>✓ Approve plan & continue</button>
+            </div>
+          ) : (
+            <>
+              {/* step 2: synth data + LLM-alone failures (baseline) */}
+              {baseline && <Baseline b={baseline} n="04" />}
+              {/* step 3: teacher → TRM (+Gemma) */}
+              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" />}
+              {/* compare baseline vs trained on the (MuJoCo) floor */}
+              {tasks && <FloorScene3D tasks={tasks} n="06" />}
+              {tasks && <Humanoid tasks={tasks} n="07" />}
+              {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="08" />}
+              {/* actionable feedback → patch the humanoid */}
+              <TeacherFeedback live={live} n="09" />
+            </>
+          )}
         </>
       )}
-      {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="07" />}
     </div>
   )
 }

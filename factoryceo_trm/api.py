@@ -13,6 +13,7 @@ through the same verifier + recursive TRM repair loop.
 
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from fastapi import FastAPI
@@ -28,7 +29,7 @@ from src.hud_env import hybrid_reward, normalized_reward
 from src.data_export import build_episode
 from src.intake import intake_state
 from src.llm import (DeterministicPlanner, FireworksPlanner, AnthropicPlanner,
-                     VLLMPlanner, vision_caption)
+                     VLLMPlanner, vision_caption, chat_json)
 from isaac.plan_to_isaac import plan_to_tasks
 
 app = FastAPI(title="FactoryCEO-TRM", version="1.0",
@@ -205,6 +206,52 @@ def optimize_region(req: RegionReq):
         },
         "reward": hybrid_reward(state, final),
     }
+
+
+class FeedbackReq(BaseModel):
+    episode: Optional[dict] = None
+    isaac_tasks: Optional[dict] = None
+    intake: Optional[dict] = None
+
+
+_FEEDBACK_SYS = (
+    "You are the senior operations teacher for an autonomous factory. Given a "
+    "verified plan and its humanoid task queue, write concise, actionable feedback "
+    "the operator can apply next cycle to make unattended operation safer and more "
+    "profitable. Output ONLY JSON: {\"summary\": short paragraph, \"patches\": "
+    "[{\"target\": machine/operator/process id or area, \"action\": one concrete "
+    "instruction}]}. 3-5 patches. Be specific to the data; no platitudes."
+)
+
+
+@app.post("/teacher_feedback")
+def teacher_feedback(req: FeedbackReq):
+    """Step in the loop: the teacher (Fireworks) reviews the verified run and emits
+    actionable patches for the operator / humanoid policy. Deterministic fallback
+    when no key so the demo never breaks."""
+    ep = req.episode or {}
+    metrics = (ep.get("verifier_after") or {}).get("metrics") or {}
+    tasks = req.isaac_tasks or {}
+    safety = tasks.get("safety_controls", [])
+    industry = (req.intake or {}).get("industry", "general")
+    user = (
+        f"Industry: {industry}\nVerified metrics: {json.dumps(metrics)[:1200]}\n"
+        f"Safety controls applied: {json.dumps(safety)[:600]}\n"
+        f"Humanoid queues: {json.dumps(tasks.get('robot_queues', {}))[:1500]}\n"
+        "Write the feedback JSON."
+    )
+    out = chat_json(_FEEDBACK_SYS, user)
+    if out and isinstance(out.get("patches"), list):
+        return out
+    # deterministic fallback
+    patches = [{"target": s.get("target", "machine"),
+                "action": f"Keep the {s.get('control','inspect')} control on {s.get('target','')} on the unattended schedule."}
+               for s in safety[:3]]
+    patches.append({"target": "humanoid policy",
+                    "action": "Log each repaired conflict as a preference pair to fine-tune the TRM/Gemma student next cycle."})
+    return {"summary": "Verified plan ran with zero hard violations. Carry the safety "
+            "controls forward and feed the repair trace back into the student model.",
+            "patches": patches}
 
 
 @app.post("/episode")

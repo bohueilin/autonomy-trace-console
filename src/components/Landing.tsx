@@ -45,7 +45,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
             <span aria-hidden="true">＋</span> Describe your site
           </button>
           <button className="btn ghost" onClick={onSample}>
-            See sample safety case
+            Start from a stock floor
           </button>
         </div>
       </div>
@@ -54,22 +54,22 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <li>
           <span className="ls-num">1</span>
           <div>
-            <strong>Capture the workflow</strong>
-            <p>Upload a video, paste a Drive link, and declare the safety rules for the site.</p>
+            <strong>Capture the floor</strong>
+            <p>Messy inputs — video, photos, notes, or a stock factory clip. The multimodal brain compiles a real, schedulable factory.</p>
           </div>
         </li>
         <li>
           <span className="ls-num">2</span>
           <div>
-            <strong>Align on understanding</strong>
-            <p>Edit the proposed site map, storyboard, and finish/escalate/refuse rules.</p>
+            <strong>Brain plans, you approve</strong>
+            <p>The brain reasons out the plan; the verifier + recursive TRM repair it to zero hard violations before you sign off.</p>
           </div>
         </li>
         <li>
           <span className="ls-num">3</span>
           <div>
-            <strong>Freeze into a safety case</strong>
-            <p>FAR/FRR calibration, reward-hacking checks, and what the robot may, must escalate, or must refuse.</p>
+            <strong>Baseline → train → patch</strong>
+            <p>See where an LLM alone fails, distil a TRM that fixes it, watch it execute on the floor, and get feedback to patch the humanoid.</p>
           </div>
         </li>
       </ol>
@@ -101,8 +101,8 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <h2>What a customer gives us, and what they get back.</h2>
           <p>
             Start with a small workplace slice: the task outcome, robot type, SOPs, floor plan,
-            unsafe examples, and escalation rules. The current demo captures local metadata only;
-            the evaluation remains deterministic.
+            unsafe examples, and escalation rules. Video frames are read by the multimodal brain;
+            every plan is gated by a deterministic verifier before it executes.
           </p>
         </div>
         <div className="pilot-grid">
