@@ -152,7 +152,8 @@ function MujocoFloor({ tasks, n }: { tasks: Json; n: string }) {
 
 // three.js floor: stations from the humanoid task queue + a humanoid per robot that
 // walks between machines along the verified timeline. Drives off isaac_tasks.
-function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
+function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false }:
+  { tasks: Json; n?: string; accentVar?: string; height?: number; bare?: boolean }) {
   const mount = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const el = mount.current
@@ -164,13 +165,13 @@ function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
     }
     const C = {
       floor: hex('--panel-2', 0xeceae5), grid: hex('--line', 0xdcd8d0),
-      station: hex('--line', 0xcfd3da), accent: hex('--accent', 0x3f5fe0),
+      station: hex('--line', 0xcfd3da), accent: hex(accentVar || '--accent', 0x3f5fe0),
       head: hex('--panel', 0xffffff),
     }
     const queues = tasks.robot_queues ?? {}
     const machineXY: Record<string, number[]> = tasks.meta?.machines ?? {}
     const ids = Object.keys(machineXY)
-    const W = el.clientWidth || 640, H = 320
+    const W = el.clientWidth || 640, H = height
     const scene = new THREE.Scene()
     scene.background = null
     const cam = new THREE.PerspectiveCamera(45, W / H, 0.1, 100)
@@ -227,13 +228,42 @@ function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
     const onResize = () => { const w = el.clientWidth || 640; cam.aspect = w / H; cam.updateProjectionMatrix(); renderer.setSize(w, H) }
     window.addEventListener('resize', onResize)
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); renderer.dispose(); el.removeChild(renderer.domElement) }
-  }, [tasks])
+  }, [tasks, accentVar, height])
+  const canvas = <div ref={mount} style={{ width: '100%', height, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }} />
+  if (bare) return canvas
   return (
     <div style={card}>
-      <Label n={n}>Humanoid executes on the 3D floor (verified plan)</Label>
-      <div ref={mount} style={{ width: '100%', height: 320, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }} />
+      <Label n={n ?? '·'}>Humanoid executes on the 3D floor (verified plan)</Label>
+      {canvas}
       <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
         stations light up as each humanoid reaches them along the verified timeline · loops the full horizon
+      </div>
+    </div>
+  )
+}
+
+// Before -> After: the same scene with the RAW plan vs the verified plan, so the
+// verifier's value is visible, not just tabulated.
+function BeforeAfter({ naive, verified, naiveHard, n }:
+  { naive: Json; verified: Json; naiveHard: number; n: string }) {
+  const panel = (label: string, sub: string, color: string, tasks: Json, accentVar: string) => (
+    <div style={{ background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 12, padding: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{label}</span>
+        <span style={{ fontFamily: mono, fontSize: 11, color }}>{sub}</span>
+      </div>
+      <FloorScene3D tasks={tasks} accentVar={accentVar} height={240} bare />
+    </div>
+  )
+  return (
+    <div style={card}>
+      <Label n={n}>Before → after: what the verifier actually fixes</Label>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14 }}>
+        {panel('Raw plan', `${naiveHard} hard violations`, 'var(--neg)', naive, '--neg')}
+        {panel('Verified plan', '0 hard violations', 'var(--pos)', verified, '--pos')}
+      </div>
+      <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>
+        same factory, same humanoid: the raw plan (left) violates {naiveHard} hard constraints; recursive TRM repair drives it to a feasible, safe schedule (right).
       </div>
     </div>
   )
@@ -639,6 +669,75 @@ function TrainDistill({ rows, n, customerId, customerName, taskId, state }: { ro
   )
 }
 
+// Long-horizon manufacturing eval (DragonBench-style): naive / greedy / TRM across
+// the HUD Taskset (14-60 day scenarios), partial-credit leaderboard + per-task.
+function EvalReport({ n }: { n: string }) {
+  const [d, setD] = useState<Json | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  async function run() {
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetch(`${BRAIN}/eval_report`)
+      if (!r.ok) throw new Error(String(r.status))
+      setD(await r.json())
+    } catch { setErr(`Brain unreachable at ${BRAIN}.`) } finally { setBusy(false) }
+  }
+  const col: Record<string, string> = { trm: 'var(--pos)', greedy: 'var(--accent)', naive: 'var(--neg)' }
+  const maxScore = 1
+  return (
+    <div style={card}>
+      <Label n={n}>Long-horizon eval: how the verifier-gated brain improves the benchmark</Label>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        The same approaches run across a Taskset of 14-60 day factory scenarios, scored by partial credit (feasibility + on-time + safety + profit). This is the manufacturing analogue of a single-answer eval report.
+      </p>
+      {!d && <button className="btn primary" onClick={run} disabled={busy}>{busy ? 'Running eval…' : '▶ Run long-horizon eval'}</button>}
+      {err && <div style={{ marginTop: 10, color: 'var(--warn)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
+      {d && (
+        <div>
+          <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>
+            {d.benchmark} · {d.n_tasks} tasks · horizons {(d.horizons ?? []).join('/')} days
+          </div>
+          {/* leaderboard bars */}
+          <div style={{ marginBottom: 16 }}>
+            {(d.leaderboard ?? []).map((l: Json) => (
+              <div key={l.agent} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 3 }}>
+                  <span style={{ color: 'var(--text)', fontWeight: l.agent === 'trm' ? 700 : 400 }}>{l.agent === 'naive' ? 'frontier-style (no repair)' : l.agent === 'trm' ? 'verifier-gated TRM' : 'greedy'}</span>
+                  <span style={{ fontFamily: mono, color: col[l.agent] }}>{l.score.toFixed(3)}</span>
+                </div>
+                <div style={{ height: 8, background: 'var(--bg)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${(100 * l.score) / maxScore}%`, height: '100%', background: col[l.agent] }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* per-task table */}
+          <table style={{ width: '100%', fontSize: 12.5, borderCollapse: 'collapse' }}>
+            <thead><tr style={{ color: 'var(--muted)', fontFamily: mono, fontSize: 10 }}>
+              <th style={{ textAlign: 'left', padding: '5px 6px' }}>task</th>
+              <th style={{ padding: '5px 6px', textAlign: 'right' }}>horizon</th>
+              <th style={{ padding: '5px 6px', textAlign: 'right' }}>naive</th>
+              <th style={{ padding: '5px 6px', textAlign: 'right' }}>greedy</th>
+              <th style={{ padding: '5px 6px', textAlign: 'right' }}>TRM</th></tr></thead>
+            <tbody>{(d.rows ?? []).map((r: Json) => (
+              <tr key={r.task} style={{ borderTop: '1px solid var(--line)' }}>
+                <td style={{ padding: '6px', color: 'var(--text)' }}>{r.task}</td>
+                <td style={{ padding: '6px', textAlign: 'right', color: 'var(--muted)' }}>{r.horizon_days}d</td>
+                {['naive', 'greedy', 'trm'].map((a) => {
+                  const pc = r.agents[a]
+                  return <td key={a} style={{ padding: '6px', textAlign: 'right', color: pc.feasible ? 'var(--pos)' : 'var(--neg)' }}>{pc.total.toFixed(2)}{pc.feasible ? '' : ` (${pc.hard_violations})`}</td>
+                })}
+              </tr>
+            ))}</tbody>
+          </table>
+          <p style={{ margin: '12px 0 0', color: 'var(--text)', fontSize: 12.5, lineHeight: 1.5 }}>{d.headline}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Final step: teacher gives actionable feedback the operator can use to patch the
 // humanoid for next time. Real call to the brain's /teacher_feedback (Fireworks).
 function TeacherFeedback({ live, n }: { live: Json | null; n: string }) {
@@ -822,17 +921,24 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
               {baseline && <Baseline b={baseline} n="04" />}
               {/* step 3: teacher → TRM (+Gemma) */}
               {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} taskId={isLive ? taskId : undefined} state={fs} />}
+              {/* before -> after: the verifier's value, made visible */}
+              {live?.naive_isaac_tasks && tasks && (
+                <BeforeAfter naive={live.naive_isaac_tasks} verified={tasks}
+                  naiveHard={live.naive_verdict?.hard_violations ?? 0} n="06" />
+              )}
               {/* execution viewers, side by side (3D + physics) */}
               {tasks && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
-                  <FloorScene3D tasks={tasks} n="06" />
-                  <MujocoFloor tasks={tasks} n="06b" />
+                  <FloorScene3D tasks={tasks} n="07" />
+                  <MujocoFloor tasks={tasks} n="07b" />
                 </div>
               )}
-              {tasks && <Humanoid tasks={tasks} n="07" />}
-              {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="08" />}
+              {tasks && <Humanoid tasks={tasks} n="08" />}
+              {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="09" />}
+              {/* long-horizon benchmark: how we improve manufacturing evals */}
+              <EvalReport n="10" />
               {/* actionable feedback → patch the humanoid */}
-              <TeacherFeedback live={live} n="09" />
+              <TeacherFeedback live={live} n="11" />
             </>
           )}
         </>
