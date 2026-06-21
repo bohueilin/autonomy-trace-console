@@ -11,3 +11,6 @@ results/episodes_train.jsonl
 results/episodes_eval.jsonl
 .venv-hud/
 results/episodes_qwen.jsonl
+
+# per-customer trained TRM checkpoints (runtime state)
+checkpoints/

@@ -69,6 +69,8 @@ function App() {
             initial={brain}
             onRestart={() => setView('capture')}
             onRun={(run) => fac.saveRun(run)}
+            customerId={fac.currentFactory?.id}
+            customerName={fac.currentFactory?.name}
           />
         </section>
       )}

@@ -254,6 +254,88 @@ def teacher_feedback(req: FeedbackReq):
             "patches": patches}
 
 
+import os as _os
+from pathlib import Path as _Path
+
+CKPT_ROOT = _Path(__file__).resolve().parent / "checkpoints"
+
+
+def _safe_id(cid: str) -> str:
+    return "".join(c for c in (cid or "default") if c.isalnum() or c in "-_")[:48] or "default"
+
+
+def _build_episodes_jsonl(path: str, n: int, seed0: int = 0) -> int:
+    traces = 0
+    with open(path, "w") as f:
+        for i in range(n):
+            s = generate_state(seed=seed0 + i, horizon_days=30)
+            cand = corrupt_plan(s, greedy(s), seed=seed0 + i, n_corruptions=6)
+            ep = build_episode(s, cand, seed=seed0 + i, K=60)
+            traces += len(ep.get("repair_trace", []))
+            f.write(json.dumps(ep) + "\n")
+    return traces
+
+
+class TrainReq(BaseModel):
+    customer_id: str = "default"
+    n_episodes: int = 40
+    epochs: int = 40
+
+
+@app.post("/train_trm")
+def train_trm(req: TrainReq):
+    """Train a tiny TRM student on freshly-generated verified repair traces and
+    SAVE the checkpoint under this customer. Fast (~3K params, CPU). Returns the
+    checkpoint metadata. Falls back gracefully if torch is unavailable."""
+    cid = _safe_id(req.customer_id)
+    ckpt_dir = CKPT_ROOT / cid
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    eps_path = str(ckpt_dir / "episodes.jsonl")
+    n_traces = _build_episodes_jsonl(eps_path, max(4, min(120, req.n_episodes)))
+    try:
+        import torch
+        from src.trm_student import train as trm_train, build_dataset
+        model = trm_train(eps_path, out_dir=str(ckpt_dir), epochs=max(10, min(120, req.epochs)))
+        X, y = build_dataset(eps_path)
+        with torch.no_grad():
+            acc = float((model(torch.tensor(X)).argmax(-1) == torch.tensor(y)).float().mean())
+        params = int(sum(p.numel() for p in model.parameters()))
+        meta = {"customer_id": cid, "params": params, "train_acc": round(acc, 4),
+                "n_traces": int(n_traces), "n_episodes": req.n_episodes,
+                "created": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+                "checkpoint": "trm.pt", "trained": True}
+    except Exception as e:
+        meta = {"customer_id": cid, "trained": False, "n_traces": int(n_traces),
+                "error": f"{type(e).__name__}: {e}"[:160]}
+    (ckpt_dir / "meta.json").write_text(json.dumps(meta, indent=2))
+    return meta
+
+
+@app.get("/checkpoints")
+def list_checkpoints():
+    """All stored customer checkpoints (metadata only)."""
+    out = []
+    if CKPT_ROOT.exists():
+        for d in sorted(CKPT_ROOT.iterdir()):
+            mp = d / "meta.json"
+            if mp.exists():
+                out.append(json.loads(mp.read_text()))
+    return {"checkpoints": out}
+
+
+@app.get("/checkpoint/{customer_id}")
+def get_checkpoint(customer_id: str):
+    """The stored checkpoint for one customer, or {trained: false} if none yet."""
+    cid = _safe_id(customer_id)
+    mp = CKPT_ROOT / cid / "meta.json"
+    has_pt = (CKPT_ROOT / cid / "trm.pt").exists()
+    if mp.exists():
+        m = json.loads(mp.read_text())
+        m["loadable"] = has_pt
+        return m
+    return {"customer_id": cid, "trained": False, "loadable": False}
+
+
 @app.post("/episode")
 def episode(req: PlanReq):
     """Full RFT/SFT episode (SYNTH-style) for one scenario: observation, initial

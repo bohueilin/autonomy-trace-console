@@ -519,10 +519,32 @@ function Scoreboard({ rows, n }: { rows: Json[]; n: string }) {
 }
 
 // Step 3 of the diagram: teacher → small specialist. Shows the distillation
-// pipeline and the headline gain from the scoreboard (LLM-alone vs trained TRM).
-function TrainDistill({ rows, n }: { rows: Json[]; n: string }) {
+// pipeline, the LLM-alone vs trained TRM gain, and a per-customer checkpoint you
+// train once and reload on return.
+function TrainDistill({ rows, n, customerId, customerName }: { rows: Json[]; n: string; customerId?: string; customerName?: string }) {
   const base = rows.find((r) => r.method === 'base_llm') ?? rows.find((r) => r.method === 'llm_retry')
   const trm = rows.find((r) => r.method === 'trm')
+  const cid = customerId || 'default'
+  const [ckpt, setCkpt] = useState<Json | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  useEffect(() => {
+    let on = true
+    fetch(`${BRAIN}/checkpoint/${encodeURIComponent(cid)}`).then((r) => r.json()).then((j) => { if (on) setCkpt(j) }).catch(() => {})
+    return () => { on = false }
+  }, [cid])
+  async function trainSave() {
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetch(`${BRAIN}/train_trm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customer_id: cid, n_episodes: 40, epochs: 40 }),
+      })
+      if (!r.ok) throw new Error(String(r.status))
+      const m = await r.json()
+      setCkpt({ ...m, loadable: m.trained })
+    } catch { setErr(`Brain unreachable at ${BRAIN}.`) } finally { setBusy(false) }
+  }
   const stat = (label: string, b: any, t: any, fmt: (v: number) => string) => (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
       <span style={{ color: 'var(--muted)' }}>{label}</span>
@@ -548,6 +570,28 @@ function TrainDistill({ rows, n }: { rows: Json[]; n: string }) {
           {stat('on-time', base.on_time_rate, trm.on_time_rate, (v) => `${Math.round(v * 100)}%`)}
         </div>
       )}
+
+      {/* per-customer trained checkpoint: train once, reload on return */}
+      <div style={{ marginTop: 16, padding: '14px 16px', border: `1px solid ${ckpt?.trained ? 'var(--pos)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--bg)' }}>
+        <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
+          TRM checkpoint · {customerName || cid}
+        </div>
+        {ckpt?.trained ? (
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ color: 'var(--pos)', fontWeight: 700 }}>✓ checkpoint loaded</span>
+            <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--text)' }}>{ckpt.params?.toLocaleString()} params</span>
+            <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--text)' }}>train acc {Math.round((ckpt.train_acc ?? 0) * 100)}%</span>
+            <span style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)' }}>{ckpt.n_traces} traces · {String(ckpt.created || '').slice(0, 10)}</span>
+            <button className="btn ghost" style={{ marginLeft: 'auto' }} onClick={trainSave} disabled={busy}>{busy ? 'Retraining…' : '↻ retrain'}</button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--muted)', fontSize: 13 }}>No saved model for this customer yet.</span>
+            <button className="btn primary" onClick={trainSave} disabled={busy}>{busy ? 'Training & saving…' : '▶ Train & save checkpoint'}</button>
+          </div>
+        )}
+        {err && <div style={{ marginTop: 8, color: 'var(--neg)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
+      </div>
     </div>
   )
 }
@@ -593,7 +637,7 @@ function TeacherFeedback({ live, n }: { live: Json | null; n: string }) {
   )
 }
 
-export function FactoryCeoPanel({ initial, onRestart, onRun }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void } = {}) {
+export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, customerName }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void; customerId?: string; customerName?: string } = {}) {
   const { data: run, err: runErr } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
   const { data: cannedTasks } = useJson('/factoryceo/isaac_tasks.json')
@@ -692,7 +736,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun }: { initial?: Brain
               {/* step 2: synth data + LLM-alone failures (baseline) */}
               {baseline && <Baseline b={baseline} n="04" />}
               {/* step 3: teacher → TRM (+Gemma) */}
-              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" />}
+              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} />}
               {/* compare baseline vs trained on the (MuJoCo) floor */}
               {tasks && <FloorScene3D tasks={tasks} n="06" />}
               {tasks && <Humanoid tasks={tasks} n="07" />}
