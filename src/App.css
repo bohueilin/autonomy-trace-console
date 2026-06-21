@@ -4326,3 +4326,17 @@ select.field-input {
 .capture-card .cc-role select {
   width: 100%;
 }
+
+/* Static-demo banner — shown when no backend is configured (VITE_API_BASE_URL unset). */
+.static-demo-banner {
+  margin: 0 auto;
+  max-width: 1100px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #92560a;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+}
+.static-demo-banner strong { color: #7c3d06; }

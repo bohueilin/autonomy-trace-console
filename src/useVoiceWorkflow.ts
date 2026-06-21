@@ -5,6 +5,7 @@
 // something useful. The MiniMax key stays server-side; no audio is uploaded by us.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiUrl, SERVER_ENABLED } from './apiConfig'
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'success' | 'error' | 'unsupported'
 
@@ -82,8 +83,14 @@ export function useVoiceWorkflow(onFields: (fields: VoiceFields, opts: { fallbac
   const structure = useCallback(
     async (text: string) => {
       setState('processing')
+      // Static demo with no backend: skip the doomed call and keep the raw words.
+      if (!SERVER_ENABLED) {
+        onFields({ outcome: text }, { fallback: true })
+        setState('success')
+        return
+      }
       try {
-        const resp = await fetch('/api/voice/structure', {
+        const resp = await fetch(apiUrl('/api/voice/structure'), {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ transcript: text }),

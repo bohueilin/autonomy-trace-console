@@ -1,0 +1,5 @@
+# Cloudflare Pages SPA fallback: serve index.html for client-side routes.
+# API/gym paths are intentionally NOT rewritten — when a backend is configured
+# via VITE_API_BASE_URL the frontend calls it by absolute URL; on a static-only
+# deploy those features are disabled in-app (see src/apiConfig.ts).
+/*    /index.html   200

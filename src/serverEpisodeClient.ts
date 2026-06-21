@@ -1,3 +1,4 @@
+import { apiUrl, SERVER_ENABLED } from './apiConfig'
 import type { EvidenceStatus, RecentRun, ServerEpisodeResponse } from './types'
 
 // ----------------------------------------------------------------------------
@@ -13,7 +14,8 @@ export async function runServerEpisode(
   scenarioId: string,
   policyMode: 'mock' | 'nebius',
 ): Promise<ServerEpisodeResponse> {
-  const resp = await fetch('/api/run-episode', {
+  if (!SERVER_ENABLED) throw new Error('Server episode unavailable (static demo — no backend configured).')
+  const resp = await fetch(apiUrl('/api/run-episode'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ scenarioId, policyMode }),
@@ -66,8 +68,9 @@ export async function persistWarehouseReference(input: {
     reward: 0,
     category: 'unavailable',
   }
+  if (!SERVER_ENABLED) return fail
   try {
-    const resp = await fetch('/v1/warehouse/reference-episodes', {
+    const resp = await fetch(apiUrl('/v1/warehouse/reference-episodes'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
@@ -95,8 +98,9 @@ export async function persistWarehouseReference(input: {
 
 /** Best-effort fetch of recent server-owned episodes. Returns [] on any failure. */
 export async function fetchRecentRuns(): Promise<RecentRun[]> {
+  if (!SERVER_ENABLED) return []
   try {
-    const resp = await fetch('/api/runs/recent')
+    const resp = await fetch(apiUrl('/api/runs/recent'))
     const data = (await resp.json()) as { ok?: boolean; runs?: RecentRun[] }
     return data?.ok && Array.isArray(data.runs) ? data.runs : []
   } catch {
@@ -110,8 +114,9 @@ export async function fetchRecentRuns(): Promise<RecentRun[]> {
  * only local React state. Returns null if the endpoint is unreachable.
  */
 export async function fetchEvidenceStatus(): Promise<EvidenceStatus | null> {
+  if (!SERVER_ENABLED) return null
   try {
-    const resp = await fetch('/api/evidence/status')
+    const resp = await fetch(apiUrl('/api/evidence/status'))
     const data = (await resp.json()) as ({ ok?: boolean } & EvidenceStatus) | null
     return data?.ok ? data : null
   } catch {

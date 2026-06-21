@@ -1,3 +1,4 @@
+import { apiUrl, SERVER_ENABLED } from './apiConfig'
 import type { AgentDecision, ModelPolicyView } from './types'
 
 // ----------------------------------------------------------------------------
@@ -26,7 +27,8 @@ interface ServerErr {
 }
 
 export async function fetchNebiusAction(view: ModelPolicyView): Promise<AgentDecision> {
-  const resp = await fetch('/api/nebius-action', {
+  if (!SERVER_ENABLED) throw new Error('Nebius unavailable (static demo — no backend configured)')
+  const resp = await fetch(apiUrl('/api/nebius-action'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ view }),

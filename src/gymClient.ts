@@ -1,3 +1,4 @@
+import { apiUrl, SERVER_ENABLED } from './apiConfig'
 import { LICENSE_LEVELS } from './license'
 import type {
   Action,
@@ -44,7 +45,12 @@ export async function runReferenceGymEpisode(
   scenarioId: string,
   mode: AgentSource,
 ): Promise<GymReferenceResult> {
-  const resp = await fetch('/v1/reference-episodes', {
+  if (!SERVER_ENABLED) {
+    throw new Error(
+      'Live gym episodes need the backend. This is the static demo — run the local server, or use Train Eval (runs fully in your browser).',
+    )
+  }
+  const resp = await fetch(apiUrl('/v1/reference-episodes'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ scenarioId, mode }),
@@ -67,7 +73,7 @@ export async function runReferenceGymEpisode(
 
 /** reset — open a signed episode and return the observation the agent may see. */
 export async function resetGymEpisode(scenarioId: string, agentId: string): Promise<GymResetResult> {
-  const resp = await fetch('/v1/episodes', {
+  const resp = await fetch(apiUrl('/v1/episodes'), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ scenarioId, agentId }),
@@ -97,7 +103,7 @@ export async function resetGymEpisode(scenarioId: string, agentId: string): Prom
 
 /** step — submit ONLY the chosen action; the env scores it authoritatively. */
 export async function stepGymEpisode(episodeId: string, action: Action): Promise<GymStepResult> {
-  const resp = await fetch(`/v1/episodes/${encodeURIComponent(episodeId)}/step`, {
+  const resp = await fetch(apiUrl(`/v1/episodes/${encodeURIComponent(episodeId)}/step`), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     // The step body carries the action and nothing else.

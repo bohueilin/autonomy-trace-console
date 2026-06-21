@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import { SERVER_ENABLED } from './apiConfig'
 import { decide, toMockView } from './agent'
 import { fetchEvidenceStatus } from './serverEpisodeClient'
 import { buildGymTrace, gymLicenseToState, runReferenceGymEpisode } from './gymClient'
@@ -257,6 +258,14 @@ function App() {
           </button>
         </div>
       </nav>
+
+      {!SERVER_ENABLED && (
+        <div className="static-demo-banner" role="note">
+          <strong>Static demo.</strong> The deterministic oracle, warehouse env, and Train Eval run
+          fully in your browser. Live model runs, voice structuring, server gym episodes, and the
+          evidence store need the backend and are disabled here.
+        </div>
+      )}
 
       <FlowStepper view={view} />
 
