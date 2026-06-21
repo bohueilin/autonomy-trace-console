@@ -497,6 +497,22 @@ def library():
     return _LIBRARY_CACHE
 
 
+@app.get("/benchmark")
+def benchmark():
+    """Standard JSSP instances (OR-Library / Fisher-Thompson / Lawrence) graded vs
+    published best-known solutions: makespan, gap-to-BKS, feasibility. Grounds the
+    eval in the operations-research literature."""
+    from src.benchmarks import evaluate_instance, INSTANCES
+    rows = [evaluate_instance(k) for k in INSTANCES]
+    return {"benchmark": "JSSP (OR-Library) vs best-known solutions",
+            "metric": "makespan; gap = (makespan - BKS) / BKS",
+            "rows": rows,
+            "note": ("feasibility-first scheduler (greedy + verifier-gated repair): "
+                     "feasible on every instance, with a measured gap to the optimum. "
+                     "The differentiator is dynamic re-optimisation under disruption, "
+                     "which static BKS instances do not test.")}
+
+
 @app.get("/eval_report")
 def eval_report():
     """Long-horizon manufacturing eval: run naive / greedy / TRM across the HUD

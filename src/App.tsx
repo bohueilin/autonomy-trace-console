@@ -5,14 +5,16 @@ import type { CaptureManifest } from './captureManifest'
 import { Landing } from './components/Landing'
 import { CaptureConsole } from './components/CaptureConsole'
 import { FactoryCeoPanel, type BrainFile, type BrainInput } from './components/FactoryCeoPanel'
+import { BenchmarkReport } from './components/BenchmarkReport'
 import { ProfileMenu } from './components/ProfileMenu'
 import { useFactories } from './factoryStore'
 
 // One simple flow: landing → capture (messy inputs / videos) → studio (the brain
 // reasons, plans, you approve, it shows the LLM-alone baseline, the TRM/Gemma it
 // trains, the MuJoCo before/after, and actionable feedback to patch the humanoid).
-// No separate sample-eval tab; saved work lives under the profile's factories/floors.
-type View = 'landing' | 'capture' | 'studio'
+// A separate FactoryBench report page presents the eval. Saved work lives under
+// the profile's factories/floors.
+type View = 'landing' | 'capture' | 'studio' | 'benchmark'
 
 function App() {
   const fac = useFactories()
@@ -50,6 +52,7 @@ function App() {
           </span>
         </button>
         <div className="appnav-links">
+          <button className={`navlink ${view === 'benchmark' ? 'on' : ''}`} onClick={() => setView('benchmark')}>FactoryBench</button>
           <ProfileMenu fac={fac} onOpenFloor={openSavedFloor} onNewFloor={() => setView('capture')} />
           <button className="btn primary navlink-cta" onClick={() => setView('capture')}>New capture</button>
         </div>
@@ -62,6 +65,8 @@ function App() {
       {view === 'capture' && (
         <CaptureConsole onAnalyze={handleCapture} onManual={handleCapture} onBack={() => setView('landing')} />
       )}
+
+      {view === 'benchmark' && <BenchmarkReport onBack={() => setView('landing')} />}
 
       {view === 'studio' && (
         <section className="flow-shell" style={{ paddingTop: 16 }}>
