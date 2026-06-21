@@ -4264,3 +4264,65 @@ select.field-input {
   line-height: 1.45;
   color: var(--text);
 }
+
+/* ---------- Capture: upload clarity + uploaded inputs ---------- */
+/* Recognizable input-type chips above the picker (same words as the dropdown). */
+.upload-types {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.upload-type {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-soft, #475569);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+/* Uploaded-inputs header — larger so people clearly see what they added. */
+.capture-items-head {
+  margin-top: 4px;
+}
+.capture-items-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.capture-items-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Clearer file cards — bigger name, explicit "what is this?" classifier.       */
+/* Scoped with .capture-card to beat the generic .capture-card span/strong rules. */
+.capture-card .cc-name {
+  font-size: 15px;
+  font-weight: 600;
+  word-break: break-word;
+}
+.capture-card .cc-meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.capture-card .cc-role-label {
+  display: block;
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.capture-card .cc-role select {
+  width: 100%;
+}

@@ -30,6 +30,17 @@ const ROLE_LABEL: Record<CaptureRole, string> = {
   google_drive: 'Google Drive',
 }
 
+// The recognizable input types we surface as example chips above the picker.
+// Same vocabulary as the per-file classification dropdown, so the chips, the
+// upload, and the dropdown all teach one consistent mental model.
+const UPLOAD_EXAMPLE_ROLES: CaptureRole[] = [
+  'workflow_video',
+  'site_photo',
+  'floor_plan',
+  'sop',
+  'forbidden_example',
+]
+
 const VIDEO_ACCEPT =
   'video/mp4,video/quicktime,video/webm,video/x-msvideo,video/mpeg,image/*,application/pdf,text/plain,.mov,.mp4,.webm,.avi,.mpeg,.pdf,.txt,.md'
 
@@ -182,8 +193,18 @@ export function CaptureConsole({
             }}
           >
             <div className="upload-orb">↑</div>
-            <h2>Upload workflow video</h2>
-            <p>MP4, MOV, WebM, AVI, images, PDFs, and text notes. Metadata only in this demo.</p>
+            <h2>Add anything that shows the site</h2>
+            <ul className="upload-types" aria-label="Examples of useful inputs">
+              {UPLOAD_EXAMPLE_ROLES.map((role) => (
+                <li key={role} className="upload-type">
+                  {ROLE_LABEL[role]}
+                </li>
+              ))}
+            </ul>
+            <p>
+              Drag files in, or select them below. MP4, MOV, images, PDFs, and notes — metadata
+              only in this demo; nothing is uploaded or parsed.
+            </p>
             <input
               ref={inputRef}
               className="sr-only"
@@ -196,13 +217,13 @@ export function CaptureConsole({
               }}
             />
             <button className="btn primary" onClick={() => inputRef.current?.click()}>
-              Select video or files
+              Select files
             </button>
             <div className="drive-row">
               <input
                 className="field-input"
                 value={driveUrl}
-                placeholder="Paste Google Drive link"
+                placeholder="Paste a Google Drive link"
                 onChange={(e) => setDriveUrl(e.target.value)}
               />
               <button className="btn" onClick={addDriveLink}>
@@ -299,26 +320,44 @@ export function CaptureConsole({
 
         <div className="capture-items">
           {items.length === 0 ? (
-            <div className="empty-upload">No inputs yet. You can still map the workflow manually.</div>
+            <div className="empty-upload">
+              No files yet — that’s fine. Describe the site by voice or in the fields, or add files
+              above.
+            </div>
           ) : (
-            items.map((item) => (
-              <div className="capture-card" key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span>{item.type} · {formatSize(item.size)}</span>
-                </div>
-                <select value={item.role} onChange={(e) => updateRole(item.id, e.target.value as CaptureRole)}>
-                  {CAPTURE_ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {ROLE_LABEL[role]}
-                    </option>
-                  ))}
-                </select>
-                <button className="btn ghost" onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}>
-                  Remove
-                </button>
+            <>
+              <div className="capture-items-head">
+                <h3>Your inputs · {items.length}</h3>
+                <p>Pick what each file shows — it helps the eval read your site correctly.</p>
               </div>
-            ))
+              {items.map((item) => (
+                <div className="capture-card" key={item.id}>
+                  <div className="cc-main">
+                    <strong className="cc-name">{item.name}</strong>
+                    <span className="cc-meta">{item.type} · {formatSize(item.size)}</span>
+                  </div>
+                  <label className="cc-role">
+                    <span className="cc-role-label">What is this?</span>
+                    <select
+                      value={item.role}
+                      onChange={(e) => updateRole(item.id, e.target.value as CaptureRole)}
+                    >
+                      {CAPTURE_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {ROLE_LABEL[role]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="btn ghost"
+                    onClick={() => setItems((prev) => prev.filter((i) => i.id !== item.id))}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </>
           )}
         </div>
 
