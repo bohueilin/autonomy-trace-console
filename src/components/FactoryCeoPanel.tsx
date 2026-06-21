@@ -109,6 +109,47 @@ export function StockGallery({ onPick, busyId }: { onPick: (clip: Json, input: B
   )
 }
 
+// MuJoCo physics floor: renders the verified plan in the MuJoCo simulator
+// (server-side) and shows the captured frames. Falls back quietly if unavailable.
+function MujocoFloor({ tasks, n }: { tasks: Json; n: string }) {
+  const [data, setData] = useState<Json | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  async function render() {
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetch(`${BRAIN}/mujoco_floor`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isaac_tasks: tasks }),
+      })
+      if (!r.ok) throw new Error(String(r.status))
+      const j = await r.json()
+      setData(j)
+      if (!j.available) setErr(j.error || 'MuJoCo unavailable on the brain host.')
+    } catch { setErr(`Brain unreachable at ${BRAIN}.`) } finally { setBusy(false) }
+  }
+  return (
+    <div style={card}>
+      <Label n={n}>MuJoCo physics floor — render the verified plan</Label>
+      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        The same verified queue, rolled out in the MuJoCo simulator (the executor V-JEPA scores). Frames are rendered server-side.
+      </p>
+      {!data?.available && <button className="btn primary" onClick={render} disabled={busy}>{busy ? 'Rendering…' : '▶ Render in MuJoCo'}</button>}
+      {err && <div style={{ marginTop: 10, color: 'var(--warn)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
+      {data?.available && (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${data.frames.length}, 1fr)`, gap: 10 }}>
+            {data.frames.map((f: string, i: number) => (
+              <img key={i} src={f} alt={`mujoco frame ${i}`} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--line)' }} />
+            ))}
+          </div>
+          <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>{data.n_frames} frames · start → mid → end · engine: {data.engine}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // three.js floor: stations from the humanoid task queue + a humanoid per robot that
 // walks between machines along the verified timeline. Drives off isaac_tasks.
 function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
@@ -521,24 +562,26 @@ function Scoreboard({ rows, n }: { rows: Json[]; n: string }) {
 // Step 3 of the diagram: teacher → small specialist. Shows the distillation
 // pipeline, the LLM-alone vs trained TRM gain, and a per-customer checkpoint you
 // train once and reload on return.
-function TrainDistill({ rows, n, customerId, customerName }: { rows: Json[]; n: string; customerId?: string; customerName?: string }) {
+function TrainDistill({ rows, n, customerId, customerName, taskId, state }: { rows: Json[]; n: string; customerId?: string; customerName?: string; taskId?: string; state?: Json }) {
   const base = rows.find((r) => r.method === 'base_llm') ?? rows.find((r) => r.method === 'llm_retry')
   const trm = rows.find((r) => r.method === 'trm')
   const cid = customerId || 'default'
+  const key = taskId || cid                              // per-task checkpoint key
+  const taskSpecific = !!(taskId && state && (state.machines ?? []).length)
   const [ckpt, setCkpt] = useState<Json | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     let on = true
-    fetch(`${BRAIN}/checkpoint/${encodeURIComponent(cid)}`).then((r) => r.json()).then((j) => { if (on) setCkpt(j) }).catch(() => {})
+    fetch(`${BRAIN}/checkpoint/${encodeURIComponent(key)}`).then((r) => r.json()).then((j) => { if (on) setCkpt(j) }).catch(() => {})
     return () => { on = false }
-  }, [cid])
+  }, [key])
   async function trainSave() {
     setBusy(true); setErr(null)
     try {
       const r = await fetch(`${BRAIN}/train_trm`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customer_id: cid, n_episodes: 40, epochs: 40 }),
+        body: JSON.stringify({ customer_id: cid, task_id: taskId || '', state: taskSpecific ? state : null, n_episodes: 40, epochs: 40 }),
       })
       if (!r.ok) throw new Error(String(r.status))
       const m = await r.json()
@@ -574,7 +617,7 @@ function TrainDistill({ rows, n, customerId, customerName }: { rows: Json[]; n: 
       {/* per-customer trained checkpoint: train once, reload on return */}
       <div style={{ marginTop: 16, padding: '14px 16px', border: `1px solid ${ckpt?.trained ? 'var(--pos)' : 'var(--line)'}`, borderRadius: 10, background: 'var(--bg)' }}>
         <div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
-          TRM checkpoint · {customerName || cid}
+          TRM checkpoint · {taskSpecific ? 'per-task' : 'per-customer'} · {customerName || cid}
         </div>
         {ckpt?.trained ? (
           <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -637,7 +680,7 @@ function TeacherFeedback({ live, n }: { live: Json | null; n: string }) {
   )
 }
 
-export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, customerName }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void; customerId?: string; customerName?: string } = {}) {
+export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, customerName, taskId }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void; customerId?: string; customerName?: string; taskId?: string } = {}) {
   const { data: run, err: runErr } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
   const { data: cannedTasks } = useJson('/factoryceo/isaac_tasks.json')
@@ -736,9 +779,10 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
               {/* step 2: synth data + LLM-alone failures (baseline) */}
               {baseline && <Baseline b={baseline} n="04" />}
               {/* step 3: teacher → TRM (+Gemma) */}
-              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} />}
+              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} taskId={isLive ? taskId : undefined} state={fs} />}
               {/* compare baseline vs trained on the (MuJoCo) floor */}
               {tasks && <FloorScene3D tasks={tasks} n="06" />}
+              {tasks && <MujocoFloor tasks={tasks} n="06b" />}
               {tasks && <Humanoid tasks={tasks} n="07" />}
               {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="08" />}
               {/* actionable feedback → patch the humanoid */}

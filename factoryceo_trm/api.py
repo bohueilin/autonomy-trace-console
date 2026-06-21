@@ -208,6 +208,34 @@ def optimize_region(req: RegionReq):
     }
 
 
+class MujocoReq(BaseModel):
+    isaac_tasks: dict
+
+
+@app.post("/mujoco_floor")
+def mujoco_floor(req: MujocoReq):
+    """Render the verified plan on the MuJoCo physics floor (humanoid moving over
+    stations) and return a few frames as PNG data URLs. Falls back to {available:
+    false} if mujoco / a GL context isn't present."""
+    try:
+        import base64, io
+        import numpy as np
+        from PIL import Image
+        from src.closed_loop import MuJoCoExecutor
+        achieved, _goal = MuJoCoExecutor().rollout(req.isaac_tasks)
+        arr = np.asarray(achieved)
+        idxs = [0, len(arr) // 2, len(arr) - 1] if len(arr) >= 3 else list(range(len(arr)))
+        frames = []
+        for i in idxs:
+            buf = io.BytesIO()
+            Image.fromarray(arr[i]).save(buf, format="PNG")
+            frames.append("data:image/png;base64," + base64.b64encode(buf.getvalue()).decode())
+        return {"available": True, "n_frames": int(len(arr)), "frames": frames,
+                "engine": "mujoco"}
+    except Exception as e:
+        return {"available": False, "error": f"{type(e).__name__}: {e}"[:160]}
+
+
 class FeedbackReq(BaseModel):
     episode: Optional[dict] = None
     isaac_tasks: Optional[dict] = None
@@ -264,11 +292,14 @@ def _safe_id(cid: str) -> str:
     return "".join(c for c in (cid or "default") if c.isalnum() or c in "-_")[:48] or "default"
 
 
-def _build_episodes_jsonl(path: str, n: int, seed0: int = 0) -> int:
+def _build_episodes_jsonl(path: str, n: int, seed0: int = 0,
+                          base: Optional[FactoryState] = None) -> int:
+    """Verified repair traces. If `base` is given, all episodes are corruptions of
+    THAT task's state (task-specific reasoning); otherwise random scenarios."""
     traces = 0
     with open(path, "w") as f:
         for i in range(n):
-            s = generate_state(seed=seed0 + i, horizon_days=30)
+            s = base if base is not None else generate_state(seed=seed0 + i, horizon_days=30)
             cand = corrupt_plan(s, greedy(s), seed=seed0 + i, n_corruptions=6)
             ep = build_episode(s, cand, seed=seed0 + i, K=60)
             traces += len(ep.get("repair_trace", []))
@@ -278,20 +309,22 @@ def _build_episodes_jsonl(path: str, n: int, seed0: int = 0) -> int:
 
 class TrainReq(BaseModel):
     customer_id: str = "default"
+    task_id: str = ""                       # per-task checkpoint key (e.g. floor id)
+    state: Optional[FactoryState] = None     # train on THIS task's scenario if given
     n_episodes: int = 40
     epochs: int = 40
 
 
 @app.post("/train_trm")
 def train_trm(req: TrainReq):
-    """Train a tiny TRM student on freshly-generated verified repair traces and
-    SAVE the checkpoint under this customer. Fast (~3K params, CPU). Returns the
-    checkpoint metadata. Falls back gracefully if torch is unavailable."""
-    cid = _safe_id(req.customer_id)
-    ckpt_dir = CKPT_ROOT / cid
+    """Train a tiny TRM student on verified repair traces and SAVE the checkpoint,
+    keyed by task (falls back to customer). When `state` is supplied the traces are
+    specific to that task's factory — a new model per task. Fast (~3K params, CPU)."""
+    key = _safe_id(req.task_id or req.customer_id)
+    ckpt_dir = CKPT_ROOT / key
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     eps_path = str(ckpt_dir / "episodes.jsonl")
-    n_traces = _build_episodes_jsonl(eps_path, max(4, min(120, req.n_episodes)))
+    n_traces = _build_episodes_jsonl(eps_path, max(4, min(120, req.n_episodes)), base=req.state)
     try:
         import torch
         from src.trm_student import train as trm_train, build_dataset
@@ -300,12 +333,15 @@ def train_trm(req: TrainReq):
         with torch.no_grad():
             acc = float((model(torch.tensor(X)).argmax(-1) == torch.tensor(y)).float().mean())
         params = int(sum(p.numel() for p in model.parameters()))
-        meta = {"customer_id": cid, "params": params, "train_acc": round(acc, 4),
+        meta = {"key": key, "customer_id": _safe_id(req.customer_id),
+                "task_id": _safe_id(req.task_id) if req.task_id else None,
+                "task_specific": req.state is not None,
+                "params": params, "train_acc": round(acc, 4),
                 "n_traces": int(n_traces), "n_episodes": req.n_episodes,
                 "created": __import__("datetime").datetime.utcnow().isoformat() + "Z",
                 "checkpoint": "trm.pt", "trained": True}
     except Exception as e:
-        meta = {"customer_id": cid, "trained": False, "n_traces": int(n_traces),
+        meta = {"key": key, "trained": False, "n_traces": int(n_traces),
                 "error": f"{type(e).__name__}: {e}"[:160]}
     (ckpt_dir / "meta.json").write_text(json.dumps(meta, indent=2))
     return meta

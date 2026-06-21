@@ -71,6 +71,7 @@ function App() {
             onRun={(run) => fac.saveRun(run)}
             customerId={fac.currentFactory?.id}
             customerName={fac.currentFactory?.name}
+            taskId={fac.currentFloor?.id}
           />
         </section>
       )}
