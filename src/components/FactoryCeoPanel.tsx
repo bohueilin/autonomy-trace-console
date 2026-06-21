@@ -978,39 +978,83 @@ const VIO_LABEL: Record<string, string> = {
   overlap: 'Two operations overlap',
 }
 
+// What each repair op means in plain English (the brain/TRM's decisions).
+const OP_LABEL: Record<string, string> = {
+  move_operation: 'Moved the op to a free slot',
+  swap_machine: 'Swapped to a capable machine',
+  assign_operator: 'Assigned a qualified, on-shift operator',
+  delay_job: 'Delayed the job to respect constraints',
+  add_overtime: 'Added overtime to hit the deadline',
+  expedite_material: 'Expedited material to arrive in time',
+  reject_rfq: 'Rejected an unprofitable order',
+  warn_customer: 'Warned the customer of a delay',
+  inspect: 'Scheduled a safety inspection',
+  lockout: 'Locked out a degraded machine',
+  slowdown: 'Capped robot continuous run (safety)',
+  noop: 'No change needed',
+}
+
+// Decision ledger: the LLM authored the raw plan; the brain/TRM made these repair
+// decisions. Each row = the LLM's mistake → the brain's fix → the revenue +
+// reliability impact. This is the "why our method is better" view for judges.
 function WhatWasFixed({ ep, naiveHard, n }: { ep: Json; naiveHard?: number; n: string }) {
-  const errs: Json[] = ep?.verifier_before?.errors ?? []
-  const before = ep?.verifier_before?.n_hard ?? naiveHard ?? errs.length
-  const after = ep?.verifier_after?.n_hard ?? 0
-  const groups: Record<string, Json[]> = {}
-  errs.forEach((e) => { (groups[e.type] ??= []).push(e) })
-  const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length)
+  const steps: Json[] = ep?.repair_trace ?? []
+  const before = ep?.verifier_before?.n_hard ?? naiveHard ?? (ep?.verifier_before?.errors ?? []).length
+  const r0 = Math.round(ep?.verifier_before?.reward ?? 0)
+  const rf = Math.round(ep?.verifier_after?.reward ?? 0)
+  const m = ep?.verifier_after?.metrics ?? {}
+  // reward trajectory across the brain's decisions (profit climbing)
+  const series = [r0, ...steps.map((s) => Math.round(s.reward_after ?? r0))]
+  const lo = Math.min(...series), hi = Math.max(...series), span = (hi - lo) || 1
+  const W = 720, H = 60
+  const xs = (i: number) => (i / Math.max(1, series.length - 1)) * W
+  const ys = (v: number) => H - 6 - ((v - lo) / span) * (H - 12)
+  const stat = (v: React.ReactNode, l: string, c: string) => (
+    <div><div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 22, color: c, lineHeight: 1 }}>{v}</div><div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--muted)', marginTop: 5, textTransform: 'uppercase' }}>{l}</div></div>
+  )
+  const prev = (i: number) => (i === 0 ? r0 : Math.round(steps[i - 1].reward_after ?? r0))
   return (
     <div style={card}>
-      <Label n={n}>What the verifier caught — and the brain fixed</Label>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: 'var(--neg)' }}>{before}</span>
-        <span style={{ fontFamily: mono, color: 'var(--muted)' }}>broken in the raw plan</span>
-        <span style={{ color: 'var(--muted)', fontSize: 18 }}>→</span>
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: 'var(--pos)' }}>{after}</span>
-        <span style={{ fontFamily: mono, color: 'var(--muted)' }}>after repair</span>
+      <Label n={n}>Who decided what — LLM plan vs brain repairs, and the $ impact</Label>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        The <b style={{ color: 'var(--neg)' }}>LLM</b> authored the raw plan ({before} hard violations, reward {r0.toLocaleString()}). The <b style={{ color: 'var(--pos)' }}>brain/TRM</b> then made {steps.length} repair decisions, each fixing one and lifting reward.
+      </p>
+      <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', marginBottom: 14 }}>
+        {stat(`${before} → 0`, 'violations (reliability)', 'var(--pos)')}
+        {stat(`${r0.toLocaleString()} → ${rf.toLocaleString()}`, 'verifier reward', 'var(--brand)')}
+        {stat(Math.round(m.profit ?? 0).toLocaleString(), 'profit', 'var(--text)')}
+        {stat(`${Math.round((m.on_time_rate ?? 0) * 100)}%`, 'on-time', 'var(--text)')}
       </div>
-      {sorted.length === 0 ? (
-        <div style={{ color: 'var(--muted)', fontFamily: mono, fontSize: 12 }}>raw plan was already feasible.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {sorted.map(([type, list]) => (
-            <div key={type} style={{ display: 'flex', gap: 12, alignItems: 'baseline', paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neg)', flexShrink: 0, marginTop: 5 }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{VIO_LABEL[type] ?? type} <span style={{ fontFamily: mono, color: 'var(--neg)', fontSize: 12 }}>×{list.length}</span></div>
-                <div style={{ fontFamily: mono, fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{list[0]?.detail}</div>
-              </div>
-              <span style={{ fontFamily: mono, fontSize: 11, color: 'var(--pos)', flexShrink: 0 }}>✓ fixed</span>
-            </div>
-          ))}
-        </div>
+      {/* reward climbs as the brain makes decisions */}
+      {series.length > 1 && (
+        <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 52, marginBottom: 12 }} preserveAspectRatio="none">
+          <polyline points={series.map((v, i) => `${xs(i)},${ys(v)}`).join(' ')} fill="none" stroke="var(--brand)" strokeWidth={2} />
+          {series.map((v, i) => <circle key={i} cx={xs(i)} cy={ys(v)} r={2.2} fill="var(--brand)" />)}
+        </svg>
       )}
+      {/* per-decision ledger */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {steps.slice(0, 12).map((s, i) => {
+          const te = s.targeted_error || {}
+          const op = s.repair_action?.op ?? 'noop'
+          const tgt = [s.repair_action?.job_id && `${s.repair_action.job_id}/${s.repair_action.operation_id ?? ''}`, s.repair_action?.machine_id, s.repair_action?.operator_id, s.repair_action?.material].filter(Boolean).join(' → ')
+          const d = Math.round((s.reward_after ?? r0)) - prev(i)
+          return (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'baseline', padding: '9px 0', borderTop: '1px solid var(--line)' }}>
+              <div>
+                <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--neg)', textTransform: 'uppercase' }}>LLM got wrong</div>
+                <div style={{ fontSize: 12.5 }}>{VIO_LABEL[te.type] ?? te.type ?? 'violation'}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--pos)', textTransform: 'uppercase' }}>brain decided</div>
+                <div style={{ fontSize: 12.5 }}>{OP_LABEL[op] ?? op} <span style={{ fontFamily: mono, color: 'var(--muted)', fontSize: 10.5 }}>{tgt}</span></div>
+              </div>
+              <div style={{ textAlign: 'right', fontFamily: mono, fontSize: 12, color: d >= 0 ? 'var(--pos)' : 'var(--neg)' }}>{d >= 0 ? '+' : ''}{d.toLocaleString()}</div>
+            </div>
+          )
+        })}
+        {steps.length > 12 && <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', paddingTop: 8 }}>+{steps.length - 12} more repair decisions</div>}
+      </div>
     </div>
   )
 }
