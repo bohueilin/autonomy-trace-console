@@ -102,25 +102,36 @@ function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
         Hosted floor archetypes, already compiled and verified. Open one and the brain's plan is ready instantly — no description needed.
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
-        {floors.map((f) => (
-          <div key={f.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 16, background: 'var(--bg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>{f.label}</span>
-              {f.verified && <span style={{ fontFamily: mono, fontSize: 10, color: 'var(--pos)' }}>✓ verified</span>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
+        {floors.map((f) => {
+          const nv = f.naive_violations ?? 0
+          const onTime = Math.round((f.metrics?.on_time ?? 0) * 100)
+          const tags: { t: string; c: string }[] = [
+            { t: `${f.n_jobs} jobs`, c: 'var(--muted)' },
+            ...(f.horizon_days ? [{ t: `${f.horizon_days}-day horizon`, c: 'var(--muted)' }] : []),
+            { t: `${onTime}% on-time`, c: onTime >= 95 ? 'var(--pos)' : 'var(--muted)' },
+            ...(f.n_jobs >= 24 ? [{ t: 'high-mix', c: 'var(--brand)' }] : []),
+            ...((f.horizon_days ?? 99) <= 21 ? [{ t: 'tight deadline', c: 'var(--brand)' }] : []),
+          ]
+          return (
+            <div key={f.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 16, background: 'var(--panel)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>{f.label}</span>
+                {f.verified && <span style={{ fontFamily: mono, fontSize: 10, color: 'var(--pos)' }}>✓ verified</span>}
+              </div>
+              {/* the why: brain banks profit by fixing what a frontier LLM breaks */}
+              <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text)', lineHeight: 1.45 }}>
+                A frontier LLM leaves <b style={{ color: 'var(--neg)' }}>{nv} hard violations</b> here; the brain fixes <b style={{ color: 'var(--pos)' }}>all of them</b> and banks <b style={{ color: 'var(--brand)' }}>${f.metrics?.reward?.toLocaleString()}</b>.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {tags.map((tg, i) => (
+                  <span key={i} style={{ fontFamily: mono, fontSize: 10, color: tg.c, border: `1px solid ${tg.c === 'var(--muted)' ? 'var(--line)' : tg.c}`, borderRadius: 999, padding: '2px 8px' }}>{tg.t}</span>
+                ))}
+              </div>
+              <button className="btn primary" style={{ width: '100%' }} disabled={busy === f.id} onClick={() => open(f)}>{busy === f.id ? 'Opening…' : 'Open floor →'}</button>
             </div>
-            <div style={{ display: 'flex', gap: 14, marginBottom: 12, flexWrap: 'wrap' }}>
-              {[['reward', f.metrics?.reward?.toLocaleString()], ['violations', f.metrics?.hard_violations], ['on-time', `${Math.round((f.metrics?.on_time ?? 0) * 100)}%`]].map(([l, v]) => (
-                <div key={l as string}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 17, color: l === 'violations' ? 'var(--pos)' : 'var(--text)' }}>{v as any}</div>
-                  <div style={{ fontFamily: mono, fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase' }}>{l as string}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--muted)', marginBottom: 10 }}>{(f.machines ?? []).join(' · ')} · {f.n_jobs} jobs</div>
-            <button className="btn primary" style={{ width: '100%' }} disabled={busy === f.id} onClick={() => open(f)}>{busy === f.id ? 'Opening…' : 'Open floor'}</button>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -1005,7 +1016,7 @@ function WhatWasFixed({ ep, naiveHard, n }: { ep: Json; naiveHard?: number; n: s
 }
 
 export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, customerName, taskId }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void; customerId?: string; customerName?: string; taskId?: string } = {}) {
-  const { data: run, err: runErr } = useJson('/factoryceo/run.json')
+  const { data: run } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
   const { data: cannedTasks } = useJson('/factoryceo/isaac_tasks.json')
   const [live, setLive] = useState<Json | null>(null)
@@ -1053,79 +1064,70 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
     } finally { setPickBusy(null) }
   }
 
-  const ep = live?.episode ?? run?.episode
+  const ep = live?.episode
   const tasks = live?.isaac_tasks ?? cannedTasks
   const fs = ep?.observation?.factory_state ?? {}
   const isLive = !!live
-
   const m = ep?.verifier_after?.metrics ?? {}
+
+  // ── library-first: no floor open → just the library grid ──
+  if (!live) {
+    return (
+      <div>
+        <div style={{ marginBottom: 18 }}>
+          <Label n="·">Floor library</Label>
+          <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' }}>Pick a floor — the brain already planned it.</h2>
+          <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 620, fontSize: 14 }}>Each floor is pre-compiled and verified. Open one to see the plan, exactly which constraints the brain fixed, and the humanoid run.</p>
+          {onRestart && <button className="btn ghost" style={{ marginTop: 14 }} onClick={onRestart}>↑ Upload your own floor</button>}
+        </div>
+        {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
+        <FloorLibrary onResult={applyRun} />
+      </div>
+    )
+  }
+
+  // ── a floor is open → its verified plan ──
+  const hard = ep?.verifier_after?.n_hard ?? 0
+  const reward = Math.round(ep?.verifier_after?.reward ?? 0)
+  const tiles = [
+    { v: reward.toLocaleString(), l: 'reward', c: 'var(--brand)', big: true },
+    { v: hard, l: 'hard violations', c: hard === 0 ? 'var(--pos)' : 'var(--neg)' },
+    { v: `${Math.round((m.on_time_rate ?? 0) * 100)}%`, l: 'on-time', c: 'var(--text)' },
+    { v: Math.round(m.profit ?? 0).toLocaleString(), l: 'profit', c: 'var(--text)' },
+    { v: `${Math.round((m.utilization ?? 0) * 100)}%`, l: 'utilization', c: 'var(--text)' },
+    { v: m.safety_incidents ?? 0, l: 'safety incidents', c: (m.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' },
+    { v: `${m.completed_jobs ?? '?'} / ${m.total_jobs ?? '?'}`, l: 'jobs done', c: 'var(--text)' },
+  ]
   return (
     <div>
-      {/* gradient hero (Fireworks-style band) */}
-      <div style={{
-        borderRadius: 18, padding: '30px 32px', marginBottom: 20, color: 'var(--text)',
-        background: 'linear-gradient(135deg, rgba(239,74,35,0.12), rgba(58,91,239,0.12) 60%, rgba(24,137,90,0.10))',
-        border: '1px solid var(--line)',
-      }}>
-        <Label n="·">Operations studio</Label>
-        <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em' }}>
-          Plan, verify, repair, execute.
-        </h2>
-        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 640 }}>Start from our library of shop floors below. The brain plans each one, a deterministic verifier with recursive TRM repair drives it to zero violations, and the humanoid runs the optimal actions.</p>
-        {onRestart && <button className="btn ghost" style={{ marginTop: 16 }} onClick={onRestart}>↻ Describe a different site</button>}
-      </div>
+      <div ref={resultRef} />
+      <button className="btn ghost" style={{ marginBottom: 14 }} onClick={() => setLive(null)}>← Back to library</button>
 
-      {/* run-report metric bar (DragonBench-style): formula line + compact tiles */}
-      {ep && (() => {
-        const hard = ep.verifier_after?.n_hard ?? 0
-        const reward = Math.round(ep.verifier_after?.reward ?? 0)
-        const tiles = [
-          { v: reward.toLocaleString(), l: 'reward', c: 'var(--brand)', big: true },
-          { v: hard, l: 'hard violations', c: hard === 0 ? 'var(--pos)' : 'var(--neg)' },
-          { v: `${Math.round((m.on_time_rate ?? 0) * 100)}%`, l: 'on-time', c: 'var(--text)' },
-          { v: Math.round(m.profit ?? 0).toLocaleString(), l: 'profit', c: 'var(--text)' },
-          { v: `${Math.round((m.utilization ?? 0) * 100)}%`, l: 'utilization', c: 'var(--text)' },
-          { v: m.safety_incidents ?? 0, l: 'safety incidents', c: (m.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' },
-          { v: `${m.completed_jobs ?? '?'} / ${m.total_jobs ?? '?'}`, l: 'jobs done', c: 'var(--text)' },
-        ]
-        return (
-          <div style={{ ...card, padding: '18px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>Run report{isLive ? ` · ${live.intake?.industry}` : ''}</div>
-              <div style={{ fontFamily: mono, fontSize: 11, color: hard === 0 ? 'var(--pos)' : 'var(--neg)' }}>{hard === 0 ? 'VERIFIED · executable' : `${hard} hard violations`}</div>
-            </div>
-            <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginBottom: 14 }}>
-              reward = profit − material/overtime/expedite/scrap − lateness/trust − hard-violation penalty
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(108px, 1fr))', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
-              {tiles.map((t, i) => (
-                <div key={i} style={{ background: 'var(--panel)', padding: '12px 14px' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: t.big ? 26 : 20, fontWeight: 800, color: t.c, lineHeight: 1 }}>{t.v}</div>
-                  <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--muted)', marginTop: 7, textTransform: 'uppercase' }}>{t.l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })()}
-
-      {autoBusy && <div style={{ ...card, color: 'var(--accent)', fontFamily: mono, fontSize: 13 }}>▶ Brain compiling your captured input…</div>}
+      {autoBusy && <div style={{ ...card, color: 'var(--accent)', fontFamily: mono, fontSize: 13 }}>▶ Brain compiling…</div>}
       {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
 
-      <FloorLibrary onResult={applyRun} />
-
-      {!ep ? (
-        <div style={{ ...card, color: runErr ? 'var(--neg)' : 'var(--muted)' }}>
-          {runErr ? 'Open a shop floor from the library above to see the brain plan it.' : 'Loading…'}
+      <div style={{ ...card, padding: '18px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 16 }}>{live.intake?.summary ?? live.intake?.industry ?? 'Run report'}</div>
+          <div style={{ fontFamily: mono, fontSize: 11, color: hard === 0 ? 'var(--pos)' : 'var(--neg)' }}>{hard === 0 ? 'VERIFIED · executable' : `${hard} hard violations`}</div>
         </div>
-      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(108px, 1fr))', gap: 1, background: 'var(--line)', border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden' }}>
+          {tiles.map((t, i) => (
+            <div key={i} style={{ background: 'var(--panel)', padding: '12px 14px' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: t.big ? 26 : 20, fontWeight: 800, color: t.c, lineHeight: 1 }}>{t.v}</div>
+              <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.06em', color: 'var(--muted)', marginTop: 7, textTransform: 'uppercase' }}>{t.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {ep && (
         <>
-          <div ref={resultRef} />
           {/* compiled floor (concise) */}
           <div style={card}>
-            <Label n="01">{isLive ? `Compiled floor · ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled floor'}</Label>
-            {isLive && live.intake?.vision_caption && <p style={{ margin: '0 0 8px', color: 'var(--accent)', fontFamily: mono, fontSize: 12, lineHeight: 1.5 }}>👁 {live.intake.vision_caption}</p>}
-            <div>{(fs.machines ?? []).map((m: Json) => <Chip key={m.id}>{m.id} · {m.capabilities?.join('/')}</Chip>)}</div>
+            <Label n="01">{`Compiled floor · ${live.intake?.industry} · ${live.intake?.n_jobs} jobs`}</Label>
+            {live.intake?.vision_caption && <p style={{ margin: '0 0 8px', color: 'var(--accent)', fontFamily: mono, fontSize: 12, lineHeight: 1.5 }}>👁 {live.intake.vision_caption}</p>}
+            <div>{(fs.machines ?? []).map((mm: Json) => <Chip key={mm.id}>{mm.id} · {mm.capabilities?.join('/')}</Chip>)}</div>
             <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '10px 0 4px' }}>jobs</div>
             <div>{(fs.jobs ?? []).slice(0, 8).map((j: Json) => <Chip key={j.id}>{j.id} · due d{j.due_day}</Chip>)}</div>
           </div>

@@ -94,21 +94,14 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
         Verifier-gated planning for autonomous shop-floor operations.
       </h1>
       <p style={prose}>
-        FactoryBench is built from our own procedurally-generated <strong>hard instances</strong> and
-        <strong> long-horizon builds</strong> (14–60 day floors with breakdowns, absences, and late
-        material). Each is an executable-plan task: schedule every operation without violating a single
-        hard constraint — machine overlap, capability, operator availability, material arrival,
-        maintenance, or precedence — while maximizing a profit-and-safety objective. Plans are graded
-        by a <strong>deterministic verifier</strong>, not an LLM judge. Frontier models (Claude, GPT)
-        can be run on the same instances; a frontier LLM alone emits infeasible or value-destroying
-        plans, while a recursive verify→repair loop, distilled into a ~3K-parameter TRM, reaches zero
-        violations on every horizon.
+        A benchmark of long-horizon factory scheduling: schedule every operation without breaking a
+        hard constraint, while maximizing profit and safety. Plans are graded by a <strong>deterministic
+        verifier</strong>, not an LLM judge. Run a frontier model on it and you see the gap our brain closes.
       </p>
       <p style={{ ...prose, color: 'var(--muted)', fontSize: 14 }}>
-        Framing follows the "LLM as robot brain" view (Butter-Bench, Andon Labs): the LLM is the
-        high-level <strong>orchestrator</strong>, paired with an <strong>executor</strong> for control.
-        FactoryBench measures the orchestrator's practical intelligence — and the verifier is what
-        closes the planning gap that orchestrator LLMs leave open.
+        Instances are our procedurally-generated hard + long-horizon floors (breakdowns, absences, late
+        material). Framing follows the "LLM as robot brain" view (Butter-Bench): the LLM orchestrates,
+        an executor controls — and the verifier closes the planning gap orchestrator LLMs leave open.
       </p>
 
       {/* results */}
@@ -134,6 +127,14 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
           <p style={{ ...prose, fontSize: 14, color: 'var(--muted)', marginTop: 14 }}>{evalr.headline}</p>
         </div>
       )}
+      <div style={{ ...prose, fontSize: 13.5, background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 16px', color: 'var(--text)' }}>
+        <strong>Why is the brain at ~1.0, and isn't that suspicious?</strong> The score is partial credit
+        (0–1), and the verifier-gated brain is feasible <em>by construction</em> — the verifier won't let
+        an infeasible plan through. That's the guarantee, not a trick. A frontier LLM has no verifier, so
+        it can't reach it — which is the whole point. Separately, the tiny TRM <em>student</em> that
+        imitates the brain trains to ~85% accuracy (it's a 3K-param model, not perfect); the verifier is
+        what makes the system safe, not the student being flawless.
+      </div>
 
       {/* long-horizon rolling sim (Vending-Bench-style) */}
       <div style={{ ...kicker, marginTop: 36 }}>02 · Long-horizon business sim</div>
@@ -156,6 +157,11 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
         published best-known solution (BKS). Our scheduler is feasibility-first, not a makespan
         optimizer: it is feasible on every instance, with a measured gap to the optimum. The
         differentiator is dynamic re-optimization under disruption, which static BKS instances do not test.
+      </p>
+      <p style={{ ...prose, fontSize: 13.5, color: 'var(--muted)' }}>
+        The disruption model draws on standard predictive-maintenance + defect datasets — AI4I 2020
+        (telemetry → 5 failure modes), NASA CMAPSS (run-to-failure / RUL), and UCI SECOM (semiconductor
+        fault signatures) — so breakdowns, tool wear, and defects reflect real failure distributions.
       </p>
       {!bench ? <Pending /> : (
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6 }}>
