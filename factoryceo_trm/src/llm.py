@@ -243,6 +243,65 @@ def chat_json(system: str, user: str, max_tokens: int = 4000) -> Optional[dict]:
     return None
 
 
+VISION_SYS = (
+    "You are a manufacturing analyst. You are shown one or more frames from a "
+    "factory floor (often sampled from a video). Describe, in 3-5 sentences, what "
+    "is being manufactured and the operations visible: machines/stations (molding, "
+    "CNC, assembly, deburr, inspection), materials, and the apparent industry "
+    "(automotive, electronics, medical, general). Be concrete; this description is "
+    "compiled into a scheduler's factory state. Respond with ONLY the description "
+    "prose — no preamble, no numbered analysis, no mention of the image or the task."
+)
+
+
+def vision_caption(image_data_urls: list[str], hint: str = "") -> Optional[str]:
+    """Caption factory frames with a Fireworks multimodal model (Qwen3.7-plus is
+    multimodal; override with FIREWORKS_VISION_MODEL). Frames come from an uploaded
+    image or sampled from a video in the browser (base64 data URLs). Returns a
+    free-text factory description fed into the intake, or None if no key / failure."""
+    import urllib.request
+    key = fireworks_key()
+    if not key or not image_data_urls:
+        return None
+    model = os.environ.get("FIREWORKS_VISION_MODEL",
+                           "accounts/fireworks/models/qwen3p7-plus")
+    content: list[dict] = [{"type": "text",
+                            "text": (hint or "Describe this factory floor.")}]
+    for url in image_data_urls[:4]:
+        content.append({"type": "image_url", "image_url": {"url": url}})
+    try:
+        body = json.dumps({
+            "model": model, "max_tokens": 700, "temperature": 0.2,
+            "messages": [{"role": "system", "content": VISION_SYS},
+                         {"role": "user", "content": content}],
+        }).encode()
+        req = urllib.request.Request(f"{FIREWORKS_BASE_URL}/chat/completions", data=body,
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+        with urllib.request.urlopen(req, timeout=90) as r:
+            raw = json.loads(r.read())["choices"][0]["message"]["content"]
+        return _clean_caption(raw)
+    except Exception:
+        return None
+
+
+_META = ("the user wants", "i see", "i can see", "identify the", "let me",
+         "in the image", "in the images", "this image", "the image shows",
+         "here is", "here's", "**", "okay,", "sure,")
+
+
+def _clean_caption(text: str) -> str:
+    """Strip a thinking model's analysis preamble (numbered lists, 'the user wants…',
+    markdown) and keep the descriptive prose."""
+    import re
+    text = re.sub(r"\*\*|\*|^#+\s*", "", text, flags=re.MULTILINE)
+    sents = re.split(r"(?<=[.!?])\s+", text.replace("\n", " "))
+    keep = [s.strip() for s in sents
+            if s.strip() and not any(m in s.lower() for m in _META)
+            and not re.match(r"^\d+[.)]", s.strip())]
+    out = " ".join(keep).strip()
+    return out or text.strip()
+
+
 def _seed_with_greedy(state: FactoryState, plan: ActionPlan) -> ActionPlan:
     """Fill operations the LLM left unscheduled using the greedy backbone.
 

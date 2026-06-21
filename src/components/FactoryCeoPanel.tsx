@@ -4,8 +4,11 @@
 // live brain (FastAPI). Styling takes cues from primeintellect.ai: dark, numbered
 // uppercase mono labels, minimal borders, generous whitespace, terminal-like blocks.
 import { useEffect, useMemo, useRef, useState } from 'react'
+import * as THREE from 'three'
 
 type Json = Record<string, any>
+export type BrainFile = { name: string; kind: string; content: string }
+export type BrainInput = { text: string; files: BrainFile[] }
 const BRAIN = ((import.meta as any).env?.VITE_BRAIN_URL as string) || 'http://localhost:8090'
 const mono = "'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
 
@@ -37,6 +40,154 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: string }) 
   return <span style={{ fontFamily: mono, fontSize: 11.5, border: `1px solid ${tone ?? 'var(--line)'}`, color: tone ?? 'var(--text)', borderRadius: 6, padding: '4px 8px', display: 'inline-block', marginRight: 7, marginBottom: 7 }}>{children}</span>
 }
 
+// Sample N frames from a video (uploaded File object URL or a clip URL) into JPEG
+// data URLs, entirely in the browser via <canvas> — no deps, the raw video never
+// leaves the page. These frames are what the multimodal VLM intake actually sees.
+export async function extractFrames(src: string, count = 2): Promise<string[]> {
+  return new Promise((resolve) => {
+    const v = document.createElement('video')
+    v.crossOrigin = 'anonymous'; v.muted = true; v.preload = 'auto'; v.src = src
+    const frames: string[] = []
+    const canvas = document.createElement('canvas')
+    v.onloadeddata = () => {
+      const dur = isFinite(v.duration) && v.duration > 0 ? v.duration : 8
+      const times = Array.from({ length: count }, (_, i) => (dur * (i + 1)) / (count + 1))
+      let idx = 0
+      const seek = () => { if (idx < times.length) v.currentTime = times[idx]; else resolve(frames) }
+      v.onseeked = () => {
+        canvas.width = v.videoWidth || 640; canvas.height = v.videoHeight || 360
+        canvas.getContext('2d')!.drawImage(v, 0, 0, canvas.width, canvas.height)
+        frames.push(canvas.toDataURL('image/jpeg', 0.7)); idx++; seek()
+      }
+      seek()
+    }
+    v.onerror = () => resolve(frames)
+    setTimeout(() => resolve(frames), 12000)  // safety: never hang the UI
+  })
+}
+
+// Stock manufacturing-task clips (CC, from Wikimedia Commons) for initial runs.
+// Picking one samples frames in-browser and hands {text, files} to the brain.
+export function StockGallery({ onPick, busyId }: { onPick: (clip: Json, input: BrainInput) => void; busyId?: string | null }) {
+  const { data } = useJson('/factoryceo/videos/manifest.json')
+  const clips: Json[] = data?.clips ?? []
+  if (!clips.length) return null
+  async function pick(c: Json) {
+    const frames = await extractFrames(c.file, 2)
+    onPick(c, {
+      text: c.summary || c.title,
+      files: frames.map((f, i) => ({ name: `${c.id}-frame${i}.jpg`, kind: 'image', content: f })),
+    })
+  }
+  return (
+    <div style={card}>
+      <Label n="00a">Start from a stock factory floor (video → brain)</Label>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        Real manufacturing footage. Pick one — frames are sampled in your browser and read by the multimodal brain (Qwen3.7-VL) to compile a factory it can plan.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14 }}>
+        {clips.map((c) => (
+          <div key={c.id} style={{ border: '1px solid var(--line)', borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }}>
+            <video src={c.file} poster={c.poster} muted loop playsInline
+              onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play().catch(() => {})}
+              onMouseLeave={(e) => { const v = e.currentTarget as HTMLVideoElement; v.pause(); v.currentTime = 0 }}
+              style={{ width: '100%', height: 110, objectFit: 'cover', display: 'block' }} />
+            <div style={{ padding: '9px 11px' }}>
+              <div style={{ fontSize: 12.5, color: 'var(--text)', marginBottom: 3 }}>{c.title}</div>
+              <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--muted)', marginBottom: 8 }}>{c.capability} · {c.license}</div>
+              <button className="btn primary" style={{ width: '100%' }} disabled={busyId === c.id} onClick={() => pick(c)}>
+                {busyId === c.id ? 'Reading…' : 'Use this floor'}
+              </button>
+              <a href={c.source_url} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 6, fontFamily: mono, fontSize: 9, color: 'var(--muted)', textDecoration: 'none' }}>
+                {c.author} — {c.license} ↗
+              </a>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// three.js floor: stations from the humanoid task queue + a humanoid per robot that
+// walks between machines along the verified timeline. Drives off isaac_tasks.
+function FloorScene3D({ tasks, n }: { tasks: Json; n: string }) {
+  const mount = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = mount.current
+    if (!el) return
+    const queues = tasks.robot_queues ?? {}
+    const machineXY: Record<string, number[]> = tasks.meta?.machines ?? {}
+    const ids = Object.keys(machineXY)
+    const W = el.clientWidth || 640, H = 320
+    const scene = new THREE.Scene()
+    scene.background = null
+    const cam = new THREE.PerspectiveCamera(45, W / H, 0.1, 100)
+    cam.position.set(6, 7, 9); cam.lookAt(2, 0, 2)
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setSize(W, H); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
+    el.appendChild(renderer.domElement)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7))
+    const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(5, 10, 7); scene.add(key)
+    // floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: 0x171a23, roughness: 1 }))
+    floor.rotation.x = -Math.PI / 2; floor.position.set(2, 0, 2); scene.add(floor)
+    const grid = new THREE.GridHelper(12, 12, 0x2a2f3d, 0x2a2f3d); grid.position.set(2, 0.01, 2); scene.add(grid)
+    // stations
+    const stationMesh: Record<string, THREE.Mesh> = {}
+    const pos3 = (xy: number[]) => new THREE.Vector3(xy[0] * 2, 0, xy[1] * 2)
+    ids.forEach((id) => {
+      const p = pos3(machineXY[id])
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), new THREE.MeshStandardMaterial({ color: 0x2a2f3d }))
+      m.position.set(p.x, 0.3, p.z); scene.add(m); stationMesh[id] = m
+    })
+    // humanoids (one per robot queue)
+    const accent = new THREE.Color(0x6c8cff)
+    const robots = Object.entries(queues).map(([rid, q]) => {
+      const g = new THREE.Group()
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.5, 4, 8), new THREE.MeshStandardMaterial({ color: accent }))
+      body.position.y = 0.75
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffffff }))
+      head.position.y = 1.2
+      g.add(body); g.add(head); scene.add(g)
+      return { rid, q: q as Json[], g }
+    })
+    const allHrs = robots.flatMap((r) => r.q.map((t) => t.end_hr))
+    const maxHr = Math.max(1, ...allHrs)
+    let raf = 0; const clock = new THREE.Clock()
+    const tick = () => {
+      const t = (clock.getElapsedTime() * 0.12) % 1   // loop the whole horizon every ~8s
+      const hr = t * maxHr
+      // reset station colors
+      ids.forEach((id) => ((stationMesh[id].material as THREE.MeshStandardMaterial).color.setHex(0x2a2f3d)))
+      robots.forEach((r) => {
+        const active = r.q.find((task) => hr >= task.start_hr && hr < task.end_hr)
+        const target = active ?? r.q[r.q.length - 1] ?? r.q[0]
+        if (target) {
+          const p = pos3(target.machine_xy ?? machineXY[target.machine] ?? [0, 0])
+          r.g.position.lerp(new THREE.Vector3(p.x, 0, p.z + 0.9), 0.06)
+          if (active && stationMesh[active.machine]) (stationMesh[active.machine].material as THREE.MeshStandardMaterial).color.copy(accent)
+        }
+      })
+      renderer.render(scene, cam)
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    const onResize = () => { const w = el.clientWidth || 640; cam.aspect = w / H; cam.updateProjectionMatrix(); renderer.setSize(w, H) }
+    window.addEventListener('resize', onResize)
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); renderer.dispose(); el.removeChild(renderer.domElement) }
+  }, [tasks])
+  return (
+    <div style={card}>
+      <Label n={n}>Humanoid executes on the 3D floor (verified plan)</Label>
+      <div ref={mount} style={{ width: '100%', height: 320, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }} />
+      <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
+        stations light up as each humanoid reaches them along the verified timeline · loops the full horizon
+      </div>
+    </div>
+  )
+}
+
 // ---- multi-modal input: the user's own factory floor ----
 function FactoryInput({ onResult }: { onResult: (r: Json) => void }) {
   const [text, setText] = useState('')
@@ -49,8 +200,15 @@ function FactoryInput({ onResult }: { onResult: (r: Json) => void }) {
     if (!list) return
     const out: { name: string; kind: string; content: string }[] = []
     for (const f of Array.from(list)) {
-      if (f.type.startsWith('image/')) out.push({ name: f.name, kind: 'image', content: '' })
-      else out.push({ name: f.name, kind: 'text', content: await f.text() })
+      if (f.type.startsWith('image/')) {
+        const url = await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(f) })
+        out.push({ name: f.name, kind: 'image', content: url })
+      } else if (f.type.startsWith('video/')) {
+        const u = URL.createObjectURL(f)
+        const frames = await extractFrames(u, 2)
+        URL.revokeObjectURL(u)
+        frames.forEach((fr, i) => out.push({ name: `${f.name}-frame${i}.jpg`, kind: 'image', content: fr }))
+      } else out.push({ name: f.name, kind: 'text', content: await f.text() })
     }
     setFiles((p) => [...p, ...out])
   }
@@ -342,11 +500,44 @@ function Scoreboard({ rows, n }: { rows: Json[]; n: string }) {
   )
 }
 
-export function FactoryCeoPanel() {
+export function FactoryCeoPanel({ initial, onRestart }: { initial?: BrainInput | null; onRestart?: () => void } = {}) {
   const { data: run, err: runErr } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
   const { data: cannedTasks } = useJson('/factoryceo/isaac_tasks.json')
   const [live, setLive] = useState<Json | null>(null)
+  const [autoBusy, setAutoBusy] = useState(false)
+  const [autoErr, setAutoErr] = useState<string | null>(null)
+  const [pickBusy, setPickBusy] = useState<string | null>(null)
+
+  // Real backend call on the input captured up front in the Describe-site flow.
+  useEffect(() => {
+    if (!initial || (!initial.text && !initial.files?.length)) return
+    let cancelled = false
+    setAutoBusy(true); setAutoErr(null)
+    fetch(`${BRAIN}/plan_from_input`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: initial.text, files: initial.files }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((j) => { if (!cancelled) setLive(j) })
+      .catch(() => { if (!cancelled) setAutoErr(`Brain unreachable at ${BRAIN} — showing the prebuilt run. Start it: cd factoryceo_trm && uvicorn api:app --port 8090.`) })
+      .finally(() => { if (!cancelled) setAutoBusy(false) })
+    return () => { cancelled = true }
+  }, [initial])
+
+  async function pickStock(clip: Json, input: BrainInput) {
+    setPickBusy(clip.id); setAutoErr(null)
+    try {
+      const r = await fetch(`${BRAIN}/plan_from_input`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+      if (!r.ok) throw new Error(String(r.status))
+      setLive(await r.json())
+    } catch {
+      setAutoErr(`Brain unreachable at ${BRAIN}.`)
+    } finally { setPickBusy(null) }
+  }
 
   const ep = live?.episode ?? run?.episode
   const tasks = live?.isaac_tasks ?? cannedTasks
@@ -359,8 +550,13 @@ export function FactoryCeoPanel() {
         <Label n="—">FactoryCEO-TRM · brain decides → verifier gates → humanoid executes</Label>
         <h2 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 500 }}>The CEO leaves for two weeks. The brain runs operations.</h2>
         <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6 }}>Messy context → compiled state → proposed plan → recursive TRM repair to a verified, safe solution → humanoid executes it. Any operational task plugs into the same loop.</p>
+        {onRestart && <button className="btn ghost" style={{ marginTop: 14 }} onClick={onRestart}>↻ Describe a different site</button>}
       </div>
 
+      {autoBusy && <div style={{ ...card, color: 'var(--accent)', fontFamily: mono, fontSize: 13 }}>▶ Brain compiling your captured input…</div>}
+      {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
+
+      <StockGallery onPick={pickStock} busyId={pickBusy} />
       <FactoryInput onResult={setLive} />
       {(fs.machines ?? []).length > 0 && <FloorPlanLasso machines={fs.machines} onResult={setLive} />}
       {live?.region && <RegionResult region={live.region} />}
@@ -374,6 +570,7 @@ export function FactoryCeoPanel() {
         <>
           <div style={card}>
             <Label n="02">{isLive ? `Your factory — ${live.intake?.industry} · ${live.intake?.n_jobs} jobs (intake: ${live.intake?.source})` : 'Messy context the CEO leaves behind'}</Label>
+            {isLive && live.intake?.vision_caption && <p style={{ margin: '0 0 8px', color: 'var(--accent)', fontFamily: mono, fontSize: 12, lineHeight: 1.5 }}>👁 {live.intake.vision_caption}</p>}
             {isLive && live.intake?.summary && <p style={{ margin: '0 0 10px', color: 'var(--text)' }}>{live.intake.summary}</p>}
             <pre style={{ fontFamily: mono, fontSize: 12.5, whiteSpace: 'pre-wrap', margin: 0, color: 'var(--text)' }}>{ep.observation?.messy_prompt}</pre>
           </div>
@@ -389,10 +586,11 @@ export function FactoryCeoPanel() {
           </div>
 
           <RepairStepper ep={ep} n="04" />
-          {tasks && <Humanoid tasks={tasks} n="05" />}
+          {tasks && <FloorScene3D tasks={tasks} n="05" />}
+          {tasks && <Humanoid tasks={tasks} n="06" />}
         </>
       )}
-      {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="06" />}
+      {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="07" />}
     </div>
   )
 }

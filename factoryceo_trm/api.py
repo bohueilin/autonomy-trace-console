@@ -28,7 +28,7 @@ from src.hud_env import hybrid_reward, normalized_reward
 from src.data_export import build_episode
 from src.intake import intake_state
 from src.llm import (DeterministicPlanner, FireworksPlanner, AnthropicPlanner,
-                     VLLMPlanner)
+                     VLLMPlanner, vision_caption)
 from isaac.plan_to_isaac import plan_to_tasks
 
 app = FastAPI(title="FactoryCEO-TRM", version="1.0",
@@ -128,8 +128,8 @@ def isaac_tasks(sp: StatePlan):
 
 class InputFile(BaseModel):
     name: str = ""
-    kind: str = "text"          # text | image (image currently noted, not parsed)
-    content: str = ""           # text content (or base64 for image)
+    kind: str = "text"          # text | image (data URL) | video (sampled frames)
+    content: str = ""           # text content, or a base64 data URL for image frames
 
 
 class InputReq(BaseModel):
@@ -140,16 +140,71 @@ class InputReq(BaseModel):
 
 @app.post("/plan_from_input")
 def plan_from_input(req: InputReq):
-    """Multi-modal intake: free-form factory description (+ text files) -> a real
-    feasible FactoryState -> proposed plan -> verified, repaired plan + humanoid
-    queue. Returns the same episode shape the FactoryCEO panel renders."""
+    """Multi-modal intake: free-form text + text files + image/video frames -> a
+    real feasible FactoryState -> proposed plan -> verified, repaired plan +
+    humanoid queue. Image/video frames (base64 data URLs) are captioned by a
+    Fireworks VLM and folded into the description. Returns the same episode shape
+    the FactoryCEO panel renders."""
     files_text = "\n".join(f.content for f in req.files if f.kind == "text")
+    frames = [f.content for f in req.files
+              if f.kind in ("image", "video") and f.content.startswith("data:")]
+    caption = vision_caption(frames, hint=req.text) if frames else None
+    if caption:
+        files_text = f"{files_text}\n[from uploaded footage] {caption}".strip()
     state, info = intake_state(req.text, files_text, horizon_days=req.horizon_days)
+    info["vision_caption"] = caption
     cand = corrupt_plan(state, greedy(state), seed=0, n_corruptions=6)  # rough proposal
     episode = build_episode(state, cand, seed=0, K=60)
     final, _ = repair_loop(state, cand, K=60)
     return {"episode": episode, "isaac_tasks": plan_to_tasks(state, final),
             "intake": info, "reward": hybrid_reward(state, final)}
+
+
+class RegionReq(BaseModel):
+    """The CEO lasso-selects a region of the live floor plan; we optimize it.
+
+    Supply a state (or generate one with `seed`), plus the `machine_ids` inside
+    the selected rectangle. The full plan is verified + repaired, then we report
+    the region scoped to those machines: which jobs/ops touch them, the humanoid
+    queue restricted to them, and the verifier verdict."""
+    state: Optional[FactoryState] = None
+    seed: int = 0
+    horizon_days: int = 30
+    machine_ids: list[str] = []
+    repair_K: int = 60
+
+
+@app.post("/optimize_region")
+def optimize_region(req: RegionReq):
+    state = req.state or generate_state(seed=req.seed, horizon_days=req.horizon_days)
+    sel = set(req.machine_ids) or {m.id for m in state.machines}
+    cand = corrupt_plan(state, greedy(state), seed=req.seed, n_corruptions=6)
+    episode = build_episode(state, cand, seed=req.seed, K=req.repair_K)
+    final, _ = repair_loop(state, cand, K=req.repair_K)
+    res = evaluate(state, final)
+
+    # scope to the lasso: ops scheduled on a selected machine
+    region_ops = [a for a in final.schedule if a.machine_id in sel]
+    region_jobs = sorted({a.job_id for a in region_ops})
+    tasks = plan_to_tasks(state, final)
+    region_queues = {
+        oid: [t for t in q if t["machine"] in sel]
+        for oid, q in tasks.get("all_queues", {}).items()
+    }
+    region_queues = {oid: q for oid, q in region_queues.items() if q}
+    return {
+        "episode": episode,
+        "isaac_tasks": tasks,
+        "region": {
+            "machine_ids": sorted(sel),
+            "job_ids": region_jobs,
+            "n_ops": len(region_ops),
+            "queues": region_queues,
+            "verified": res.n_hard == 0,
+            "hard_violations": res.n_hard,
+        },
+        "reward": hybrid_reward(state, final),
+    }
 
 
 @app.post("/episode")

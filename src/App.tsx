@@ -6,7 +6,7 @@ import { buildGymTrace, gymLicenseToState, runReferenceGymEpisode } from './gymC
 import { computeLicense } from './license'
 import { seedScenarios, trainScenarios } from './seedScenarios'
 import { verify } from './verifier'
-import { WAREHOUSE_TOOLS, buildWarehouseDemo, buildWarehouseDemoForTasks } from './warehouse'
+import { WAREHOUSE_TOOLS, buildWarehouseDemo } from './warehouse'
 import { buildEnvironmentPlan, type EnvironmentPlan, type EnvironmentRequirement } from './environmentPlan'
 import type { CaptureManifest } from './captureManifest'
 import {
@@ -36,9 +36,8 @@ import { UnderstandingProgress } from './components/UnderstandingProgress'
 import { ReflectAlign } from './components/ReflectAlign'
 import { WorkflowIllustration } from './components/WorkflowIllustration'
 import { EnvironmentPreview } from './components/EnvironmentPreview'
-import { LicenseResults } from './components/LicenseResults'
 import { MatrixMini, TriptychCard } from './components/warehouseViz'
-import { FactoryCeoPanel } from './components/FactoryCeoPanel'
+import { FactoryCeoPanel, type BrainFile, type BrainInput } from './components/FactoryCeoPanel'
 import { actionTrace, pct } from './format'
 
 const FALLBACK_MSG = 'Nebius unavailable — using local policy fallback for demo reliability.'
@@ -52,7 +51,6 @@ type View =
   | 'preview'
   | 'results'
   | 'showcase'
-  | 'factoryceo'
 
 function App() {
   // Product journey: landing -> capture -> understanding -> reflect -> illustrate -> preview -> results, with the
@@ -63,20 +61,31 @@ function App() {
   const [manifest, setManifest] = useState<CaptureManifest | null>(null)
   const [draft, setDraft] = useState<WorkflowUnderstanding | null>(null)
   const [frozen, setFrozen] = useState<FrozenWorkflow | null>(null)
-  const planDemo = useMemo(() => (plan ? buildWarehouseDemoForTasks(plan.tasks) : null), [plan])
+  // The real multimodal input captured up front (text + extracted video/image
+  // frames). The brain runs on THIS at the results stage — same journey, real call.
+  const [brain, setBrain] = useState<BrainInput | null>(null)
 
-  function handleAnalyze(req: EnvironmentRequirement, cap: CaptureManifest) {
+  function deriveBrainInput(req: EnvironmentRequirement, frames: BrainFile[]): BrainInput {
+    const text = [req.outcome, req.notes, (req.attachments ?? []).join('; ')]
+      .filter(Boolean)
+      .join('\n')
+    return { text, files: frames }
+  }
+
+  function handleAnalyze(req: EnvironmentRequirement, cap: CaptureManifest, frames: BrainFile[] = []) {
     setRequirement(req)
     setManifest(cap)
+    setBrain(deriveBrainInput(req, frames))
     setDraft(proposeUnderstanding(cap))
     setFrozen(null)
     setPlan(null)
     setView('understanding')
   }
 
-  function handleManual(req: EnvironmentRequirement, cap: CaptureManifest) {
+  function handleManual(req: EnvironmentRequirement, cap: CaptureManifest, frames: BrainFile[] = []) {
     setRequirement(req)
     setManifest(cap)
+    setBrain(deriveBrainInput(req, frames))
     setDraft(proposeUnderstanding(cap, true))
     setFrozen(null)
     setPlan(null)
@@ -239,12 +248,6 @@ function App() {
           >
             Sample eval
           </button>
-          <button
-            className={`navlink ${view === 'factoryceo' ? 'on' : ''}`}
-            onClick={() => setView('factoryceo')}
-          >
-            FactoryCEO
-          </button>
           <button className="btn primary navlink-cta" onClick={() => setView('capture')}>
             Describe site
           </button>
@@ -288,21 +291,17 @@ function App() {
           onBack={() => setView(frozen ? 'illustrate' : 'capture')}
         />
       )}
-      {view === 'results' && plan && planDemo && (
-        <LicenseResults
-          plan={plan}
-          frozen={frozen}
-          demo={planDemo}
-          onRefine={() => setView('preview')}
-          onRestart={() => setView('capture')}
-          onSample={() => setView('showcase')}
-        />
-      )}
-
-      {view === 'factoryceo' && (
-        <div className="console" style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 20px' }}>
-          <FactoryCeoPanel />
-        </div>
+      {view === 'results' && (
+        <section className="flow-shell" style={{ paddingTop: 16 }}>
+          <button className="btn ghost back" onClick={() => setView('preview')}>← Back to preview</button>
+          <div className="flow-kicker">Results · live brain</div>
+          <h1 style={{ marginBottom: 6 }}>The brain runs your floor — verified before it executes.</h1>
+          <p className="flow-sub">
+            Real call to the FactoryCEO brain on the input you captured: compiled state → recursive
+            TRM repair to zero violations → humanoid execution. Lasso a region to re-optimize it.
+          </p>
+          <FactoryCeoPanel initial={brain} onRestart={() => setView('capture')} />
+        </section>
       )}
 
       {view === 'showcase' && (

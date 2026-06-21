@@ -17,6 +17,7 @@ import {
   type PhysicalDomain,
   type RobotEmbodiment,
 } from '../environmentPlan'
+import { StockGallery, extractFrames, type BrainFile, type BrainInput } from './FactoryCeoPanel'
 
 const ROLE_LABEL: Record<CaptureRole, string> = {
   workflow_video: 'Workflow video',
@@ -43,11 +44,14 @@ export function CaptureConsole({
   onManual,
   onBack,
 }: {
-  onAnalyze: (req: EnvironmentRequirement, manifest: CaptureManifest) => void
-  onManual: (req: EnvironmentRequirement, manifest: CaptureManifest) => void
+  onAnalyze: (req: EnvironmentRequirement, manifest: CaptureManifest, frames?: BrainFile[]) => void
+  onManual: (req: EnvironmentRequirement, manifest: CaptureManifest, frames?: BrainFile[]) => void
   onBack: () => void
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const blobs = useRef<Record<string, File>>({})
+  const [stockFrames, setStockFrames] = useState<BrainFile[]>([])
+  const [extracting, setExtracting] = useState(false)
   const [outcome, setOutcome] = useState(
     'A robot assistant for my dad’s factory that can move totes safely without entering operator-only cells.',
   )
@@ -89,13 +93,38 @@ export function CaptureConsole({
   }
 
   function addFiles(files: FileList | File[]) {
-    const next = Array.from(files).map((file, index) =>
+    const arr = Array.from(files)
+    const next = arr.map((file, index) =>
       fileMetaToCaptureItem(
         { name: file.name, type: file.type, size: file.size },
         items.length + index,
       ),
     )
+    next.forEach((item, i) => {
+      const f = arr[i]
+      if (f.type.startsWith('video/') || f.type.startsWith('image/')) blobs.current[item.id] = f
+    })
     setItems((prev) => [...prev, ...next])
+  }
+
+  // Real multimodal: sample frames from any uploaded video/image (browser-side) and
+  // combine with frames from a chosen stock clip — these feed the brain's VLM intake.
+  async function gatherFrames(): Promise<BrainFile[]> {
+    const out: BrainFile[] = [...stockFrames]
+    for (const item of items) {
+      const f = blobs.current[item.id]
+      if (!f) continue
+      const url = URL.createObjectURL(f)
+      try {
+        if (f.type.startsWith('image/')) {
+          out.push({ name: f.name, kind: 'image', content: await fileToDataUrl(f) })
+        } else if (f.type.startsWith('video/')) {
+          const frames = await extractFrames(url, 2)
+          frames.forEach((fr, i) => out.push({ name: `${f.name}-frame${i}.jpg`, kind: 'image', content: fr }))
+        }
+      } finally { URL.revokeObjectURL(url) }
+    }
+    return out
   }
 
   function addDriveLink() {
@@ -109,11 +138,24 @@ export function CaptureConsole({
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, role } : item)))
   }
 
-  function submit(mode: 'analyze' | 'manual') {
+  function fileToDataUrl(f: File): Promise<string> {
+    return new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(f) })
+  }
+
+  function pickStock(clip: any, input: BrainInput) {
+    setStockFrames(input.files)
+    if (!description.trim() || description.startsWith('Dad receives')) setDescription(clip.summary || clip.title)
+    setOutcome((o) => (o && !o.startsWith('A robot assistant for my dad')) ? o : `Keep the ${clip.title.toLowerCase()} floor running unattended, safely, while the operator is away.`)
+  }
+
+  async function submit(mode: 'analyze' | 'manual') {
     if (!canContinue) return
+    setExtracting(true)
     const payload = buildManifest()
-    if (mode === 'manual') onManual(payload.req, payload.manifest)
-    else onAnalyze(payload.req, payload.manifest)
+    let frames: BrainFile[] = []
+    try { frames = await gatherFrames() } finally { setExtracting(false) }
+    if (mode === 'manual') onManual(payload.req, payload.manifest, frames)
+    else onAnalyze(payload.req, payload.manifest, frames)
   }
 
   return (
@@ -125,8 +167,8 @@ export function CaptureConsole({
         <div className="flow-kicker">Capture</div>
         <h1>Describe the site before the robot ever steps on it.</h1>
         <p className="flow-sub">
-          Upload workflow video, photos, SOPs, floor plans, forbidden examples, or paste a Google
-          Drive link. In this demo we capture metadata only: nothing is uploaded or parsed.
+          Upload workflow video, photos, SOPs, floor plans, or start from a stock floor below. Video
+          frames are sampled in your browser and read by the multimodal brain — the raw file never leaves the page.
         </p>
 
         <div className="capture-layout">
@@ -145,7 +187,7 @@ export function CaptureConsole({
           >
             <div className="upload-orb">↑</div>
             <h2>Upload workflow video</h2>
-            <p>MP4, MOV, WebM, AVI, images, PDFs, and text notes. Metadata only in this demo.</p>
+            <p>MP4, MOV, WebM, AVI, images, PDFs, and text notes. Video frames are sampled locally and read by the brain.</p>
             <input
               ref={inputRef}
               className="sr-only"
@@ -232,6 +274,13 @@ export function CaptureConsole({
           </div>
         </div>
 
+        <StockGallery onPick={pickStock} />
+        {stockFrames.length > 0 && (
+          <div className="trust-note" style={{ marginTop: 8 }}>
+            ✓ {stockFrames.length} frames sampled from the stock clip — the brain will read them.
+          </div>
+        )}
+
         <div className="capture-items">
           {items.length === 0 ? (
             <div className="empty-upload">No inputs yet. You can still map the workflow manually.</div>
@@ -258,10 +307,10 @@ export function CaptureConsole({
         </div>
 
         <div className="flow-actions">
-          <button className="btn primary hero-action" onClick={() => submit('analyze')} disabled={!canContinue}>
-            Analyze workflow
+          <button className="btn primary hero-action" onClick={() => submit('analyze')} disabled={!canContinue || extracting}>
+            {extracting ? 'Reading footage…' : 'Analyze workflow'}
           </button>
-          <button className="btn ghost" onClick={() => submit('manual')} disabled={!canContinue}>
+          <button className="btn ghost" onClick={() => submit('manual')} disabled={!canContinue || extracting}>
             Map manually instead
           </button>
           <span className="trust-note">Local metadata only · no upload · no model spend</span>
