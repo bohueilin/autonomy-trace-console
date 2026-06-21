@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CaptureManifest } from '../captureManifest'
+import { countDeclaredWorkflowInputs, type CaptureManifest } from '../captureManifest'
 import type { WorkflowUnderstanding } from '../workflowDraft'
 
 const CHECKS = [
@@ -48,7 +48,7 @@ export function UnderstandingProgress({
             {done ? '✓' : step + 1}
           </div>
           <div>
-            <strong>{manifest.items.length} declared input(s)</strong>
+            <strong>{countDeclaredWorkflowInputs(manifest)} declared input(s)</strong>
             <p>{draft.inputManifestSummary}</p>
           </div>
         </div>

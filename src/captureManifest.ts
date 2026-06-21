@@ -112,13 +112,40 @@ export function createCaptureManifest(input: {
   return { ...normalized, id: stableHash('capture', normalized) }
 }
 
-export function summarizeInputManifest(manifest: Pick<CaptureManifest, 'items' | 'safetyRules'>): string {
+const ROLE_LABELS: Record<CaptureRole, string> = {
+  workflow_video: 'workflow video',
+  site_photo: 'site photo',
+  floor_plan: 'floor plan',
+  sop: 'SOP',
+  forbidden_example: 'forbidden example',
+  robot_profile: 'robot profile',
+  google_drive: 'Google Drive link',
+}
+
+// Declared workflow inputs are the operator-provided facts that define the eval request:
+// a non-empty outcome, a non-empty workflow description, plus each media/link item.
+// Safety rules are counted separately (see summarizeInputManifest). This is metadata-only
+// counting — voice/text never fabricate media items.
+export function countDeclaredWorkflowInputs(
+  manifest: Pick<CaptureManifest, 'outcome' | 'description' | 'items'>,
+): number {
+  let count = manifest.items.length
+  if (manifest.outcome.trim()) count += 1
+  if (manifest.description.trim()) count += 1
+  return count
+}
+
+export function summarizeInputManifest(
+  manifest: Pick<CaptureManifest, 'outcome' | 'description' | 'items' | 'safetyRules'>,
+): string {
+  const labels: string[] = []
+  if (manifest.outcome.trim()) labels.push('outcome requirement')
+  if (manifest.description.trim()) labels.push('workflow description')
   const roleCounts = new Map<CaptureRole, number>()
   for (const item of manifest.items) roleCounts.set(item.role, (roleCounts.get(item.role) ?? 0) + 1)
-  const roles = [...roleCounts.entries()]
-    .map(([role, count]) => `${count} ${role.replaceAll('_', ' ')}`)
-    .join(', ')
+  for (const [role, count] of roleCounts) labels.push(`${count} ${ROLE_LABELS[role]}`)
+  const count = countDeclaredWorkflowInputs(manifest)
   const rules = manifest.safetyRules.length ? `${manifest.safetyRules.length} safety rule(s)` : 'no explicit rules'
-  return `${manifest.items.length} declared input(s): ${roles || 'none'}; ${rules}.`
+  return `${count} declared input(s): ${labels.join(', ') || 'none'}; ${rules}.`
 }
 

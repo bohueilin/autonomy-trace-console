@@ -922,3 +922,172 @@ Proceed with the build after applying the refinements above.
 The most important product judgment: keep the ambition of "Autonomy License" while making
 the trust boundary painfully clear. The demo should feel bold to YC and boringly honest to
 a safety buyer.
+
+## Codex Bug Report — Voice-Entered Inputs Show As `0 declared input(s)`
+
+Status: urgent UX correctness fix. Claude should implement this next.
+
+User-observed flow:
+
+1. User enters requirements by voice.
+2. Browser speech recognition -> server-side MiniMax structuring -> form pre-fill works.
+3. User clicks `Analyze workflow`.
+4. The Understanding screen animates through checks, but the status card says:
+   `0 declared input(s)` and `0 declared input(s): none; 3 safety rule(s).`
+5. Reality for the user's test: there were 2 declared inputs plus 3 safety rules.
+
+### Diagnosis
+
+The app is not losing the voice fields. It is counting the wrong thing.
+
+- `src/components/CaptureConsole.tsx:78-98` builds a `CaptureManifest` with `outcome`,
+  `description`, `safetyRules`, and `items`.
+- Voice pre-fill writes `outcome`, `description`, `safetyRules`, `domain`, and
+  `embodiment` into that form at `src/components/CaptureConsole.tsx:101-115`.
+- `src/captureManifest.ts:115-123` summarizes only `manifest.items.length`, where `items`
+  means uploaded local files or Google Drive links.
+- `src/components/UnderstandingProgress.tsx:51-52` displays `manifest.items.length` as
+  the headline count.
+
+So a voice-only or text-only capture can truthfully have structured requirement inputs,
+but the Understanding screen reports `0 declared input(s)` because it only counts media
+assets.
+
+### Product Semantics To Fix
+
+Separate these concepts:
+
+- **Declared workflow inputs**: operator-provided facts that define the eval request.
+  Count at least:
+  - non-empty outcome requirement,
+  - non-empty workflow description / notes,
+  - uploaded local file metadata items,
+  - declared Google Drive links.
+- **Safety rules**: keep counted separately as `N safety rule(s)`.
+- **Media/link assets**: still metadata-only; do not pretend voice/text created uploaded
+  media.
+
+For the user's voice-only case, the UI should show approximately:
+
+`2 declared input(s)`
+
+and the summary should read something like:
+
+`2 declared input(s): outcome requirement, workflow description; 3 safety rule(s).`
+
+If the user also uploads a workflow video and a Drive link, it should become:
+
+`4 declared input(s): outcome requirement, workflow description, 1 workflow video, 1 Google Drive link; 3 safety rule(s).`
+
+### Implementation Instructions For Claude
+
+Please read `.agentloop/BRIDGE.md`, `.agentloop/GOAL.md`, `.agentloop/claude.md`, and
+this section of `.agentloop/codex.md`.
+
+This is an approved implementation pass. Please inspect the repo, run `npm run gates`
+first, then implement the smallest fix. Keep diffs focused, run gates again, verify the
+browser flow, and commit/push if gates are green and only in-scope files are staged.
+
+Recommended files:
+
+- `src/captureManifest.ts`
+- `src/captureManifest.test.ts`
+- `src/workflowDraft.ts` only if type/signature updates are needed
+- `src/components/UnderstandingProgress.tsx`
+- optionally `src/components/CaptureConsole.tsx` only if copy needs to distinguish
+  workflow facts vs media assets
+- `.agentloop/claude.md` for the final report
+
+Recommended implementation:
+
+1. Add a pure helper in `src/captureManifest.ts`, for example:
+   - `countDeclaredWorkflowInputs(manifest)`
+   - or return both count and labels from a helper such as `summarizeCaptureSources`.
+2. Count non-empty `outcome` and non-empty `description` as declared workflow inputs.
+3. Count each `manifest.items` entry as one declared workflow input, grouped by role in
+   the summary.
+4. Keep safety rules as their own separate count, not part of the headline input count.
+5. Update `summarizeInputManifest` so it no longer says `none` when outcome/description
+   are present. It should include human-readable labels such as `outcome requirement` and
+   `workflow description`.
+6. Update `UnderstandingProgress` to display the new declared workflow input count, not
+   `manifest.items.length`.
+7. Do **not** create fake `CaptureItem`s for voice/text fields. That would blur the
+   metadata-only media boundary. This is a summary/counting fix, not an upload-model fix.
+8. Preserve trust boundaries:
+   - no media parsing,
+   - no file byte reads,
+   - no object URLs,
+   - no model calls beyond the existing voice structuring path,
+   - no oracle/reward/license changes,
+   - no schema/server route changes.
+
+### Tests Claude Should Add Or Update
+
+Update `src/captureManifest.test.ts`:
+
+1. Voice/text-only manifest:
+   - `outcome` non-empty,
+   - `description` non-empty,
+   - `safetyRules` length 3,
+   - `items: []`.
+   - Assert the declared input count is `2`.
+   - Assert summary includes `2 declared input(s)`.
+   - Assert summary includes `outcome requirement` and `workflow description`.
+   - Assert summary includes `3 safety rule(s)`.
+   - Assert summary does **not** include `none`.
+
+2. Mixed manifest:
+   - outcome + description + 2 file/link items + safety rules.
+   - Assert the count includes text facts plus media/link items.
+   - Update the existing deterministic summary test if its expected count changes from
+     media-only to workflow-input count.
+
+3. Determinism:
+   - The summary/count helper should be pure and stable.
+   - Manifest IDs should stay deterministic.
+
+Manual browser QA:
+
+1. Start a fresh dev server and report the exact URL.
+2. Use voice only. Confirm the form pre-fills outcome, workflow description, and safety
+   rules.
+3. Click `Analyze workflow`.
+4. Confirm Understanding shows `2 declared input(s)` and `3 safety rule(s)`, not `0`.
+5. Repeat with one uploaded file or Drive link and confirm the count increments.
+6. Continue through Align -> Illustrate -> Preview -> Results to confirm no regression.
+
+### Include This Prior Repo-Collaboration Feedback
+
+Claude's latest handoff also asked Codex to pressure-test branch convergence. Carry this
+forward, but do not implement convergence in this bugfix pass.
+
+1. Basing a future `integration` branch on `codex/physical-ai-license` is reasonable
+   because this branch has the latest product UI and the known conflicts are frontend.
+   Main risk: preserve Ajinkya's engine-wiring frontend and server routes while keeping
+   our landing/journey.
+2. CODEOWNERS can work by broad ownership:
+   - Bo-Huei/UI: `src/**`, `index.html`, pitch assets, `server/minimaxHandler*`.
+   - Ajinkya/engine: `factoryceo_trm/**`, `public/factoryceo/**`, `migrations/**`, engine
+     routes/scripts.
+   - Shared/coordinate: `server/app.ts`, `package.json`, lockfile, `vite.config.ts`,
+     tsconfig.
+3. Our latest UI work did touch shared-ish files like `src/App.tsx`, `src/App.css`,
+   `src/components/*`, `src/useVoiceWorkflow.ts`, and `server/minimaxHandler.ts`, but it
+   did not touch engine directories. This input-count fix should avoid `server/app.ts`,
+   `package.json`, and engine folders entirely.
+
+### Handoff Back To Codex
+
+After implementation, write to `.agentloop/claude.md`:
+
+```md
+## Handoff To Codex
+Status:
+Files changed:
+Gates:
+Preview URL tested:
+Voice-only declared input result:
+Mixed media declared input result:
+Questions:
+```
