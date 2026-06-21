@@ -16,6 +16,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from src.schemas import FactoryState, ActionPlan
@@ -25,12 +26,16 @@ from src.verifier import evaluate
 from src.repair_loop import repair_loop
 from src.hud_env import hybrid_reward, normalized_reward
 from src.data_export import build_episode
+from src.intake import intake_state
 from src.llm import (DeterministicPlanner, FireworksPlanner, AnthropicPlanner,
                      VLLMPlanner)
 from isaac.plan_to_isaac import plan_to_tasks
 
 app = FastAPI(title="FactoryCEO-TRM", version="1.0",
               description="Verifiable autonomous factory-operations brain.")
+# the console (Vite) calls this from the browser
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
+                   allow_headers=["*"])
 
 PLANNERS = {
     "deterministic": DeterministicPlanner,
@@ -119,6 +124,32 @@ def reward(sp: StatePlan):
 def isaac_tasks(sp: StatePlan):
     """Verified plan -> humanoid task queue for Isaac Sim/Lab."""
     return plan_to_tasks(sp.state, sp.plan)
+
+
+class InputFile(BaseModel):
+    name: str = ""
+    kind: str = "text"          # text | image (image currently noted, not parsed)
+    content: str = ""           # text content (or base64 for image)
+
+
+class InputReq(BaseModel):
+    text: str = ""
+    files: list[InputFile] = []
+    horizon_days: Optional[int] = None
+
+
+@app.post("/plan_from_input")
+def plan_from_input(req: InputReq):
+    """Multi-modal intake: free-form factory description (+ text files) -> a real
+    feasible FactoryState -> proposed plan -> verified, repaired plan + humanoid
+    queue. Returns the same episode shape the FactoryCEO panel renders."""
+    files_text = "\n".join(f.content for f in req.files if f.kind == "text")
+    state, info = intake_state(req.text, files_text, horizon_days=req.horizon_days)
+    cand = corrupt_plan(state, greedy(state), seed=0, n_corruptions=6)  # rough proposal
+    episode = build_episode(state, cand, seed=0, K=60)
+    final, _ = repair_loop(state, cand, K=60)
+    return {"episode": episode, "isaac_tasks": plan_to_tasks(state, final),
+            "intake": info, "reward": hybrid_reward(state, final)}
 
 
 @app.post("/episode")

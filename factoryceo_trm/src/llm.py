@@ -204,6 +204,45 @@ class FireworksPlanner(VLLMPlanner):
         return bool(self.api_key and self.api_key != "EMPTY")
 
 
+def chat_json(system: str, user: str, max_tokens: int = 4000) -> Optional[dict]:
+    """One-shot LLM call returning parsed JSON. Tries Fireworks (FIREWORKS_API_KEY)
+    then Anthropic (ANTHROPIC_API_KEY); returns None if neither is reachable or the
+    response doesn't parse. Used by the multi-modal intake to extract a factory
+    spec from free-form user input."""
+    import urllib.request
+    # Fireworks (serverless, OpenAI-compatible)
+    key = fireworks_key()
+    if key:
+        try:
+            body = json.dumps({
+                # intake needs a SERVERLESS model (Gemma-31B isn't); Qwen3.7 is
+                "model": os.environ.get("FIREWORKS_CHAT_MODEL",
+                                        "accounts/fireworks/models/qwen3p7-plus"),
+                "max_tokens": max_tokens, "temperature": 0.2,
+                "response_format": {"type": "json_object"},
+                "messages": [{"role": "system", "content": system},
+                             {"role": "user", "content": user}],
+            }).encode()
+            req = urllib.request.Request(f"{FIREWORKS_BASE_URL}/chat/completions", data=body,
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                txt = json.loads(r.read())["choices"][0]["message"]["content"]
+            return json.loads(_extract_json(txt))
+        except Exception:
+            pass
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        try:
+            import anthropic
+            resp = anthropic.Anthropic().messages.create(
+                model=MODEL, max_tokens=max_tokens, system=system,
+                messages=[{"role": "user", "content": user}])
+            txt = "".join(b.text for b in resp.content if b.type == "text")
+            return json.loads(_extract_json(txt))
+        except Exception:
+            pass
+    return None
+
+
 def _seed_with_greedy(state: FactoryState, plan: ActionPlan) -> ActionPlan:
     """Fill operations the LLM left unscheduled using the greedy backbone.
 
