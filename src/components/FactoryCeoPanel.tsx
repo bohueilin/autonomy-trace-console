@@ -41,7 +41,7 @@ function Chip({ children, tone }: { children: React.ReactNode; tone?: string }) 
 }
 
 // Sample N frames from a video (uploaded File object URL or a clip URL) into JPEG
-// data URLs, entirely in the browser via <canvas> — no deps, the raw video never
+// data URLs, entirely in the browser via <canvas>, no deps, the raw video never
 // leaves the page. These frames are what the multimodal VLM intake actually sees.
 export async function extractFrames(src: string, count = 2): Promise<string[]> {
   return new Promise((resolve) => {
@@ -83,7 +83,7 @@ export function StockGallery({ onPick, busyId }: { onPick: (clip: Json, input: B
     <div style={card}>
       <Label n="00a">Start from a stock factory floor (video → brain)</Label>
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
-        Real manufacturing footage. Pick one — frames are sampled in your browser and read by the multimodal brain (Qwen3.7-VL) to compile a factory it can plan.
+        Real manufacturing footage. Pick one, frames are sampled in your browser and read by the multimodal brain (Qwen3.7-VL) to compile a factory it can plan.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14 }}>
         {clips.map((c) => (
@@ -99,7 +99,7 @@ export function StockGallery({ onPick, busyId }: { onPick: (clip: Json, input: B
                 {busyId === c.id ? 'Reading…' : 'Use this floor'}
               </button>
               <a href={c.source_url} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 6, fontFamily: mono, fontSize: 9, color: 'var(--muted)', textDecoration: 'none' }}>
-                {c.author} — {c.license} ↗
+                {c.author}, {c.license} ↗
               </a>
             </div>
           </div>
@@ -130,7 +130,7 @@ function MujocoFloor({ tasks, n }: { tasks: Json; n: string }) {
   }
   return (
     <div style={card}>
-      <Label n={n}>MuJoCo physics floor — render the verified plan</Label>
+      <Label n={n}>MuJoCo physics floor, render the verified plan</Label>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
         The same verified queue, rolled out in the MuJoCo simulator (the executor V-JEPA scores). Frames are rendered server-side.
       </p>
@@ -278,12 +278,12 @@ function FactoryInput({ onResult }: { onResult: (r: Json) => void }) {
     } finally { setBusy(false) }
   }
 
-  const sample = 'Automotive injection-molding + CNC shop. ~14 jobs this month — clips and brackets in ABS and Nylon, a few medical syringe runs in PP. M2 has been overheating. One operator out sick next week. Acme wants 10k clips by Friday at $0.18/unit.'
+  const sample = 'Automotive injection-molding + CNC shop. ~14 jobs this month, clips and brackets in ABS and Nylon, a few medical syringe runs in PP. M2 has been overheating. One operator out sick next week. Acme wants 10k clips by Friday at $0.18/unit.'
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
-      <Label n="00">Your factory floor — describe it, the brain plans it</Label>
+      <Label n="00">Your factory floor, describe it, the brain plans it</Label>
       <textarea value={text} onChange={(e) => setText(e.target.value)} rows={6}
-        placeholder="Paste RFQs, machine logs, operator notes, inventory — anything. The brain compiles it into a real, feasible factory and plans it."
+        placeholder="Paste RFQs, machine logs, operator notes, inventory, anything. The brain compiles it into a real, feasible factory and plans it."
         style={{ width: '100%', fontFamily: mono, fontSize: 13, lineHeight: 1.55, color: 'var(--text)', background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, padding: 12, resize: 'vertical', boxSizing: 'border-box' }} />
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
         <button className="btn primary" onClick={run} disabled={busy}>{busy ? 'Compiling…' : '▶ Compile & plan'}</button>
@@ -371,7 +371,7 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
   const plan = (fpData?.plans ?? [])[fpIdx]
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
-      <Label n="02">Live floor plan — calibrate toward a region/task (lasso)</Label>
+      <Label n="02">Live floor plan, calibrate toward a region/task (lasso)</Label>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
         Drag a box across the stations you want the brain to focus on. The verifier + TRM optimize that region and the humanoid runs it.
       </p>
@@ -409,7 +409,7 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
 function RegionResult({ region }: { region: Json }) {
   return (
     <div style={{ ...card, borderColor: region.verified ? 'var(--pos)' : 'var(--neg)' }}>
-      <Label n="00c">Region optimized — {region.machine_ids?.join(', ')}</Label>
+      <Label n="00c">Region optimized, {region.machine_ids?.join(', ')}</Label>
       <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div><div style={{ fontFamily: mono, fontSize: 30, color: region.verified ? 'var(--pos)' : 'var(--neg)' }}>{region.hard_violations}</div><div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)' }}>HARD VIOLATIONS</div></div>
         <div><div style={{ fontFamily: mono, fontSize: 30, color: 'var(--accent)' }}>{region.n_ops}</div><div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)' }}>OPS IN REGION</div></div>
@@ -427,7 +427,7 @@ function Baseline({ b, n }: { b: Json; n: string }) {
   const cell = (v: any, good: boolean) => <td style={{ padding: '7px 8px', textAlign: 'right', color: good ? 'var(--pos)' : 'var(--neg)' }}>{v}</td>
   return (
     <div style={{ ...card, borderColor: 'var(--neg)' }}>
-      <Label n={n}>Baseline — synthetic data shows a frontier LLM alone isn't safe</Label>
+      <Label n={n}>Baseline, synthetic data shows a frontier LLM alone isn't safe</Label>
       <p style={{ margin: '0 0 18px', color: 'var(--text)', lineHeight: 1.6 }}>{b.headline}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         <div>
@@ -480,7 +480,7 @@ function RepairStepper({ ep, n }: { ep: Json; n: string }) {
     return () => { if (timer.current) window.clearInterval(timer.current) }
   }, [playing, steps.length])
   const cur = steps[i], maxViol = steps[0].viol || 1, a = cur.action
-  const desc = !a ? 'raw plan — before any repair' : `${a.op}${a.job_id ? ` · ${a.job_id}/${a.operation_id ?? ''}` : ''}${a.machine_id ? ` → ${a.machine_id}/${a.operator_id ?? ''}` : ''}${a.material ? ` · ${a.material}` : ''}`
+  const desc = !a ? 'raw plan, before any repair' : `${a.op}${a.job_id ? ` · ${a.job_id}/${a.operation_id ?? ''}` : ''}${a.machine_id ? ` → ${a.machine_id}/${a.operator_id ?? ''}` : ''}${a.material ? ` · ${a.material}` : ''}`
   const big = (v: React.ReactNode, l: string, c: string) => (
     <div><div style={{ fontFamily: mono, fontSize: 36, lineHeight: 1, color: c }}>{v}</div><div style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.06em', color: 'var(--muted)', marginTop: 6 }}>{l}</div></div>
   )
@@ -520,7 +520,7 @@ function Humanoid({ tasks, n }: { tasks: Json; n: string }) {
       </div>
       {entries.map(([rid, q]) => (
         <div key={rid} style={{ marginBottom: 10 }}>
-          <div style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', marginBottom: 5 }}>{rid} (humanoid) — {q.length} tasks</div>
+          <div style={{ fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', marginBottom: 5 }}>{rid} (humanoid), {q.length} tasks</div>
           <div style={{ position: 'relative', height: 24, background: 'var(--bg)', borderRadius: 6 }}>
             {q.map((t, i) => (
               <div key={i} title={`${t.task} @ ${t.machine} (h${t.start_hr}-${t.end_hr}, ${t.job})`} style={{ position: 'absolute', top: 3, height: 18, borderRadius: 4, left: `${(100 * (t.start_hr - lo)) / span}%`, width: `${Math.max(3, (100 * (t.end_hr - t.start_hr)) / span)}%`, background: 'var(--accent)', color: '#0c0f17', fontFamily: mono, fontSize: 9, lineHeight: '18px', overflow: 'hidden', padding: '0 4px', whiteSpace: 'nowrap' }}>{t.machine}</div>
@@ -535,7 +535,7 @@ function Humanoid({ tasks, n }: { tasks: Json; n: string }) {
 function Scoreboard({ rows, n }: { rows: Json[]; n: string }) {
   return (
     <div style={card}>
-      <Label n={n}>Scoreboard — 30-day run, averaged over scenarios</Label>
+      <Label n={n}>Scoreboard, 30-day run, averaged over scenarios</Label>
       <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
         <thead><tr style={{ color: 'var(--muted)', fontFamily: mono, fontSize: 10.5 }}>
           <th style={{ textAlign: 'left', padding: '6px 8px' }}>method</th><th style={{ padding: '6px 8px', textAlign: 'right' }}>profit</th>
@@ -550,7 +550,7 @@ function Scoreboard({ rows, n }: { rows: Json[]; n: string }) {
               <td style={{ padding: '8px', textAlign: 'right' }}>{Math.round(r.on_time_rate * 100)}%</td>
               <td style={{ padding: '8px', textAlign: 'right', color: r.invalid_actions === 0 ? 'var(--pos)' : 'var(--neg)' }}>{r.invalid_actions}</td>
               <td style={{ padding: '8px', textAlign: 'right', color: r.customer_trust >= 90 ? 'var(--pos)' : 'var(--neg)' }}>{Math.round(r.customer_trust)}</td>
-              <td style={{ padding: '8px', textAlign: 'right', color: (r.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' }}>{r.safety_incidents ?? '—'}</td>
+              <td style={{ padding: '8px', textAlign: 'right', color: (r.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' }}>{r.safety_incidents ?? '-'}</td>
             </tr>
           )
         })}</tbody>
@@ -598,7 +598,7 @@ function TrainDistill({ rows, n, customerId, customerName, taskId, state }: { ro
     <div style={card}>
       <Label n={n}>Teacher → student: train a TRM (+ optional Gemma) on verified traces</Label>
       <p style={{ margin: '0 0 14px', color: 'var(--text)', lineHeight: 1.6, fontSize: 13.5 }}>
-        The serverless teacher (Qwen3.7 on Fireworks) proposes plans; the verifier + recursive repair turn each into a <b>verified reasoning trace</b>. Those traces distill a ~3K-param <b>TRM</b> that drives the repair loop — and can fine-tune a small Gemma fallback. This is the Sillon/RATP recipe: narrow domain + synthetic data + verified traces + a real verifier ⇒ a small specialist beats the frontier LLM alone.
+        The serverless teacher (Qwen3.7 on Fireworks) proposes plans; the verifier + recursive repair turn each into a <b>verified reasoning trace</b>. Those traces distill a ~3K-param <b>TRM</b> that drives the repair loop, and can fine-tune a small Gemma fallback. This is the Sillon/RATP recipe: narrow domain + synthetic data + verified traces + a real verifier ⇒ a small specialist beats the frontier LLM alone.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, fontFamily: mono, fontSize: 11 }}>
         {['seed corpus', 'teacher amplifies', 'verifier gates', 'verified traces', 'distill TRM', 'Gemma fallback'].map((s, i) => (
@@ -658,7 +658,7 @@ function TeacherFeedback({ live, n }: { live: Json | null; n: string }) {
   }
   return (
     <div style={card}>
-      <Label n={n}>Actionable feedback — patch the humanoid for next time</Label>
+      <Label n={n}>Actionable feedback, patch the humanoid for next time</Label>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
         The teacher reviews the verified run and writes concrete patches the operator (or the humanoid's policy) should apply next cycle.
       </p>
@@ -704,7 +704,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((j) => { if (!cancelled) applyRun(j) })
-      .catch(() => { if (!cancelled) setAutoErr(`Brain unreachable at ${BRAIN} — showing the prebuilt run. Start it: cd factoryceo_trm && uvicorn api:app --port 8090.`) })
+      .catch(() => { if (!cancelled) setAutoErr(`Brain unreachable at ${BRAIN}, showing the prebuilt run. Start it: cd factoryceo_trm && uvicorn api:app --port 8090.`) })
       .finally(() => { if (!cancelled) setAutoBusy(false) })
     return () => { cancelled = true }
   }, [initial])
@@ -731,7 +731,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
   return (
     <div>
       <div style={{ ...card, borderColor: 'var(--brand)', background: 'transparent' }}>
-        <Label n="—">Operations studio</Label>
+        <Label n="·">Operations studio</Label>
         <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600 }}>Plan → verify → repair → execute</h2>
         <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6 }}>The brain compiles your floor, proposes a plan, and a deterministic verifier with recursive TRM repair drives it to zero violations before the humanoid runs it.</p>
         {onRestart && <button className="btn ghost" style={{ marginTop: 14 }} onClick={onRestart}>↻ Describe a different site</button>}
@@ -751,7 +751,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
         <>
           {/* ── workflow + shop-floor diagram, calibrate toward a task ── */}
           <div style={card}>
-            <Label n="01">{isLive ? `Compiled factory — ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled factory state'}</Label>
+            <Label n="01">{isLive ? `Compiled factory, ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled factory state'}</Label>
             {isLive && live.intake?.vision_caption && <p style={{ margin: '0 0 8px', color: 'var(--accent)', fontFamily: mono, fontSize: 12, lineHeight: 1.5 }}>👁 {live.intake.vision_caption}</p>}
             {isLive && live.intake?.summary && <p style={{ margin: '0 0 10px', color: 'var(--text)' }}>{live.intake.summary}</p>}
             <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '4px 0' }}>machines</div>

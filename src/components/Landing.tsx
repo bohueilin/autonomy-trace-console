@@ -1,4 +1,4 @@
-// Landing — the first page. A frontier-lab, proof-first descent:
+// Landing, the first page. A frontier-lab, proof-first descent:
 // hook → proof → how → moat → personalized brain → breadth → why-now → who → ask.
 // AI proposes; the deterministic oracle judges. Bright, restrained, one signature
 // device (the finish / escalate / refuse decision triad).
@@ -6,15 +6,15 @@
 import { ScrollVideo } from './ScrollVideo'
 
 const FLOW = [
-  { n: '01', t: 'Media intake', d: 'Video, photos, floor plan, SOPs, and Drive links — how the work really happens.' },
+  { n: '01', t: 'Media intake', d: 'Video, photos, floor plan, SOPs, and Drive links, how the work really happens.' },
   { n: '02', t: 'Understood workflow', d: 'A site map, storyboard, and finish / escalate / refuse rules you confirm.' },
-  { n: '03', t: 'Deterministic check', d: 'A fixed rulebook (the “oracle”) — not an AI — decides if each move was safe.' },
+  { n: '03', t: 'Deterministic check', d: 'A fixed rulebook (the “oracle”), not an AI, decides if each move was safe.' },
   { n: '04', t: 'Autonomy license', d: 'A readiness score (FAR/FRR), cheat-checks, and a portable evidence pack.' },
 ]
 
 const PROOF = [
-  { v: 'Deterministic scoring', l: 'a fixed algorithm decides — not an AI’s opinion' },
-  { v: 'Calibrated per site', l: 'tune safety vs. access live — no blanket accuracy promises' },
+  { v: 'Deterministic scoring', l: 'a fixed algorithm decides, not an AI’s opinion' },
+  { v: 'Calibrated per site', l: 'tune safety vs. access live, no blanket accuracy promises' },
   { v: 'Evidence-backed', l: 'tamper-evident and reproducible' },
 ]
 
@@ -36,7 +36,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
             Robots are moving into factories, hospitals, and homes faster than anyone can prove
             they’re safe. Upload how the work really happens, confirm what we understood, and run a
             deterministic eval that decides when a robot may <strong>finish</strong>, must{' '}
-            <strong>escalate</strong>, or must <strong>refuse</strong> — then issue the autonomy
+            <strong>escalate</strong>, or must <strong>refuse</strong>, then issue the autonomy
             license it earned for that exact site.
           </p>
 
@@ -56,12 +56,12 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
             </button>
           </div>
           <p className="landing-trust">
-            AI proposes; the deterministic oracle judges. Demo captures local metadata only —
+            AI proposes; the deterministic oracle judges. The demo captures local metadata only;
             nothing is uploaded or parsed.
           </p>
         </div>
 
-        {/* Hero vision film — ambient, non-interactive (no controls, no enlarge). */}
+        {/* Hero vision film, ambient, non-interactive (no controls, no enlarge). */}
         <aside className="hero-video" aria-hidden="true">
           <div className="hv-frame">
             <video
@@ -95,11 +95,11 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <summary>How do you handle accuracy?</summary>
         <p>
           No two sites are identical, so we don’t make blanket accuracy claims. For each location we
-          measure two kinds of mistake — acting when it should have stopped (a{' '}
+          measure two kinds of mistake, acting when it should have stopped (a{' '}
           <strong>false accept</strong>), and refusing a job it could have safely done (a{' '}
           <strong>false reject</strong>), together written{' '}
           <abbr title="False-Accept Rate / False-Reject Rate">FAR / FRR</abbr>. You tune the balance
-          between strict safety and smooth operation to fit the site — measured live, never promised.
+          between strict safety and smooth operation to fit the site, measured live, never promised.
         </p>
       </details>
 
@@ -126,7 +126,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <li className="td-arrow" aria-hidden="true">→</li>
           <li className="td-node">
             <span className="td-step td-ai">AI-interpreted</span>
-            <p>A draft site map and rules — a proposal, never the judge.</p>
+            <p>A draft site map and rules, a proposal, never the judge.</p>
           </li>
           <li className="td-arrow" aria-hidden="true">→</li>
           <li className="td-node">
@@ -136,7 +136,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <li className="td-arrow" aria-hidden="true">→</li>
           <li className="td-node">
             <span className="td-step td-oracle">Safety checker</span>
-            <p>A fixed algorithm (the “oracle”) decides finish / escalate / refuse — the same way every time.</p>
+            <p>A fixed algorithm (the “oracle”) decides finish / escalate / refuse, the same way every time.</p>
           </li>
         </ol>
         <p className="td-note">
@@ -155,7 +155,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <h2>A robot that’s safe in one workplace can be dangerous in yours.</h2>
           <p>
             Capture the real workplace and we shape the deployment context the robot must reason
-            about — the routes, the hazards, the people — before it ever moves near someone.
+            about, the routes, the hazards, the people, before it ever moves near someone.
           </p>
           <ul className="bf-benefits">
             <li>
@@ -164,7 +164,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
             </li>
             <li>
               <strong>Footage in, eval out.</strong> Turn a walkthrough video into a safety test in
-              minutes — no sensors, no instrumentation.
+              minutes, no sensors, no instrumentation.
             </li>
             <li>
               <strong>Catch the dangerous error first.</strong> Acting when it should stop is the
@@ -187,7 +187,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <div className="panel-kicker">Reference footage</div>
           <h2>The same license, across human spaces.</h2>
           <p>
-            From the factory floor to the home — the settings Physical AI has to earn its license in.
+            From the factory floor to the home, the settings Physical AI has to earn its license in.
             Illustration footage only, never parsed as evidence.
           </p>
         </div>
@@ -232,7 +232,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         </p>
         <ul className="origin-points">
           <li>Humanoids and AMRs are shipping into human spaces before sites can license them.</li>
-          <li>A physical mistake isn’t a bad paragraph — it injures people or halts a line.</li>
+          <li>A physical mistake isn’t a bad paragraph, it injures people or halts a line.</li>
           <li>Capability ≠ permission. Every robot needs proof of when to act, escalate, or refuse.</li>
         </ul>
       </section>
@@ -252,7 +252,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <div className="credibility">
           <span>Aligned with the emerging AIUC-1 standard</span>
           <span>OWASP agentic-risk crosswalk</span>
-          <span className="cred-pilot">In pilot — talk to us</span>
+          <span className="cred-pilot">In pilot, talk to us</span>
         </div>
       </section>
 

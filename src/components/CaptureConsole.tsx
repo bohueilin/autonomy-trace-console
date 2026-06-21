@@ -110,7 +110,7 @@ export function CaptureConsole({
   }
 
   // Real multimodal: sample frames from any uploaded video/image (browser-side) and
-  // combine with frames from a chosen stock clip — these feed the brain's VLM intake.
+  // combine with frames from a chosen stock clip, these feed the brain's VLM intake.
   async function gatherFrames(): Promise<BrainFile[]> {
     const out: BrainFile[] = [...stockFrames]
     for (const item of items) {
@@ -176,7 +176,7 @@ export function CaptureConsole({
         <h1>Describe the site before the robot ever steps on it.</h1>
         <p className="flow-sub">
           Upload workflow video, photos, SOPs, floor plans, or start from a stock floor below. Video
-          frames are sampled in your browser and read by the multimodal brain — the raw file never leaves the page.
+          frames are sampled in your browser and read by the multimodal brain, the raw file never leaves the page.
         </p>
 
         <div className="capture-layout">
@@ -286,7 +286,7 @@ export function CaptureConsole({
         <StockGallery onPick={pickStock} />
         {stockFrames.length > 0 && (
           <div className="trust-note" style={{ marginTop: 8 }}>
-            ✓ {stockFrames.length} frames sampled from the stock clip — the brain will read them.
+            ✓ {stockFrames.length} frames sampled from the stock clip, the brain will read them.
           </div>
         )}
 
