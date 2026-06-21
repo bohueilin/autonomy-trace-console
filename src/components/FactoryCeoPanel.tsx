@@ -69,28 +69,30 @@ export async function extractFrames(src: string, count = 2): Promise<string[]> {
 // Hosted floor library: pre-built, pre-verified archetype floors. A user opens one
 // and gets a 0-violation plan with zero input (the "no input required" path).
 function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
-  // brain-first; fall back to the precomputed static catalog only if the brain
-  // is momentarily unreachable, so the entry never shows blank.
-  const live = useJson(`${BRAIN}/library`)
+  // The library is the brain's precomputed output (built offline by build_library).
+  // Serve the static catalog/runs (reliable, exact, all archetypes); the live brain
+  // is the fallback. Custom "describe your floor" still goes to the live brain.
   const stat = useJson('/factoryceo/library.json')
-  const data = live.data ?? stat.data
+  const live = useJson(`${BRAIN}/library`)
+  const data = stat.data ?? live.data
   const floors: Json[] = data?.floors ?? []
   const [busy, setBusy] = useState<string | null>(null)
   if (!floors.length) return null
   async function open(f: Json) {
     setBusy(f.id)
     try {
-      const r = await fetch(`${BRAIN}/plan_from_input`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: `${f.label} factory, ${f.n_jobs} jobs` }),
-      })
-      if (r.ok) { onResult(await r.json()); return }
-      throw new Error(String(r.status))
+      // exact precomputed run for this floor
+      const s = await fetch(`/factoryceo/library/${f.id}.json`)
+      if (s.ok) { onResult(await s.json()); return }
+      throw new Error(String(s.status))
     } catch {
-      // brain blip → static precomputed run for this floor
+      // fallback: ask the live brain to compile it
       try {
-        const s = await fetch(`/factoryceo/library/${f.id}.json`)
-        if (s.ok) onResult(await s.json())
+        const r = await fetch(`${BRAIN}/plan_from_input`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: `${f.label} factory, ${f.n_jobs} jobs` }),
+        })
+        if (r.ok) onResult(await r.json())
       } catch { /* ignore */ }
     } finally { setBusy(null) }
   }

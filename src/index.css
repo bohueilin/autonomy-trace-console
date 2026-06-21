@@ -1,9 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Space Grotesk is the primary face across the app. */
-  font-family: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  /* Monospace across the app (terminal / eval aesthetic). */
+  font-family: ui-monospace, SFMono-Regular, Menlo, 'DM Mono', monospace;
+  --font-display: ui-monospace, SFMono-Regular, Menlo, 'DM Mono', monospace;
   line-height: 1.5;
   color-scheme: light;
   font-weight: 450;

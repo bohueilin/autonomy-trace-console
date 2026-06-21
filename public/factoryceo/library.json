@@ -1,8 +1,8 @@
 {
   "floors": [
     {
-      "id": "automotive_clips_brackets",
-      "label": "Automotive clips & brackets",
+      "id": "auto_std",
+      "label": "Automotive \u00b7 standard line",
       "industry": "automotive_clips_brackets",
       "machines": [
         "M1",
@@ -11,6 +11,7 @@
         "M4"
       ],
       "n_jobs": 16,
+      "horizon_days": 30,
       "metrics": {
         "reward": 15099,
         "hard_violations": 0,
@@ -18,11 +19,32 @@
         "utilization": 0.045
       },
       "verified": true,
-      "naive_violations": 25
+      "naive_violations": 22
     },
     {
-      "id": "consumer_electronics_enclosures",
-      "label": "Electronics enclosures",
+      "id": "auto_rush",
+      "label": "Automotive \u00b7 high-mix rush",
+      "industry": "automotive_clips_brackets",
+      "machines": [
+        "M1",
+        "M2",
+        "M3",
+        "M4"
+      ],
+      "n_jobs": 26,
+      "horizon_days": 21,
+      "metrics": {
+        "reward": 36180,
+        "hard_violations": 0,
+        "on_time": 0.962,
+        "utilization": 0.113
+      },
+      "verified": true,
+      "naive_violations": 11
+    },
+    {
+      "id": "elec_enc",
+      "label": "Electronics \u00b7 enclosures",
       "industry": "consumer_electronics_enclosures",
       "machines": [
         "M1",
@@ -30,35 +52,119 @@
         "M3"
       ],
       "n_jobs": 16,
+      "horizon_days": 30,
       "metrics": {
-        "reward": 21227,
+        "reward": 23125,
         "hard_violations": 0,
-        "on_time": 0.875,
-        "utilization": 0.045
+        "on_time": 1.0,
+        "utilization": 0.038
       },
       "verified": true,
-      "naive_violations": 20
+      "naive_violations": 18
     },
     {
-      "id": "medical_devices_eval",
-      "label": "Medical devices",
+      "id": "elec_pcb",
+      "label": "Electronics \u00b7 PCB ramp",
+      "industry": "consumer_electronics_enclosures",
+      "machines": [
+        "M1",
+        "M2",
+        "M3"
+      ],
+      "n_jobs": 30,
+      "horizon_days": 45,
+      "metrics": {
+        "reward": 42493,
+        "hard_violations": 0,
+        "on_time": 0.967,
+        "utilization": 0.059
+      },
+      "verified": true,
+      "naive_violations": 23
+    },
+    {
+      "id": "med_dev",
+      "label": "Medical \u00b7 devices",
       "industry": "medical_devices_eval",
       "machines": [
         "M1",
         "M2",
         "M3"
       ],
-      "n_jobs": 16,
+      "n_jobs": 14,
+      "horizon_days": 30,
       "metrics": {
-        "reward": 36624,
+        "reward": 39796,
         "hard_violations": 0,
-        "on_time": 0.812,
-        "utilization": 0.083
+        "on_time": 0.929,
+        "utilization": 0.071
       },
       "verified": true,
       "naive_violations": 10
+    },
+    {
+      "id": "med_clean",
+      "label": "Medical \u00b7 clean-room batch",
+      "industry": "medical_devices_eval",
+      "machines": [
+        "M1",
+        "M2",
+        "M3"
+      ],
+      "n_jobs": 20,
+      "horizon_days": 30,
+      "metrics": {
+        "reward": 39497,
+        "hard_violations": 0,
+        "on_time": 0.95,
+        "utilization": 0.094
+      },
+      "verified": true,
+      "naive_violations": 21
+    },
+    {
+      "id": "gen_job",
+      "label": "General \u00b7 job shop",
+      "industry": "general",
+      "machines": [
+        "M1",
+        "M2",
+        "M3",
+        "M4"
+      ],
+      "n_jobs": 24,
+      "horizon_days": 45,
+      "metrics": {
+        "reward": 49424,
+        "hard_violations": 0,
+        "on_time": 1.0,
+        "utilization": 0.048
+      },
+      "verified": true,
+      "naive_violations": 13
+    },
+    {
+      "id": "gen_stress",
+      "label": "General \u00b7 long-horizon",
+      "industry": "general",
+      "machines": [
+        "M1",
+        "M2",
+        "M3",
+        "M4"
+      ],
+      "n_jobs": 34,
+      "horizon_days": 60,
+      "metrics": {
+        "reward": 60883,
+        "hard_violations": 0,
+        "on_time": 1.0,
+        "utilization": 0.047
+      },
+      "verified": true,
+      "naive_violations": 23
     }
   ],
-  "count": 3,
-  "note": "pre-built, verified floor archetypes (static)"
+  "count": 8,
+  "note": "pre-built, verified floor archetypes (brain-generated, static)"
 }

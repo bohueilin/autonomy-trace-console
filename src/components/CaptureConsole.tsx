@@ -29,7 +29,6 @@ export function CaptureConsole({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const blobs = useRef<Record<string, File>>({})
-  const [stockFrames, setStockFrames] = useState<BrainFile[]>([])
   const [extracting, setExtracting] = useState(false)
   const [outcome, setOutcome] = useState(
     'A robot assistant for my dad’s factory that can move totes safely without entering operator-only cells.',
@@ -81,7 +80,7 @@ export function CaptureConsole({
   // Real multimodal: sample frames from any uploaded video/image (browser-side) and
   // combine with frames from a chosen stock clip, these feed the brain's VLM intake.
   async function gatherFrames(): Promise<BrainFile[]> {
-    const out: BrainFile[] = [...stockFrames]
+    const out: BrainFile[] = []
     for (const item of items) {
       const f = blobs.current[item.id]
       if (!f) continue
@@ -108,10 +107,19 @@ export function CaptureConsole({
     if (f.safetyRules && f.safetyRules.length) setRules(f.safetyRules.join('\n'))
   }
 
+  // "Use this floor" should DO something: compile the clip's frames and go straight
+  // to the studio (no extra "build" click needed).
   function pickStock(clip: any, input: BrainInput) {
-    setStockFrames(input.files)
-    if (!description.trim() || description.startsWith('Dad receives')) setDescription(clip.summary || clip.title)
-    setOutcome((o) => (o && !o.startsWith('A robot assistant for my dad')) ? o : `Keep the ${clip.title.toLowerCase()} floor running unattended, safely, while the operator is away.`)
+    const outcomeText = `Keep the ${String(clip.title).toLowerCase()} floor running unattended, safely.`
+    const req: EnvironmentRequirement = {
+      outcome: outcomeText, domain, embodiment,
+      notes: clip.summary || clip.title, attachments: [],
+    }
+    const manifest = createCaptureManifest({
+      outcome: outcomeText, domain, expectedEmbodiment: embodiment,
+      description: clip.summary || clip.title, safetyRules: [], items: [],
+    })
+    onAnalyze(req, manifest, input.files)
   }
 
   async function submit(_mode: 'analyze' | 'manual') {
@@ -149,7 +157,6 @@ export function CaptureConsole({
             onChange={(e) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); e.currentTarget.value = '' }} />
           <button className="btn" onClick={() => inputRef.current?.click()}>📎 Add files{items.length ? ` (${items.length})` : ''}</button>
           <VoiceInput onFields={applyVoice} />
-          {stockFrames.length > 0 && <span className="trust-note">✓ {stockFrames.length} frames sampled</span>}
         </div>
 
         <div className="flow-actions" style={{ marginTop: 18 }}>
