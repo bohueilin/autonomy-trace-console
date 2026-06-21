@@ -3555,15 +3555,41 @@ select.field-input {
   }
 }
 
-/* Manufacturing footage card (phone frame already styled). Font +2 here. */
+/* Reference footage — two phone-style films side by side ("across human spaces"). */
+.footage-section {
+  margin: 44px 0 0;
+}
+.footage-head h2 {
+  margin: 6px 0 0;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.footage-head p {
+  margin: 8px 0 0;
+  max-width: 680px;
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.footage-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 18px;
+}
 .footage-card {
-  margin: 22px 0 0;
+  margin: 0;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  max-width: 560px;
+}
+@media (max-width: 760px) {
+  .footage-row {
+    grid-template-columns: 1fr;
+  }
 }
 .footage-card .phone-shell {
   background: linear-gradient(180deg, #eef3fb, #ffffff);

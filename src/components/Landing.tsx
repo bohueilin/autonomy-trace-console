@@ -80,12 +80,12 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <li><span className="lb-step">4 · Safety case</span><p>FAR/FRR, reward-hack trace, evidence pack.</p></li>
       </ol>
 
-      <section className="brain-feature" aria-label="Build the Physical AI brain for this site">
+      <section className="brain-feature" aria-label="Build the ultimate personalized AI brain">
         <div className="bf-media">
           <img src="/physical-ai-brain.png" alt="Physical AI humanoid brain concept" loading="lazy" />
         </div>
         <div className="bf-body">
-          <div className="panel-kicker">Build the Physical AI brain for this site</div>
+          <div className="panel-kicker">Build the ultimate personalized AI brain</div>
           <h2>A robot that’s safe in one workplace can be dangerous in yours.</h2>
           <p>
             Capture the real workplace and we shape the deployment context the robot must reason
@@ -115,29 +115,64 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         </div>
       </section>
 
-      <section className="footage-card" aria-label="Manufacturing reference footage">
-        <div className="phone-shell">
-          <div className="phone">
-            <span className="phone-notch" aria-hidden="true" />
-            <iframe
-              src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
-              title="Manufacturing reference footage"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
-            />
-          </div>
-        </div>
-        <div className="footage-body">
-          <div className="panel-kicker">Manufacturing reference footage</div>
+      <section className="footage-section" aria-label="Reference footage across human spaces">
+        <div className="footage-head">
+          <div className="panel-kicker">Reference footage</div>
+          <h2>The same license, across human spaces.</h2>
           <p>
-            The kind of real-world footage you’d bring in. Placeholder reference only — illustration,
-            not parsed evidence.{' '}
-            <a href="https://www.youtube.com/shorts/h4SQUglSsH4" target="_blank" rel="noreferrer">
-              Open the Short
-            </a>{' '}
-            if the embed is blocked.
+            From the factory floor to the home — the settings Physical AI has to earn its license in.
+            Illustration footage only, never parsed as evidence.
           </p>
+        </div>
+        <div className="footage-row">
+          <article className="footage-card">
+            <div className="phone-shell">
+              <div className="phone">
+                <span className="phone-notch" aria-hidden="true" />
+                <iframe
+                  src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
+                  title="Manufacturing reference footage"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <div className="footage-body">
+              <div className="panel-kicker">Manufacturing floor</div>
+              <p>
+                Lifting and moving near people and machines.{' '}
+                <a href="https://www.youtube.com/shorts/h4SQUglSsH4" target="_blank" rel="noreferrer">
+                  Open the Short
+                </a>{' '}
+                if the embed is blocked.
+              </p>
+            </div>
+          </article>
+          <article className="footage-card">
+            <div className="phone-shell">
+              <div className="phone">
+                <span className="phone-notch" aria-hidden="true" />
+                <iframe
+                  src="https://www.youtube.com/embed/L7i_KE5z_GY?autoplay=1&mute=1&playsinline=1&loop=1&playlist=L7i_KE5z_GY&controls=0&rel=0"
+                  title="Home assistance reference footage"
+                  allow="autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <div className="footage-body">
+              <div className="panel-kicker">Beyond the factory</div>
+              <p>
+                The same eval licenses robots in homes and care settings.{' '}
+                <a href="https://www.youtube.com/shorts/L7i_KE5z_GY" target="_blank" rel="noreferrer">
+                  Open the Short
+                </a>{' '}
+                if the embed is blocked.
+              </p>
+            </div>
+          </article>
         </div>
       </section>
 
