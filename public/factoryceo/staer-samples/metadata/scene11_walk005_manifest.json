@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "format": "euroc-asl",
+  "encoding": "h265",
+  "fps": 20,
+  "durationSeconds": 64.4,
+  "frameCount": 1288,
+  "framesEncoded": 1288,
+  "imuCount": 25740,
+  "monoToRealtimeOffsetNs": 0,
+  "startTimeUtc": "2026-05-11T20:41:41.073225+00:00",
+  "warehouse_width": 100.0,
+  "warehouse_depth": 100.0
+}

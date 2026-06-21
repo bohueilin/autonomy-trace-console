@@ -1,0 +1,51 @@
+{
+  "kind": "hud_trainingclient_open_student",
+  "model": "factoryceo-dispatch",
+  "floors": [
+    "staer_crossdock"
+  ],
+  "generic_env": true,
+  "steps": 0,
+  "group": 2,
+  "learning_rate": 1e-05,
+  "loss_fn": "importance_sampling",
+  "reward_mode": "shaped",
+  "curriculum_jobs": 4,
+  "dry_run": false,
+  "ok": true,
+  "baseline_reward": 0.025,
+  "final_reward": 0.04,
+  "lift": 0.015,
+  "lift_pct": 60.0,
+  "train_steps": [],
+  "baseline_samples": [
+    {
+      "reward": 0.01,
+      "has_json": false,
+      "chars": 2458,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (urgent order: 10,000 ABS units, Day 12, $0.20/unit), Operator note (M4 rough, might need maintenance), Inventory (ABS 220kg, Nylon 80kg, PP 40kg), Machine Log (Uptime stats), HR (O2 out sick), Current Jobs (J101-J103 due soon).\n    *   **Canonical State:** Detailed JSON with machines, operators, materials, jobs, RFQs.\n    *   **Goal:** Return ONE"
+    },
+    {
+      "reward": 0.04,
+      "has_json": true,
+      "chars": 2346,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (R17 - 10k ABS units by day 12, $0.20/unit), Operator note (M4 rough), Inventory (ABS 220kg, Nylon 80kg, PP 40kg), Machine log (Uptime data), HR (O2 sick 1 day), Current Jobs (J101, J102, J103, J100), Canonical State (State with jobs, machines, operators, materials, RFQs).\n    *   **Output:** ONE JSON ActionPlan with keys: `quote_decisions`, `proc"
+    }
+  ],
+  "final_samples": [
+    {
+      "reward": 0.04,
+      "has_json": true,
+      "chars": 2491,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (10k ABS units by day 12, $0.20/unit), Operator note (M4 rough), Inventory (ABS 220kg, Nylon 80kg, PP 40kg), Machine log (Uptime data), HR (O2 sick 1 day), Current jobs (J101-J103 due days 4, 6, 8).\n    *   **Canonical State:** Detailed JSON with horizon_days (14), machines (M1-M4 capabilities/uptime/maintenance), operators (O1-O3, R1), materials "
+    },
+    {
+      "reward": 0.04,
+      "has_json": true,
+      "chars": 2385,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (10k units by day 12, ABS, $0.20/unit), Operator note (M4 rough), Inventory (ABS, Nylon, PP), Machine Log (Uptime, M4 at 88%), HR (O2 out sick one day), Current Jobs (J101, J102, J103, J100), Canonical State (Detailed machine, operator, material, job, RFQ data).\n    *   **Output:** ONE JSON ActionPlan (quote_decisions, procurement, schedule, quali"
+    }
+  ],
+  "elapsed_s": 34.144,
+  "note": "TrainingClient promoted weights behind the same HUD model string if optim_step succeeded."
+}

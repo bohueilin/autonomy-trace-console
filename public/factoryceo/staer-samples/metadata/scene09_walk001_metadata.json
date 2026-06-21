@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-05-12T04:14:33.454Z",
+  "metadata": {
+    "format": "euroc-asl",
+    "type": "walkthrough_render",
+    "frame_count": 189,
+    "modalities": [
+      "depth",
+      "instance",
+      "rgb",
+      "semantic"
+    ],
+    "duration_s": 9.4,
+    "resolution": [
+      1920,
+      1080
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "format": "euroc-asl",
+  "encoding": "none",
+  "fps": 20,
+  "durationSeconds": 39.3,
+  "frameCount": 786,
+  "framesEncoded": 0,
+  "imuCount": 15700,
+  "monoToRealtimeOffsetNs": 0,
+  "startTimeUtc": "2026-05-11T22:07:17.777060+00:00",
+  "warehouse_width": 100.0,
+  "warehouse_depth": 100.0
+}

@@ -4738,12 +4738,53 @@ h4,
   overflow-wrap: anywhere;
 }
 
+.stream-log {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.stream-row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 7px;
+}
+
+.stream-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.stream-row span {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.stream-row p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 @media (max-width: 920px) {
   .landing-top,
   .bench-panel,
   .capture-workspace,
   .thinking-steps,
-  .reasoning-grid {
+  .reasoning-grid,
+  .stream-row {
     grid-template-columns: 1fr;
   }
 

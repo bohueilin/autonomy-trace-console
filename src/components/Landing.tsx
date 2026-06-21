@@ -4,11 +4,12 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
     <section className="landing">
       <div className="landing-top">
         <div className="landing-hero">
-          <span className="landing-eyebrow">ShiftBench · verified shift operations</span>
-          <h1 className="landing-headline">Turn a messy factory floor into a verified work plan.</h1>
+          <span className="landing-eyebrow">ShiftBench · verified factory operations</span>
+          <h1 className="landing-headline">Turn messy factory context into a verified operating plan.</h1>
           <p className="landing-sub">
-            Built for supervisors and factory workers: describe the floor, upload a quick walk-through,
-            then get a plan that is scored against hard safety and production constraints before anyone acts.
+            Built for supervisors and operators: upload floor evidence, orders, machine status, staffing,
+            SOPs, and constraints. The brain proposes operations decisions, then the verifier checks them
+            before anything runs.
           </p>
 
           <div className="landing-cta">

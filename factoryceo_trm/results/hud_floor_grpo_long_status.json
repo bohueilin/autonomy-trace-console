@@ -1,0 +1,15 @@
+{
+  "kind": "hud_training_status",
+  "model": "shiftbench-qwen36-27b",
+  "hud_model_id": "d630ed8e-6d1e-4750-be8f-857ebb5eb6bb",
+  "hud_model_url": "https://hud.ai/models/d630ed8e-6d1e-4750-be8f-857ebb5eb6bb",
+  "latest_job_id": "c171ab36a5b244c5bc552bd1bf49f3d3",
+  "latest_job_url": "https://hud.ai/jobs/c171ab36a5b244c5bc552bd1bf49f3d3",
+  "dashboard_url": "https://hud.ai/jobs",
+  "status": "running_long_safe",
+  "task_coverage": {
+    "platform_percent": 0,
+    "reason": "The run uses a local ad hoc Taskset with LocalRuntime, so HUD stores job traces but taskset_id is null. Platform task coverage requires syncing/deploying a HUD taskset with hud sync/deploy.",
+    "evidence": "hud jobs --json shows taskset_id:null for shiftbench jobs."
+  }
+}

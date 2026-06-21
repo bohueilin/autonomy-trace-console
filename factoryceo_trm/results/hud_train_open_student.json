@@ -1,0 +1,27 @@
+{
+  "kind": "hud_trainingclient_open_student",
+  "model": null,
+  "floors": [
+    "staer_crossdock",
+    "staer_pickpack"
+  ],
+  "generic_env": true,
+  "curriculum": true,
+  "phases": [
+    {
+      "mode": "format",
+      "steps": 2
+    },
+    {
+      "mode": "shaped",
+      "steps": 2
+    }
+  ],
+  "group": 4,
+  "learning_rate": 1e-05,
+  "loss_fn": "importance_sampling",
+  "curriculum_jobs": 4,
+  "dry_run": true,
+  "ok": false,
+  "error": "Set --model or HUD_TRAIN_MODEL to a trainable HUD gateway model from `hud models list`."
+}

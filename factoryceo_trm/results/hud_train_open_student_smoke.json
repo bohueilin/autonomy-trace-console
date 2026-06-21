@@ -1,0 +1,33 @@
+{
+  "kind": "hud_trainingclient_open_student",
+  "model": "factoryceo-dispatch",
+  "floors": [
+    "staer_crossdock"
+  ],
+  "generic_env": true,
+  "steps": 1,
+  "group": 2,
+  "learning_rate": 1e-05,
+  "loss_fn": "importance_sampling",
+  "dry_run": false,
+  "ok": true,
+  "baseline_reward": 0.0,
+  "final_reward": 0.0,
+  "lift": 0.0,
+  "lift_pct": null,
+  "train_steps": [
+    {
+      "step": 0,
+      "reward": 0.0,
+      "runs": 2,
+      "tokens": 1800,
+      "rollout_s": 19.537,
+      "train_s": 49.909,
+      "loss": 0.0,
+      "optim_step": 6,
+      "num_datums": 2
+    }
+  ],
+  "elapsed_s": 114.191,
+  "note": "TrainingClient promoted weights behind the same HUD model string if optim_step succeeded."
+}

@@ -1,0 +1,2 @@
+{"backend": "inference", "num_rollouts": 16, "phase": "calibrate", "reward_max": 0.01, "reward_mean": 0.01, "reward_min": 0.01, "reward_std": 0.0, "rollout_seconds": 18.411457457987126, "step": 0, "within_group_reward_std": 0.0}
+{"deployment_id": "shiftbench-golden-rl", "num_rollouts": 16, "phase": "calibrate", "reward_max": 0.13, "reward_mean": 0.04562500000000001, "reward_min": 0.04, "reward_std": 0.0225, "rollout_seconds": 15.38409116701223, "step": 0, "trainer_job_id": "training-api-service-d0185f4f", "within_group_reward_std": 0.011250000000000001}

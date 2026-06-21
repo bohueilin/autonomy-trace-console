@@ -1,0 +1,67 @@
+{
+  "kind": "hud_trainingclient_open_student",
+  "model": "factoryceo-dispatch",
+  "floors": [
+    "staer_crossdock"
+  ],
+  "generic_env": true,
+  "steps": 1,
+  "group": 2,
+  "learning_rate": 1e-05,
+  "loss_fn": "importance_sampling",
+  "reward_mode": "shaped",
+  "curriculum_jobs": 4,
+  "dry_run": false,
+  "ok": true,
+  "baseline_reward": 0.025,
+  "final_reward": 0.025,
+  "lift": 0.0,
+  "lift_pct": 0.0,
+  "train_steps": [
+    {
+      "step": 0,
+      "reward": 0.025,
+      "rewards": [
+        0.01,
+        0.04
+      ],
+      "runs": 2,
+      "tokens": 1800,
+      "rollout_s": 13.168,
+      "train_s": 8.63,
+      "loss": 0.10407543182373047,
+      "optim_step": 8,
+      "num_datums": 2
+    }
+  ],
+  "baseline_samples": [
+    {
+      "reward": 0.04,
+      "has_json": true,
+      "chars": 2534,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (10k units ABS, Day 12, $0.20/unit), Operator note (M4 rough), Inventory (ABS 220kg, Nylon 80kg, PP 40kg), Machine log (Uptimes), HR (O2 sick), Current jobs (J101, J102, J103), Canonical State (Detailed state with machines, operators, materials, jobs, RFQs).\n    *   **Goal:** Return ONE JSON ActionPlan with keys: `quote_decisions`, `procurement`, "
+    },
+    {
+      "reward": 0.01,
+      "has_json": false,
+      "chars": 2553,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Goal:** Return ONE JSON ActionPlan (quote_decisions, procurement, schedule, quality, customer_messages, safety).\n    *   **Constraints:** Feasible, profitable, and safe. Schedule every operation of every job. JSON only, no markdown, no explanation.\n    *   **Input Data:**\n        *   Customer Email: Need 10,000 ABS units by Day 12. Price $0.20/unit. Same ABS as last time"
+    }
+  ],
+  "final_samples": [
+    {
+      "reward": 0.04,
+      "has_json": true,
+      "chars": 2312,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (10k ABS units, Day 12, $0.20/unit), Operator note (M4 rough), Inventory (ABS 220kg, Nylon 80kg, PP 40kg), Machine log (M4 88% uptime), HR (O2 sick 1 day), Current jobs (J101, J102, J103), Canonical State (JSON with machines, operators, materials, jobs, RFQs).\n    *   **Goal:** Return ONE JSON ActionPlan (quote_decisions, procurement, schedule, qu"
+    },
+    {
+      "reward": 0.01,
+      "has_json": false,
+      "chars": 2404,
+      "snippet": "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   **Role:** Autonomous operations brain of a high-mix factory.\n    *   **Input:** Customer email (10,000 units ABS, Day 12, $0.20/unit), Operator note (M4 rough), Inventory (ABS=220kg, Nylon=80kg, PP=40kg), Machine log (Uptime stats), HR (O2 sick 1 day), Current jobs (J101, J102, J103), Canonical state (detailed JSON).\n    *   **Output:** ONE JSON ActionPlan with keys: `quote_decisions`, `procurement`, `schedule`, `quality`, `customer_message"
+    }
+  ],
+  "elapsed_s": 71.835,
+  "note": "TrainingClient promoted weights behind the same HUD model string if optim_step succeeded."
+}

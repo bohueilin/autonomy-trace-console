@@ -2,13 +2,13 @@
   "headline": "Frontier LLMs out of the box cannot safely run autonomous operations: with no verifier and no domain data they emit infeasible, unsafe plans. Safe autonomy needs the verifier gate + recursive TRM repair + a small model trained on verified traces.",
   "hud_leaderboard": [
     {
-      "agent": "Claude Haiku \u2014 frontier LLM (HUD gateway)",
+      "agent": "Open/fallback gateway LLM \u2014 raw HUD baseline",
       "reward": 0.0,
       "note": "raw one-shot, real HUD run"
     },
     {
-      "agent": "FactoryCEO-TRM \u2014 2,954-param student",
-      "reward": 0.979,
+      "agent": "ShiftBench TRM/JSON repair policy",
+      "reward": 0.971,
       "note": "verifier-gated repair, real HUD run"
     }
   ],

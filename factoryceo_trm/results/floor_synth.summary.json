@@ -1,0 +1,12 @@
+{
+  "records": 4,
+  "teacher_requested": "fireworks",
+  "teachers_used": [
+    "fireworks"
+  ],
+  "grounded": 4,
+  "hard_before": 14,
+  "hard_after": 0,
+  "grpo_rollouts": 64,
+  "out": "/Users/ajinkya/github-repos/autonomy-trace-console/factoryceo_trm/results/floor_synth.jsonl"
+}

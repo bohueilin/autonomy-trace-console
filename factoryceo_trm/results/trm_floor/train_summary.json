@@ -1,0 +1,18 @@
+{
+  "corpora": [
+    "results/floor_synth_corpus.jsonl"
+  ],
+  "records_total": 252,
+  "records_grounded": 252,
+  "records_used": 252,
+  "trm": {
+    "checkpoint": "results/trm_floor/trm.json",
+    "n_examples": 835,
+    "n_error_types": 2,
+    "train_acc": 0.8994,
+    "default_op": "expedite_material",
+    "policy_size": 2
+  },
+  "gemma_sft_rows": 252,
+  "gemma_sft_path": "results/gemma_sft_floor.jsonl"
+}

@@ -1,0 +1,37 @@
+{
+  "kind": "measured_floor_hud_runs",
+  "model": "shiftbench-qwen36-27b",
+  "checkpoint": "step-000005",
+  "reward_mode": "shaped",
+  "group": 4,
+  "updated_at": "2026-06-21T13:04:02.401583+00:00",
+  "runs": {
+    "staer_crossdock": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000005",
+      "reward_mode": "shaped",
+      "hud_reward": 0.04,
+      "grpo": {
+        "n_rollouts": 4,
+        "group_size": 4,
+        "rollout_rewards": [
+          0.04,
+          0.04,
+          0.04,
+          0.04
+        ],
+        "advantages": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "mean_reward": 0.04,
+        "best_rollout": "R01"
+      },
+      "measured_at": "2026-06-21T13:04:02.401521+00:00",
+      "rollout_s": 56.02
+    }
+  }
+}

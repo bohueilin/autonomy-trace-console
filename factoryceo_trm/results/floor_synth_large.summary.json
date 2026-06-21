@@ -1,0 +1,12 @@
+{
+  "records": 36,
+  "teacher_requested": "fireworks",
+  "teachers_used": [
+    "fireworks"
+  ],
+  "grounded": 36,
+  "hard_before": 281,
+  "hard_after": 0,
+  "grpo_rollouts": 576,
+  "out": "results/floor_synth_large.jsonl"
+}

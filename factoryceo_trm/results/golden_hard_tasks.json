@@ -1,0 +1,6517 @@
+{
+  "kind": "shiftbench_golden_hard_tasks",
+  "created_at": "2026-06-21T17:50:15.795000+00:00",
+  "reward_mode": "strict",
+  "target": 360,
+  "n_tasks": 360,
+  "n_floors": 12,
+  "per_floor_counts": {
+    "staer_crossdock": 30,
+    "staer_pickpack": 30,
+    "staer_coldchain": 30,
+    "staer_returnsort": 30,
+    "staer_nightops": 30,
+    "staer_charging": 30,
+    "staer_quarantine": 30,
+    "staer_kitting": 30,
+    "staer_bulk": 30,
+    "staer_outbound": 30,
+    "staer_maintenance": 30,
+    "staer_audit": 30
+  },
+  "selection": {
+    "min_base_hard": 3,
+    "min_strong_reward": 0.5,
+    "min_headroom": 0.3,
+    "candidates_per_floor": 90,
+    "n_scored": 1080
+  },
+  "difficulty_summary": {
+    "base_hard_mean": 178.83,
+    "base_hard_max": 297,
+    "total_ops_mean": 52.97,
+    "headroom_mean": 0.695
+  },
+  "tasks": [
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10003,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 197,
+        "greedy_hard": 0,
+        "base_reward": -119924.92,
+        "greedy_reward": 27074.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 24
+      },
+      "golden_score": 283.77,
+      "task_id": "golden-staer_crossdock-10003"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 195,
+        "greedy_hard": 0,
+        "base_reward": -105665.93,
+        "greedy_reward": 38254.57,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 24
+      },
+      "golden_score": 281.77,
+      "task_id": "golden-staer_crossdock-10038"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10021,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 190,
+        "greedy_hard": 0,
+        "base_reward": -111791.53,
+        "greedy_reward": 28888.57,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 24
+      },
+      "golden_score": 275.27,
+      "task_id": "golden-staer_crossdock-10021"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 189,
+        "greedy_hard": 0,
+        "base_reward": -100508.05,
+        "greedy_reward": 35678.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 24
+      },
+      "golden_score": 272.77,
+      "task_id": "golden-staer_crossdock-10059"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10077,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -102299.54,
+        "greedy_reward": 36115.16,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 24
+      },
+      "golden_score": 272.27,
+      "task_id": "golden-staer_crossdock-10077"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10079,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -98926.43,
+        "greedy_reward": 37144.17,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 24
+      },
+      "golden_score": 272.27,
+      "task_id": "golden-staer_crossdock-10079"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10076,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -99875.59,
+        "greedy_reward": 37562.61,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 24
+      },
+      "golden_score": 269.27,
+      "task_id": "golden-staer_crossdock-10076"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -105341.69,
+        "greedy_reward": 33104.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 24
+      },
+      "golden_score": 268.77,
+      "task_id": "golden-staer_crossdock-10005"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -104831.65,
+        "greedy_reward": 29682.95,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 24
+      },
+      "golden_score": 266.27,
+      "task_id": "golden-staer_crossdock-10009"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 182,
+        "greedy_hard": 0,
+        "base_reward": -102638.59,
+        "greedy_reward": 33490.41,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 24
+      },
+      "golden_score": 264.27,
+      "task_id": "golden-staer_crossdock-10033"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 181,
+        "greedy_hard": 0,
+        "base_reward": -101375.28,
+        "greedy_reward": 30435.02,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 24
+      },
+      "golden_score": 263.27,
+      "task_id": "golden-staer_crossdock-10000"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10034,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 181,
+        "greedy_hard": 0,
+        "base_reward": -102004.29,
+        "greedy_reward": 30632.71,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 24
+      },
+      "golden_score": 263.27,
+      "task_id": "golden-staer_crossdock-10034"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10041,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 181,
+        "greedy_hard": 0,
+        "base_reward": -96417.43,
+        "greedy_reward": 35563.27,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 24
+      },
+      "golden_score": 263.27,
+      "task_id": "golden-staer_crossdock-10041"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10042,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -102996.27,
+        "greedy_reward": 32367.23,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 51,
+        "n_jobs": 24
+      },
+      "golden_score": 263.27,
+      "task_id": "golden-staer_crossdock-10042"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -96678.21,
+        "greedy_reward": 32901.69,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 52,
+        "n_jobs": 24
+      },
+      "golden_score": 255.77,
+      "task_id": "golden-staer_crossdock-10008"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10016,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -101960.65,
+        "greedy_reward": 30129.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 52,
+        "n_jobs": 24
+      },
+      "golden_score": 255.77,
+      "task_id": "golden-staer_crossdock-10016"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -98656.47,
+        "greedy_reward": 31398.13,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 52,
+        "n_jobs": 24
+      },
+      "golden_score": 255.77,
+      "task_id": "golden-staer_crossdock-10044"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10067,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 178,
+        "greedy_hard": 0,
+        "base_reward": -102983.05,
+        "greedy_reward": 30923.55,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 50,
+        "n_jobs": 24
+      },
+      "golden_score": 255.77,
+      "task_id": "golden-staer_crossdock-10067"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10082,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -93624.24,
+        "greedy_reward": 34437.86,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 52,
+        "n_jobs": 24
+      },
+      "golden_score": 255.77,
+      "task_id": "golden-staer_crossdock-10082"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10025,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -97780.97,
+        "greedy_reward": 31858.73,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 50,
+        "n_jobs": 24
+      },
+      "golden_score": 254.77,
+      "task_id": "golden-staer_crossdock-10025"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10013,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -103488.95,
+        "greedy_reward": 27013.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 51,
+        "n_jobs": 24
+      },
+      "golden_score": 254.27,
+      "task_id": "golden-staer_crossdock-10013"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10043,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -93371.5,
+        "greedy_reward": 35106.7,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 51,
+        "n_jobs": 24
+      },
+      "golden_score": 254.27,
+      "task_id": "golden-staer_crossdock-10043"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10032,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 173,
+        "greedy_hard": 0,
+        "base_reward": -99047.84,
+        "greedy_reward": 28789.36,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 52,
+        "n_jobs": 24
+      },
+      "golden_score": 253.77,
+      "task_id": "golden-staer_crossdock-10032"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10026,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 174,
+        "greedy_hard": 0,
+        "base_reward": -99650.5,
+        "greedy_reward": 27226.3,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 51,
+        "n_jobs": 24
+      },
+      "golden_score": 253.27,
+      "task_id": "golden-staer_crossdock-10026"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -101273.79,
+        "greedy_reward": 28054.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 49,
+        "n_jobs": 24
+      },
+      "golden_score": 253.27,
+      "task_id": "golden-staer_crossdock-10084"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10020,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -100799.49,
+        "greedy_reward": 30083.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 50,
+        "n_jobs": 24
+      },
+      "golden_score": 252.77,
+      "task_id": "golden-staer_crossdock-10020"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10027,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -100940.82,
+        "greedy_reward": 28951.68,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 50,
+        "n_jobs": 24
+      },
+      "golden_score": 252.77,
+      "task_id": "golden-staer_crossdock-10027"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10055,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 173,
+        "greedy_hard": 0,
+        "base_reward": -102290.28,
+        "greedy_reward": 27082.52,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 50,
+        "n_jobs": 24
+      },
+      "golden_score": 250.77,
+      "task_id": "golden-staer_crossdock-10055"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10048,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 171,
+        "greedy_hard": 0,
+        "base_reward": -98463.58,
+        "greedy_reward": 26232.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 51,
+        "n_jobs": 24
+      },
+      "golden_score": 250.27,
+      "task_id": "golden-staer_crossdock-10048"
+    },
+    {
+      "floor_id": "staer_crossdock",
+      "seed": 10006,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -91659.31,
+        "greedy_reward": 37334.79,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 24
+      },
+      "golden_score": 249.77,
+      "task_id": "golden-staer_crossdock-10006"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10007,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 201,
+        "greedy_hard": 0,
+        "base_reward": -55838.14,
+        "greedy_reward": 86173.98,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 56,
+        "n_jobs": 30
+      },
+      "golden_score": 287.8,
+      "task_id": "golden-staer_pickpack-10007"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 197,
+        "greedy_hard": 0,
+        "base_reward": -61076.24,
+        "greedy_reward": 77491.51,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 54,
+        "n_jobs": 30
+      },
+      "golden_score": 280.8,
+      "task_id": "golden-staer_pickpack-10001"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10070,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 194,
+        "greedy_hard": 0,
+        "base_reward": -51146.67,
+        "greedy_reward": 79506.93,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 276.3,
+      "task_id": "golden-staer_pickpack-10070"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10064,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 192,
+        "greedy_hard": 0,
+        "base_reward": -72048.6,
+        "greedy_reward": 67707.55,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 54,
+        "n_jobs": 30
+      },
+      "golden_score": 275.8,
+      "task_id": "golden-staer_pickpack-10064"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10078,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 190,
+        "greedy_hard": 0,
+        "base_reward": -47986.96,
+        "greedy_reward": 81384.67,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 272.3,
+      "task_id": "golden-staer_pickpack-10078"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 188,
+        "greedy_hard": 0,
+        "base_reward": -63389.92,
+        "greedy_reward": 70130.99,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 54,
+        "n_jobs": 30
+      },
+      "golden_score": 271.8,
+      "task_id": "golden-staer_pickpack-10033"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 188,
+        "greedy_hard": 0,
+        "base_reward": -64482.48,
+        "greedy_reward": 65347.48,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 54,
+        "n_jobs": 30
+      },
+      "golden_score": 271.8,
+      "task_id": "golden-staer_pickpack-10060"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10054,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -64922.14,
+        "greedy_reward": 67345.27,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 269.3,
+      "task_id": "golden-staer_pickpack-10054"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -49595.82,
+        "greedy_reward": 79240.87,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 269.3,
+      "task_id": "golden-staer_pickpack-10086"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10051,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 188,
+        "greedy_hard": 0,
+        "base_reward": -40999.77,
+        "greedy_reward": 80330.03,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 268.8,
+      "task_id": "golden-staer_pickpack-10051"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 186,
+        "greedy_hard": 0,
+        "base_reward": -67673.38,
+        "greedy_reward": 62699.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 268.3,
+      "task_id": "golden-staer_pickpack-10059"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10074,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 186,
+        "greedy_hard": 0,
+        "base_reward": -79887.26,
+        "greedy_reward": 54088.52,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 268.3,
+      "task_id": "golden-staer_pickpack-10074"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10081,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -61708.48,
+        "greedy_reward": 68495.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 267.3,
+      "task_id": "golden-staer_pickpack-10081"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10089,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -50566.52,
+        "greedy_reward": 74524.77,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 267.3,
+      "task_id": "golden-staer_pickpack-10089"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -74689.82,
+        "greedy_reward": 56426.17,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 53,
+        "n_jobs": 30
+      },
+      "golden_score": 266.3,
+      "task_id": "golden-staer_pickpack-10008"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -53822.03,
+        "greedy_reward": 73328.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 265.8,
+      "task_id": "golden-staer_pickpack-10018"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10035,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -58155.58,
+        "greedy_reward": 67093.51,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 265.8,
+      "task_id": "golden-staer_pickpack-10035"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10049,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -47250.83,
+        "greedy_reward": 79215.03,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 265.8,
+      "task_id": "golden-staer_pickpack-10049"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -67315.8,
+        "greedy_reward": 63781.28,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 264.8,
+      "task_id": "golden-staer_pickpack-10084"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 183,
+        "greedy_hard": 0,
+        "base_reward": -38089.54,
+        "greedy_reward": 91355.18,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 263.8,
+      "task_id": "golden-staer_pickpack-10009"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10022,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 183,
+        "greedy_hard": 0,
+        "base_reward": -55903.71,
+        "greedy_reward": 71242.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 263.8,
+      "task_id": "golden-staer_pickpack-10022"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 183,
+        "greedy_hard": 0,
+        "base_reward": -71290.7,
+        "greedy_reward": 56323.57,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 263.8,
+      "task_id": "golden-staer_pickpack-10038"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10077,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -74600.23,
+        "greedy_reward": 56046.44,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 263.3,
+      "task_id": "golden-staer_pickpack-10077"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10019,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 180,
+        "greedy_hard": 0,
+        "base_reward": -51093.09,
+        "greedy_reward": 73841.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 30
+      },
+      "golden_score": 260.8,
+      "task_id": "golden-staer_pickpack-10019"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -52105.26,
+        "greedy_reward": 70828.67,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 258.3,
+      "task_id": "golden-staer_pickpack-10044"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10053,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -78070.94,
+        "greedy_reward": 50897.16,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 258.3,
+      "task_id": "golden-staer_pickpack-10053"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -52062.57,
+        "greedy_reward": 72799.62,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 258.3,
+      "task_id": "golden-staer_pickpack-10061"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10076,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -42022.61,
+        "greedy_reward": 78802.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 258.3,
+      "task_id": "golden-staer_pickpack-10076"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10030,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 178,
+        "greedy_hard": 0,
+        "base_reward": -41959.48,
+        "greedy_reward": 79130.6,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 257.3,
+      "task_id": "golden-staer_pickpack-10030"
+    },
+    {
+      "floor_id": "staer_pickpack",
+      "seed": 10065,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 178,
+        "greedy_hard": 0,
+        "base_reward": -57031.11,
+        "greedy_reward": 69018.05,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 30
+      },
+      "golden_score": 257.3,
+      "task_id": "golden-staer_pickpack-10065"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 165,
+        "greedy_hard": 0,
+        "base_reward": -71986.76,
+        "greedy_reward": 53767.02,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 18
+      },
+      "golden_score": 242.8,
+      "task_id": "golden-staer_coldchain-10005"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 165,
+        "greedy_hard": 0,
+        "base_reward": -78281.48,
+        "greedy_reward": 46560.26,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 18
+      },
+      "golden_score": 241.3,
+      "task_id": "golden-staer_coldchain-10023"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10027,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 166,
+        "greedy_hard": 0,
+        "base_reward": -77775.1,
+        "greedy_reward": 48257.15,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 240.8,
+      "task_id": "golden-staer_coldchain-10027"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10047,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 165,
+        "greedy_hard": 0,
+        "base_reward": -75895.96,
+        "greedy_reward": 48104.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 239.8,
+      "task_id": "golden-staer_coldchain-10047"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10072,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 165,
+        "greedy_hard": 0,
+        "base_reward": -78576.12,
+        "greedy_reward": 47238.91,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 239.8,
+      "task_id": "golden-staer_coldchain-10072"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10025,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 163,
+        "greedy_hard": 0,
+        "base_reward": -73119.83,
+        "greedy_reward": 49868.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 237.8,
+      "task_id": "golden-staer_coldchain-10025"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 164,
+        "greedy_hard": 0,
+        "base_reward": -67911.94,
+        "greedy_reward": 53960.79,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 237.3,
+      "task_id": "golden-staer_coldchain-10001"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10051,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 162,
+        "greedy_hard": 0,
+        "base_reward": -76033.71,
+        "greedy_reward": 47780.6,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 236.8,
+      "task_id": "golden-staer_coldchain-10051"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10058,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 162,
+        "greedy_hard": 0,
+        "base_reward": -78430.97,
+        "greedy_reward": 44632.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 236.8,
+      "task_id": "golden-staer_coldchain-10058"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10026,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 163,
+        "greedy_hard": 0,
+        "base_reward": -85977.56,
+        "greedy_reward": 37013.39,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 236.3,
+      "task_id": "golden-staer_coldchain-10026"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 163,
+        "greedy_hard": 0,
+        "base_reward": -75225.15,
+        "greedy_reward": 46993.0,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 236.3,
+      "task_id": "golden-staer_coldchain-10061"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10083,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 163,
+        "greedy_hard": 0,
+        "base_reward": -76625.46,
+        "greedy_reward": 46812.43,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 236.3,
+      "task_id": "golden-staer_coldchain-10083"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10066,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 161,
+        "greedy_hard": 0,
+        "base_reward": -63624.52,
+        "greedy_reward": 57805.75,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 18
+      },
+      "golden_score": 235.8,
+      "task_id": "golden-staer_coldchain-10066"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10020,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 162,
+        "greedy_hard": 0,
+        "base_reward": -79609.14,
+        "greedy_reward": 41102.74,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 235.3,
+      "task_id": "golden-staer_coldchain-10020"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10017,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 161,
+        "greedy_hard": 0,
+        "base_reward": -72252.9,
+        "greedy_reward": 49158.41,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 234.3,
+      "task_id": "golden-staer_coldchain-10017"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10028,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 161,
+        "greedy_hard": 0,
+        "base_reward": -69965.91,
+        "greedy_reward": 52756.01,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 234.3,
+      "task_id": "golden-staer_coldchain-10028"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10075,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 160,
+        "greedy_hard": 0,
+        "base_reward": -80966.68,
+        "greedy_reward": 40549.89,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 233.3,
+      "task_id": "golden-staer_coldchain-10075"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 161,
+        "greedy_hard": 0,
+        "base_reward": -74532.34,
+        "greedy_reward": 46900.8,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 232.8,
+      "task_id": "golden-staer_coldchain-10008"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10049,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 161,
+        "greedy_hard": 0,
+        "base_reward": -72719.54,
+        "greedy_reward": 48738.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 232.8,
+      "task_id": "golden-staer_coldchain-10049"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10007,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 159,
+        "greedy_hard": 0,
+        "base_reward": -75695.96,
+        "greedy_reward": 46264.5,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 232.3,
+      "task_id": "golden-staer_coldchain-10007"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10065,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 158,
+        "greedy_hard": 0,
+        "base_reward": -75337.37,
+        "greedy_reward": 45444.93,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 231.3,
+      "task_id": "golden-staer_coldchain-10065"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10011,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 159,
+        "greedy_hard": 0,
+        "base_reward": -77835.59,
+        "greedy_reward": 43514.46,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 230.8,
+      "task_id": "golden-staer_coldchain-10011"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10056,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 159,
+        "greedy_hard": 0,
+        "base_reward": -75940.48,
+        "greedy_reward": 45119.33,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 230.8,
+      "task_id": "golden-staer_coldchain-10056"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10064,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 159,
+        "greedy_hard": 0,
+        "base_reward": -73281.8,
+        "greedy_reward": 47608.2,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 230.8,
+      "task_id": "golden-staer_coldchain-10064"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10013,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 157,
+        "greedy_hard": 0,
+        "base_reward": -73513.91,
+        "greedy_reward": 46668.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 18
+      },
+      "golden_score": 230.3,
+      "task_id": "golden-staer_coldchain-10013"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10081,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 160,
+        "greedy_hard": 0,
+        "base_reward": -79912.02,
+        "greedy_reward": 42713.94,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 45,
+        "n_jobs": 18
+      },
+      "golden_score": 230.3,
+      "task_id": "golden-staer_coldchain-10081"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 158,
+        "greedy_hard": 0,
+        "base_reward": -72752.45,
+        "greedy_reward": 47198.51,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 229.8,
+      "task_id": "golden-staer_coldchain-10060"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10078,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 158,
+        "greedy_hard": 0,
+        "base_reward": -72029.69,
+        "greedy_reward": 46984.52,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 229.8,
+      "task_id": "golden-staer_coldchain-10078"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 158,
+        "greedy_hard": 0,
+        "base_reward": -77528.35,
+        "greedy_reward": 42435.07,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 46,
+        "n_jobs": 18
+      },
+      "golden_score": 229.8,
+      "task_id": "golden-staer_coldchain-10084"
+    },
+    {
+      "floor_id": "staer_coldchain",
+      "seed": 10030,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 159,
+        "greedy_hard": 0,
+        "base_reward": -74397.11,
+        "greedy_reward": 46803.96,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 45,
+        "n_jobs": 18
+      },
+      "golden_score": 229.3,
+      "task_id": "golden-staer_coldchain-10030"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 202,
+        "greedy_hard": 0,
+        "base_reward": -112267.65,
+        "greedy_reward": 46502.95,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 60,
+        "n_jobs": 26
+      },
+      "golden_score": 294.77,
+      "task_id": "golden-staer_returnsort-10023"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 202,
+        "greedy_hard": 0,
+        "base_reward": -99158.53,
+        "greedy_reward": 58821.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 60,
+        "n_jobs": 26
+      },
+      "golden_score": 294.77,
+      "task_id": "golden-staer_returnsort-10084"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10016,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 198,
+        "greedy_hard": 0,
+        "base_reward": -109247.41,
+        "greedy_reward": 45768.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 60,
+        "n_jobs": 26
+      },
+      "golden_score": 290.77,
+      "task_id": "golden-staer_returnsort-10016"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 192,
+        "greedy_hard": 0,
+        "base_reward": -90123.78,
+        "greedy_reward": 59180.02,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 59,
+        "n_jobs": 26
+      },
+      "golden_score": 283.27,
+      "task_id": "golden-staer_returnsort-10009"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10064,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 189,
+        "greedy_hard": 0,
+        "base_reward": -98772.45,
+        "greedy_reward": 48168.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 57,
+        "n_jobs": 26
+      },
+      "golden_score": 277.27,
+      "task_id": "golden-staer_returnsort-10064"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10085,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 190,
+        "greedy_hard": 0,
+        "base_reward": -97200.61,
+        "greedy_reward": 50542.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 276.77,
+      "task_id": "golden-staer_returnsort-10085"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -96538.98,
+        "greedy_reward": 50446.72,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 57,
+        "n_jobs": 26
+      },
+      "golden_score": 275.27,
+      "task_id": "golden-staer_returnsort-10033"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10058,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -95343.08,
+        "greedy_reward": 50148.02,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 273.77,
+      "task_id": "golden-staer_returnsort-10058"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 185,
+        "greedy_hard": 0,
+        "base_reward": -86821.65,
+        "greedy_reward": 57026.55,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 271.77,
+      "task_id": "golden-staer_returnsort-10050"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -94664.86,
+        "greedy_reward": 48518.74,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 270.77,
+      "task_id": "golden-staer_returnsort-10001"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -93221.66,
+        "greedy_reward": 51076.04,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 270.77,
+      "task_id": "golden-staer_returnsort-10038"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 184,
+        "greedy_hard": 0,
+        "base_reward": -96916.75,
+        "greedy_reward": 47231.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 270.77,
+      "task_id": "golden-staer_returnsort-10061"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10071,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 181,
+        "greedy_hard": 0,
+        "base_reward": -93396.56,
+        "greedy_reward": 46979.14,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 26
+      },
+      "golden_score": 266.27,
+      "task_id": "golden-staer_returnsort-10071"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10028,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -94591.66,
+        "greedy_reward": 44842.84,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 26
+      },
+      "golden_score": 264.27,
+      "task_id": "golden-staer_returnsort-10028"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10056,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 180,
+        "greedy_hard": 0,
+        "base_reward": -89319.67,
+        "greedy_reward": 49877.23,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 26
+      },
+      "golden_score": 263.77,
+      "task_id": "golden-staer_returnsort-10056"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -85953.69,
+        "greedy_reward": 52160.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 56,
+        "n_jobs": 26
+      },
+      "golden_score": 263.77,
+      "task_id": "golden-staer_returnsort-10059"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10010,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 178,
+        "greedy_hard": 0,
+        "base_reward": -88381.79,
+        "greedy_reward": 50055.21,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 26
+      },
+      "golden_score": 263.27,
+      "task_id": "golden-staer_returnsort-10010"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -97871.85,
+        "greedy_reward": 41999.65,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 26
+      },
+      "golden_score": 262.77,
+      "task_id": "golden-staer_returnsort-10086"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10034,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 179,
+        "greedy_hard": 0,
+        "base_reward": -94412.42,
+        "greedy_reward": 46145.98,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 261.27,
+      "task_id": "golden-staer_returnsort-10034"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10072,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 176,
+        "greedy_hard": 0,
+        "base_reward": -86583.69,
+        "greedy_reward": 50682.61,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 26
+      },
+      "golden_score": 261.27,
+      "task_id": "golden-staer_returnsort-10072"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10074,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 176,
+        "greedy_hard": 0,
+        "base_reward": -87147.73,
+        "greedy_reward": 49444.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 55,
+        "n_jobs": 26
+      },
+      "golden_score": 261.27,
+      "task_id": "golden-staer_returnsort-10074"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10029,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -88413.41,
+        "greedy_reward": 50441.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 26
+      },
+      "golden_score": 260.77,
+      "task_id": "golden-staer_returnsort-10029"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10004,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 178,
+        "greedy_hard": 0,
+        "base_reward": -87892.31,
+        "greedy_reward": 49534.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 260.27,
+      "task_id": "golden-staer_returnsort-10004"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10024,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 176,
+        "greedy_hard": 0,
+        "base_reward": -92456.11,
+        "greedy_reward": 44455.09,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 26
+      },
+      "golden_score": 259.77,
+      "task_id": "golden-staer_returnsort-10024"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10014,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -86393.75,
+        "greedy_reward": 50645.15,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 259.27,
+      "task_id": "golden-staer_returnsort-10014"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10042,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -83572.39,
+        "greedy_reward": 53296.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 259.27,
+      "task_id": "golden-staer_returnsort-10042"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -95721.01,
+        "greedy_reward": 42755.09,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 259.27,
+      "task_id": "golden-staer_returnsort-10060"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10070,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 177,
+        "greedy_hard": 0,
+        "base_reward": -90269.59,
+        "greedy_reward": 47265.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 259.27,
+      "task_id": "golden-staer_returnsort-10070"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10040,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -82876.71,
+        "greedy_reward": 52944.39,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 54,
+        "n_jobs": 26
+      },
+      "golden_score": 258.77,
+      "task_id": "golden-staer_returnsort-10040"
+    },
+    {
+      "floor_id": "staer_returnsort",
+      "seed": 10048,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 176,
+        "greedy_hard": 0,
+        "base_reward": -92450.03,
+        "greedy_reward": 44436.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 53,
+        "n_jobs": 26
+      },
+      "golden_score": 258.27,
+      "task_id": "golden-staer_returnsort-10048"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 247,
+        "greedy_hard": 0,
+        "base_reward": -136578.41,
+        "greedy_reward": 56621.19,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 34
+      },
+      "golden_score": 363.77,
+      "task_id": "golden-staer_nightops-10023"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 248,
+        "greedy_hard": 0,
+        "base_reward": -122729.42,
+        "greedy_reward": 70222.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 74,
+        "n_jobs": 34
+      },
+      "golden_score": 361.77,
+      "task_id": "golden-staer_nightops-10044"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 246,
+        "greedy_hard": 0,
+        "base_reward": -118224.75,
+        "greedy_reward": 72634.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 75,
+        "n_jobs": 34
+      },
+      "golden_score": 361.27,
+      "task_id": "golden-staer_nightops-10050"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10027,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 243,
+        "greedy_hard": 0,
+        "base_reward": -127436.6,
+        "greedy_reward": 60859.6,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 75,
+        "n_jobs": 34
+      },
+      "golden_score": 358.27,
+      "task_id": "golden-staer_nightops-10027"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 243,
+        "greedy_hard": 0,
+        "base_reward": -126671.18,
+        "greedy_reward": 61879.92,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 74,
+        "n_jobs": 34
+      },
+      "golden_score": 356.77,
+      "task_id": "golden-staer_nightops-10009"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 244,
+        "greedy_hard": 0,
+        "base_reward": -123787.16,
+        "greedy_reward": 65023.24,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 73,
+        "n_jobs": 34
+      },
+      "golden_score": 356.27,
+      "task_id": "golden-staer_nightops-10018"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10051,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 241,
+        "greedy_hard": 0,
+        "base_reward": -120762.67,
+        "greedy_reward": 67722.43,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 351.77,
+      "task_id": "golden-staer_nightops-10051"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 239,
+        "greedy_hard": 0,
+        "base_reward": -133014.92,
+        "greedy_reward": 53425.58,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 73,
+        "n_jobs": 34
+      },
+      "golden_score": 351.27,
+      "task_id": "golden-staer_nightops-10061"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10032,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 240,
+        "greedy_hard": 0,
+        "base_reward": -119866.71,
+        "greedy_reward": 66353.79,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 350.77,
+      "task_id": "golden-staer_nightops-10032"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 236,
+        "greedy_hard": 0,
+        "base_reward": -129558.61,
+        "greedy_reward": 54925.79,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 73,
+        "n_jobs": 34
+      },
+      "golden_score": 348.27,
+      "task_id": "golden-staer_nightops-10000"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10055,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 237,
+        "greedy_hard": 0,
+        "base_reward": -121679.17,
+        "greedy_reward": 62740.93,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 347.77,
+      "task_id": "golden-staer_nightops-10055"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 238,
+        "greedy_hard": 0,
+        "base_reward": -110537.11,
+        "greedy_reward": 74640.49,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 71,
+        "n_jobs": 34
+      },
+      "golden_score": 347.27,
+      "task_id": "golden-staer_nightops-10084"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10067,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 234,
+        "greedy_hard": 0,
+        "base_reward": -116263.73,
+        "greedy_reward": 64676.67,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 73,
+        "n_jobs": 34
+      },
+      "golden_score": 346.27,
+      "task_id": "golden-staer_nightops-10067"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10071,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 235,
+        "greedy_hard": 0,
+        "base_reward": -122298.46,
+        "greedy_reward": 61389.84,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 345.77,
+      "task_id": "golden-staer_nightops-10071"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 237,
+        "greedy_hard": 0,
+        "base_reward": -117073.65,
+        "greedy_reward": 67463.65,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 344.77,
+      "task_id": "golden-staer_nightops-10033"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10053,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 235,
+        "greedy_hard": 0,
+        "base_reward": -117254.63,
+        "greedy_reward": 65317.07,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 71,
+        "n_jobs": 34
+      },
+      "golden_score": 344.27,
+      "task_id": "golden-staer_nightops-10053"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 234,
+        "greedy_hard": 0,
+        "base_reward": -124546.29,
+        "greedy_reward": 57796.41,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 71,
+        "n_jobs": 34
+      },
+      "golden_score": 343.27,
+      "task_id": "golden-staer_nightops-10060"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10070,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 234,
+        "greedy_hard": 0,
+        "base_reward": -117871.1,
+        "greedy_reward": 64201.4,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 71,
+        "n_jobs": 34
+      },
+      "golden_score": 343.27,
+      "task_id": "golden-staer_nightops-10070"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10068,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 232,
+        "greedy_hard": 0,
+        "base_reward": -112113.58,
+        "greedy_reward": 68235.62,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 342.77,
+      "task_id": "golden-staer_nightops-10068"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10016,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 233,
+        "greedy_hard": 0,
+        "base_reward": -117790.67,
+        "greedy_reward": 62752.53,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 71,
+        "n_jobs": 34
+      },
+      "golden_score": 342.27,
+      "task_id": "golden-staer_nightops-10016"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10010,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 231,
+        "greedy_hard": 0,
+        "base_reward": -114868.61,
+        "greedy_reward": 64798.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 341.77,
+      "task_id": "golden-staer_nightops-10010"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 229,
+        "greedy_hard": 0,
+        "base_reward": -116238.99,
+        "greedy_reward": 61815.21,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 72,
+        "n_jobs": 34
+      },
+      "golden_score": 339.77,
+      "task_id": "golden-staer_nightops-10059"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10029,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 231,
+        "greedy_hard": 0,
+        "base_reward": -113280.74,
+        "greedy_reward": 65919.96,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 338.77,
+      "task_id": "golden-staer_nightops-10029"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10014,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 230,
+        "greedy_hard": 0,
+        "base_reward": -107462.23,
+        "greedy_reward": 70062.87,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 337.77,
+      "task_id": "golden-staer_nightops-10014"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10012,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 229,
+        "greedy_hard": 0,
+        "base_reward": -120310.76,
+        "greedy_reward": 58897.94,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 336.77,
+      "task_id": "golden-staer_nightops-10012"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10034,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 230,
+        "greedy_hard": 0,
+        "base_reward": -112788.83,
+        "greedy_reward": 66428.07,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 69,
+        "n_jobs": 34
+      },
+      "golden_score": 336.27,
+      "task_id": "golden-staer_nightops-10034"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10024,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 228,
+        "greedy_hard": 0,
+        "base_reward": -111940.92,
+        "greedy_reward": 65197.58,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 335.77,
+      "task_id": "golden-staer_nightops-10024"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 228,
+        "greedy_hard": 0,
+        "base_reward": -126658.76,
+        "greedy_reward": 51254.74,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 335.77,
+      "task_id": "golden-staer_nightops-10086"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10011,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 227,
+        "greedy_hard": 0,
+        "base_reward": -106652.12,
+        "greedy_reward": 68985.38,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 34
+      },
+      "golden_score": 334.77,
+      "task_id": "golden-staer_nightops-10011"
+    },
+    {
+      "floor_id": "staer_nightops",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 229,
+        "greedy_hard": 0,
+        "base_reward": -116600.45,
+        "greedy_reward": 60484.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 68,
+        "n_jobs": 34
+      },
+      "golden_score": 333.77,
+      "task_id": "golden-staer_nightops-10005"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 165,
+        "greedy_hard": 0,
+        "base_reward": -86645.37,
+        "greedy_reward": 41483.93,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 51,
+        "n_jobs": 22
+      },
+      "golden_score": 244.27,
+      "task_id": "golden-staer_charging-10009"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 166,
+        "greedy_hard": 0,
+        "base_reward": -79253.01,
+        "greedy_reward": 50484.89,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 49,
+        "n_jobs": 22
+      },
+      "golden_score": 242.27,
+      "task_id": "golden-staer_charging-10084"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 164,
+        "greedy_hard": 0,
+        "base_reward": -74071.58,
+        "greedy_reward": 52760.12,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 49,
+        "n_jobs": 22
+      },
+      "golden_score": 240.27,
+      "task_id": "golden-staer_charging-10050"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 160,
+        "greedy_hard": 0,
+        "base_reward": -82916.41,
+        "greedy_reward": 43186.79,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 234.77,
+      "task_id": "golden-staer_charging-10033"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10032,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 158,
+        "greedy_hard": 0,
+        "base_reward": -82241.21,
+        "greedy_reward": 41101.49,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 232.77,
+      "task_id": "golden-staer_charging-10032"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10011,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 156,
+        "greedy_hard": 0,
+        "base_reward": -72261.62,
+        "greedy_reward": 48440.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 230.77,
+      "task_id": "golden-staer_charging-10011"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10053,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 156,
+        "greedy_hard": 0,
+        "base_reward": -82456.36,
+        "greedy_reward": 39007.34,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 230.77,
+      "task_id": "golden-staer_charging-10053"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 156,
+        "greedy_hard": 0,
+        "base_reward": -82735.45,
+        "greedy_reward": 39504.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 230.77,
+      "task_id": "golden-staer_charging-10061"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10070,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 157,
+        "greedy_hard": 0,
+        "base_reward": -80743.19,
+        "greedy_reward": 41382.51,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 47,
+        "n_jobs": 22
+      },
+      "golden_score": 230.27,
+      "task_id": "golden-staer_charging-10070"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10029,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 155,
+        "greedy_hard": 0,
+        "base_reward": -83738.3,
+        "greedy_reward": 37534.4,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 229.77,
+      "task_id": "golden-staer_charging-10029"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 156,
+        "greedy_hard": 0,
+        "base_reward": -80766.95,
+        "greedy_reward": 40424.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 227.77,
+      "task_id": "golden-staer_charging-10005"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 153,
+        "greedy_hard": 0,
+        "base_reward": -80850.86,
+        "greedy_reward": 39176.94,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 227.77,
+      "task_id": "golden-staer_charging-10023"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 156,
+        "greedy_hard": 0,
+        "base_reward": -87570.09,
+        "greedy_reward": 35068.41,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 227.77,
+      "task_id": "golden-staer_charging-10060"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 154,
+        "greedy_hard": 0,
+        "base_reward": -78480.05,
+        "greedy_reward": 42101.45,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 47,
+        "n_jobs": 22
+      },
+      "golden_score": 227.27,
+      "task_id": "golden-staer_charging-10044"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10068,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 152,
+        "greedy_hard": 0,
+        "base_reward": -69484.94,
+        "greedy_reward": 48353.66,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 48,
+        "n_jobs": 22
+      },
+      "golden_score": 226.77,
+      "task_id": "golden-staer_charging-10068"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10024,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 153,
+        "greedy_hard": 0,
+        "base_reward": -79915.12,
+        "greedy_reward": 39168.68,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 47,
+        "n_jobs": 22
+      },
+      "golden_score": 226.27,
+      "task_id": "golden-staer_charging-10024"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10031,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 153,
+        "greedy_hard": 0,
+        "base_reward": -79845.36,
+        "greedy_reward": 38472.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 224.77,
+      "task_id": "golden-staer_charging-10031"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10051,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 153,
+        "greedy_hard": 0,
+        "base_reward": -73796.85,
+        "greedy_reward": 46171.85,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 224.77,
+      "task_id": "golden-staer_charging-10051"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 152,
+        "greedy_hard": 0,
+        "base_reward": -75866.34,
+        "greedy_reward": 41986.06,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 223.77,
+      "task_id": "golden-staer_charging-10018"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10064,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 152,
+        "greedy_hard": 0,
+        "base_reward": -80108.01,
+        "greedy_reward": 38874.59,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 223.77,
+      "task_id": "golden-staer_charging-10064"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10039,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 151,
+        "greedy_hard": 0,
+        "base_reward": -78495.7,
+        "greedy_reward": 39353.6,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 222.77,
+      "task_id": "golden-staer_charging-10039"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10085,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 152,
+        "greedy_hard": 0,
+        "base_reward": -73096.24,
+        "greedy_reward": 45006.16,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 222.27,
+      "task_id": "golden-staer_charging-10085"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10012,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 150,
+        "greedy_hard": 0,
+        "base_reward": -83169.01,
+        "greedy_reward": 34721.99,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 220.27,
+      "task_id": "golden-staer_charging-10012"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -81283.83,
+        "greedy_reward": 34182.17,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 218.77,
+      "task_id": "golden-staer_charging-10000"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10004,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 148,
+        "greedy_hard": 0,
+        "base_reward": -76055.95,
+        "greedy_reward": 38934.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 218.27,
+      "task_id": "golden-staer_charging-10004"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10019,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 148,
+        "greedy_hard": 0,
+        "base_reward": -72193.58,
+        "greedy_reward": 43109.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 218.27,
+      "task_id": "golden-staer_charging-10019"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10036,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -76258.88,
+        "greedy_reward": 38749.23,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 217.27,
+      "task_id": "golden-staer_charging-10036"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10045,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -76533.95,
+        "greedy_reward": 38047.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 217.27,
+      "task_id": "golden-staer_charging-10045"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10080,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -78690.72,
+        "greedy_reward": 36754.78,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 22
+      },
+      "golden_score": 217.27,
+      "task_id": "golden-staer_charging-10080"
+    },
+    {
+      "floor_id": "staer_charging",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 144,
+        "greedy_hard": 0,
+        "base_reward": -73497.85,
+        "greedy_reward": 39131.95,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 22
+      },
+      "golden_score": 215.77,
+      "task_id": "golden-staer_charging-10059"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 149,
+        "greedy_hard": 0,
+        "base_reward": -67578.02,
+        "greedy_reward": 46226.36,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 44,
+        "n_jobs": 16
+      },
+      "golden_score": 217.8,
+      "task_id": "golden-staer_quarantine-10050"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 149,
+        "greedy_hard": 0,
+        "base_reward": -60721.35,
+        "greedy_reward": 50964.36,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 44,
+        "n_jobs": 16
+      },
+      "golden_score": 217.8,
+      "task_id": "golden-staer_quarantine-10086"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10026,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 148,
+        "greedy_hard": 0,
+        "base_reward": -77144.07,
+        "greedy_reward": 35040.86,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 44,
+        "n_jobs": 16
+      },
+      "golden_score": 216.8,
+      "task_id": "golden-staer_quarantine-10026"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 149,
+        "greedy_hard": 0,
+        "base_reward": -67464.11,
+        "greedy_reward": 44227.86,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 216.3,
+      "task_id": "golden-staer_quarantine-10061"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -64482.8,
+        "greedy_reward": 47564.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 214.3,
+      "task_id": "golden-staer_quarantine-10005"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10002,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 145,
+        "greedy_hard": 0,
+        "base_reward": -61258.29,
+        "greedy_reward": 48526.18,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 44,
+        "n_jobs": 16
+      },
+      "golden_score": 213.8,
+      "task_id": "golden-staer_quarantine-10002"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10083,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 146,
+        "greedy_hard": 0,
+        "base_reward": -62883.41,
+        "greedy_reward": 47447.15,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 213.3,
+      "task_id": "golden-staer_quarantine-10083"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10049,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -59571.23,
+        "greedy_reward": 50087.83,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 212.8,
+      "task_id": "golden-staer_quarantine-10049"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10019,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 145,
+        "greedy_hard": 0,
+        "base_reward": -67674.03,
+        "greedy_reward": 42976.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 212.3,
+      "task_id": "golden-staer_quarantine-10019"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 145,
+        "greedy_hard": 0,
+        "base_reward": -68066.7,
+        "greedy_reward": 42178.64,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 212.3,
+      "task_id": "golden-staer_quarantine-10023"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 146,
+        "greedy_hard": 0,
+        "base_reward": -63514.29,
+        "greedy_reward": 46491.46,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 211.8,
+      "task_id": "golden-staer_quarantine-10008"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10054,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 144,
+        "greedy_hard": 0,
+        "base_reward": -72665.93,
+        "greedy_reward": 37873.76,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 211.3,
+      "task_id": "golden-staer_quarantine-10054"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 145,
+        "greedy_hard": 0,
+        "base_reward": -65780.91,
+        "greedy_reward": 43464.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 210.8,
+      "task_id": "golden-staer_quarantine-10000"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10045,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 145,
+        "greedy_hard": 0,
+        "base_reward": -68942.1,
+        "greedy_reward": 41410.78,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 210.8,
+      "task_id": "golden-staer_quarantine-10045"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10037,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 144,
+        "greedy_hard": 0,
+        "base_reward": -67755.11,
+        "greedy_reward": 41450.58,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 209.8,
+      "task_id": "golden-staer_quarantine-10037"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10047,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -75021.88,
+        "greedy_reward": 33521.98,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 43,
+        "n_jobs": 16
+      },
+      "golden_score": 209.3,
+      "task_id": "golden-staer_quarantine-10047"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10066,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -65158.23,
+        "greedy_reward": 42274.43,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 207.8,
+      "task_id": "golden-staer_quarantine-10066"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -69078.52,
+        "greedy_reward": 38956.77,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 206.8,
+      "task_id": "golden-staer_quarantine-10018"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10073,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -60641.86,
+        "greedy_reward": 45793.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 206.8,
+      "task_id": "golden-staer_quarantine-10073"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10078,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -70323.18,
+        "greedy_reward": 37755.49,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 206.8,
+      "task_id": "golden-staer_quarantine-10078"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10011,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -73183.32,
+        "greedy_reward": 35621.34,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 206.3,
+      "task_id": "golden-staer_quarantine-10011"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10012,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -60896.71,
+        "greedy_reward": 47530.43,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 206.3,
+      "task_id": "golden-staer_quarantine-10012"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10022,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -65857.38,
+        "greedy_reward": 41471.42,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 206.3,
+      "task_id": "golden-staer_quarantine-10022"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10041,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -70428.08,
+        "greedy_reward": 38645.33,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 206.3,
+      "task_id": "golden-staer_quarantine-10041"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10043,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -75425.22,
+        "greedy_reward": 32232.9,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 206.3,
+      "task_id": "golden-staer_quarantine-10043"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10036,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 140,
+        "greedy_hard": 0,
+        "base_reward": -63738.57,
+        "greedy_reward": 41344.14,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 42,
+        "n_jobs": 16
+      },
+      "golden_score": 205.8,
+      "task_id": "golden-staer_quarantine-10036"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10020,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -69621.75,
+        "greedy_reward": 37164.48,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 205.3,
+      "task_id": "golden-staer_quarantine-10020"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -67045.86,
+        "greedy_reward": 39933.85,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 205.3,
+      "task_id": "golden-staer_quarantine-10059"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10087,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -68212.48,
+        "greedy_reward": 39332.04,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 41,
+        "n_jobs": 16
+      },
+      "golden_score": 205.3,
+      "task_id": "golden-staer_quarantine-10087"
+    },
+    {
+      "floor_id": "staer_quarantine",
+      "seed": 10007,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -68959.09,
+        "greedy_reward": 39199.13,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 40,
+        "n_jobs": 16
+      },
+      "golden_score": 204.8,
+      "task_id": "golden-staer_quarantine-10007"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10007,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 186,
+        "greedy_hard": 0,
+        "base_reward": -47038.64,
+        "greedy_reward": 83324.81,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 52,
+        "n_jobs": 28
+      },
+      "golden_score": 266.8,
+      "task_id": "golden-staer_kitting-10007"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10070,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 187,
+        "greedy_hard": 0,
+        "base_reward": -48842.23,
+        "greedy_reward": 76982.25,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 28
+      },
+      "golden_score": 266.3,
+      "task_id": "golden-staer_kitting-10070"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10064,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 182,
+        "greedy_hard": 0,
+        "base_reward": -67881.32,
+        "greedy_reward": 65286.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 28
+      },
+      "golden_score": 261.3,
+      "task_id": "golden-staer_kitting-10064"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 183,
+        "greedy_hard": 0,
+        "base_reward": -61325.16,
+        "greedy_reward": 67957.49,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 28
+      },
+      "golden_score": 260.8,
+      "task_id": "golden-staer_kitting-10001"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10078,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 180,
+        "greedy_hard": 0,
+        "base_reward": -42311.54,
+        "greedy_reward": 79470.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 28
+      },
+      "golden_score": 257.8,
+      "task_id": "golden-staer_kitting-10078"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 178,
+        "greedy_hard": 0,
+        "base_reward": -59035.73,
+        "greedy_reward": 67006.34,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 51,
+        "n_jobs": 28
+      },
+      "golden_score": 257.3,
+      "task_id": "golden-staer_kitting-10033"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10074,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -73930.08,
+        "greedy_reward": 51864.03,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 28
+      },
+      "golden_score": 252.8,
+      "task_id": "golden-staer_kitting-10074"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 175,
+        "greedy_hard": 0,
+        "base_reward": -50764.79,
+        "greedy_reward": 70293.18,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 28
+      },
+      "golden_score": 252.8,
+      "task_id": "golden-staer_kitting-10086"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 174,
+        "greedy_hard": 0,
+        "base_reward": -73926.83,
+        "greedy_reward": 51171.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 28
+      },
+      "golden_score": 251.8,
+      "task_id": "golden-staer_kitting-10008"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 173,
+        "greedy_hard": 0,
+        "base_reward": -60647.25,
+        "greedy_reward": 59845.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 50,
+        "n_jobs": 28
+      },
+      "golden_score": 250.8,
+      "task_id": "golden-staer_kitting-10060"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 174,
+        "greedy_hard": 0,
+        "base_reward": -54023.71,
+        "greedy_reward": 66769.98,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 250.3,
+      "task_id": "golden-staer_kitting-10018"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10054,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 174,
+        "greedy_hard": 0,
+        "base_reward": -62589.59,
+        "greedy_reward": 60551.13,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 250.3,
+      "task_id": "golden-staer_kitting-10054"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10049,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 173,
+        "greedy_hard": 0,
+        "base_reward": -41956.57,
+        "greedy_reward": 75615.06,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 249.3,
+      "task_id": "golden-staer_kitting-10049"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 173,
+        "greedy_hard": 0,
+        "base_reward": -63442.49,
+        "greedy_reward": 59638.15,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 249.3,
+      "task_id": "golden-staer_kitting-10084"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10051,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 174,
+        "greedy_hard": 0,
+        "base_reward": -32985.64,
+        "greedy_reward": 77377.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 248.8,
+      "task_id": "golden-staer_kitting-10051"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 171,
+        "greedy_hard": 0,
+        "base_reward": -58476.37,
+        "greedy_reward": 60192.96,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 247.3,
+      "task_id": "golden-staer_kitting-10059"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10089,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 171,
+        "greedy_hard": 0,
+        "base_reward": -50058.34,
+        "greedy_reward": 67055.0,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 247.3,
+      "task_id": "golden-staer_kitting-10089"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10019,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 170,
+        "greedy_hard": 0,
+        "base_reward": -47174.89,
+        "greedy_reward": 70855.18,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 246.3,
+      "task_id": "golden-staer_kitting-10019"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10030,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 170,
+        "greedy_hard": 0,
+        "base_reward": -38727.28,
+        "greedy_reward": 77169.84,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 246.3,
+      "task_id": "golden-staer_kitting-10030"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10081,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 170,
+        "greedy_hard": 0,
+        "base_reward": -53613.63,
+        "greedy_reward": 64943.4,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 49,
+        "n_jobs": 28
+      },
+      "golden_score": 246.3,
+      "task_id": "golden-staer_kitting-10081"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10035,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 171,
+        "greedy_hard": 0,
+        "base_reward": -48684.97,
+        "greedy_reward": 65561.31,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 245.8,
+      "task_id": "golden-staer_kitting-10035"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 169,
+        "greedy_hard": 0,
+        "base_reward": -41584.36,
+        "greedy_reward": 79688.71,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 243.8,
+      "task_id": "golden-staer_kitting-10009"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 169,
+        "greedy_hard": 0,
+        "base_reward": -63057.07,
+        "greedy_reward": 54249.53,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 243.8,
+      "task_id": "golden-staer_kitting-10038"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10048,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 169,
+        "greedy_hard": 0,
+        "base_reward": -52192.57,
+        "greedy_reward": 67293.93,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 243.8,
+      "task_id": "golden-staer_kitting-10048"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 169,
+        "greedy_hard": 0,
+        "base_reward": -47262.37,
+        "greedy_reward": 69965.67,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 243.8,
+      "task_id": "golden-staer_kitting-10061"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10076,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 169,
+        "greedy_hard": 0,
+        "base_reward": -47872.88,
+        "greedy_reward": 67272.72,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 243.8,
+      "task_id": "golden-staer_kitting-10076"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10022,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 168,
+        "greedy_hard": 0,
+        "base_reward": -51705.52,
+        "greedy_reward": 65686.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 242.8,
+      "task_id": "golden-staer_kitting-10022"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10065,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 168,
+        "greedy_hard": 0,
+        "base_reward": -51459.3,
+        "greedy_reward": 67541.98,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 48,
+        "n_jobs": 28
+      },
+      "golden_score": 242.8,
+      "task_id": "golden-staer_kitting-10065"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10077,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 169,
+        "greedy_hard": 0,
+        "base_reward": -73066.87,
+        "greedy_reward": 47189.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 28
+      },
+      "golden_score": 242.3,
+      "task_id": "golden-staer_kitting-10077"
+    },
+    {
+      "floor_id": "staer_kitting",
+      "seed": 10039,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 168,
+        "greedy_hard": 0,
+        "base_reward": -55597.2,
+        "greedy_reward": 60075.86,
+        "strong_reward": 0.955,
+        "weak_reward": 0.255,
+        "headroom": 0.7,
+        "total_ops": 47,
+        "n_jobs": 28
+      },
+      "golden_score": 241.3,
+      "task_id": "golden-staer_kitting-10039"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10016,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 250,
+        "greedy_hard": 0,
+        "base_reward": -139233.75,
+        "greedy_reward": 55840.75,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 32
+      },
+      "golden_score": 366.77,
+      "task_id": "golden-staer_bulk-10016"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 237,
+        "greedy_hard": 0,
+        "base_reward": -130559.0,
+        "greedy_reward": 54990.9,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 71,
+        "n_jobs": 32
+      },
+      "golden_score": 346.27,
+      "task_id": "golden-staer_bulk-10023"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10064,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 234,
+        "greedy_hard": 0,
+        "base_reward": -118454.96,
+        "greedy_reward": 62824.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 32
+      },
+      "golden_score": 341.77,
+      "task_id": "golden-staer_bulk-10064"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10058,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 232,
+        "greedy_hard": 0,
+        "base_reward": -124294.64,
+        "greedy_reward": 56554.66,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 32
+      },
+      "golden_score": 339.77,
+      "task_id": "golden-staer_bulk-10058"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 233,
+        "greedy_hard": 0,
+        "base_reward": -111333.85,
+        "greedy_reward": 70518.45,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 69,
+        "n_jobs": 32
+      },
+      "golden_score": 339.27,
+      "task_id": "golden-staer_bulk-10084"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 231,
+        "greedy_hard": 0,
+        "base_reward": -118431.12,
+        "greedy_reward": 62225.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 32
+      },
+      "golden_score": 338.77,
+      "task_id": "golden-staer_bulk-10033"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 230,
+        "greedy_hard": 0,
+        "base_reward": -116023.09,
+        "greedy_reward": 63424.31,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 32
+      },
+      "golden_score": 337.77,
+      "task_id": "golden-staer_bulk-10050"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 227,
+        "greedy_hard": 0,
+        "base_reward": -112131.06,
+        "greedy_reward": 65082.04,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 32
+      },
+      "golden_score": 334.77,
+      "task_id": "golden-staer_bulk-10059"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10028,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 226,
+        "greedy_hard": 0,
+        "base_reward": -121096.55,
+        "greedy_reward": 55093.55,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 69,
+        "n_jobs": 32
+      },
+      "golden_score": 332.27,
+      "task_id": "golden-staer_bulk-10028"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 224,
+        "greedy_hard": 0,
+        "base_reward": -102196.61,
+        "greedy_reward": 71194.69,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 69,
+        "n_jobs": 32
+      },
+      "golden_score": 330.27,
+      "task_id": "golden-staer_bulk-10009"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10027,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 222,
+        "greedy_hard": 0,
+        "base_reward": -115087.75,
+        "greedy_reward": 58260.85,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 70,
+        "n_jobs": 32
+      },
+      "golden_score": 329.77,
+      "task_id": "golden-staer_bulk-10027"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 223,
+        "greedy_hard": 0,
+        "base_reward": -121997.51,
+        "greedy_reward": 52491.19,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 69,
+        "n_jobs": 32
+      },
+      "golden_score": 329.27,
+      "task_id": "golden-staer_bulk-10000"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 224,
+        "greedy_hard": 0,
+        "base_reward": -119251.88,
+        "greedy_reward": 55705.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 67,
+        "n_jobs": 32
+      },
+      "golden_score": 327.27,
+      "task_id": "golden-staer_bulk-10060"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10085,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 224,
+        "greedy_hard": 0,
+        "base_reward": -110157.05,
+        "greedy_reward": 63573.45,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 325.77,
+      "task_id": "golden-staer_bulk-10085"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10034,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 223,
+        "greedy_hard": 0,
+        "base_reward": -114472.72,
+        "greedy_reward": 59401.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 324.77,
+      "task_id": "golden-staer_bulk-10034"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 221,
+        "greedy_hard": 0,
+        "base_reward": -114513.51,
+        "greedy_reward": 58292.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 67,
+        "n_jobs": 32
+      },
+      "golden_score": 324.27,
+      "task_id": "golden-staer_bulk-10061"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10056,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 222,
+        "greedy_hard": 0,
+        "base_reward": -108295.53,
+        "greedy_reward": 63318.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 323.77,
+      "task_id": "golden-staer_bulk-10056"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 220,
+        "greedy_hard": 0,
+        "base_reward": -108269.43,
+        "greedy_reward": 63457.47,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 67,
+        "n_jobs": 32
+      },
+      "golden_score": 323.27,
+      "task_id": "golden-staer_bulk-10038"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10047,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 223,
+        "greedy_hard": 0,
+        "base_reward": -108042.55,
+        "greedy_reward": 65099.95,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 65,
+        "n_jobs": 32
+      },
+      "golden_score": 323.27,
+      "task_id": "golden-staer_bulk-10047"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10071,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 221,
+        "greedy_hard": 0,
+        "base_reward": -114787.31,
+        "greedy_reward": 57125.49,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 322.77,
+      "task_id": "golden-staer_bulk-10071"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 220,
+        "greedy_hard": 0,
+        "base_reward": -119233.67,
+        "greedy_reward": 52574.23,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 321.77,
+      "task_id": "golden-staer_bulk-10018"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10036,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 220,
+        "greedy_hard": 0,
+        "base_reward": -117798.67,
+        "greedy_reward": 53994.43,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 321.77,
+      "task_id": "golden-staer_bulk-10036"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10072,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 217,
+        "greedy_hard": 0,
+        "base_reward": -113500.34,
+        "greedy_reward": 55827.76,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 68,
+        "n_jobs": 32
+      },
+      "golden_score": 321.77,
+      "task_id": "golden-staer_bulk-10072"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10074,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 217,
+        "greedy_hard": 0,
+        "base_reward": -107902.46,
+        "greedy_reward": 60188.64,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 68,
+        "n_jobs": 32
+      },
+      "golden_score": 321.77,
+      "task_id": "golden-staer_bulk-10074"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 218,
+        "greedy_hard": 0,
+        "base_reward": -112919.08,
+        "greedy_reward": 56549.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 67,
+        "n_jobs": 32
+      },
+      "golden_score": 321.27,
+      "task_id": "golden-staer_bulk-10001"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10024,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 218,
+        "greedy_hard": 0,
+        "base_reward": -112115.64,
+        "greedy_reward": 57284.66,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 67,
+        "n_jobs": 32
+      },
+      "golden_score": 321.27,
+      "task_id": "golden-staer_bulk-10024"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10002,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 216,
+        "greedy_hard": 0,
+        "base_reward": -114427.78,
+        "greedy_reward": 53336.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 68,
+        "n_jobs": 32
+      },
+      "golden_score": 320.77,
+      "task_id": "golden-staer_bulk-10002"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10063,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 217,
+        "greedy_hard": 0,
+        "base_reward": -111386.55,
+        "greedy_reward": 58727.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 67,
+        "n_jobs": 32
+      },
+      "golden_score": 320.27,
+      "task_id": "golden-staer_bulk-10063"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10029,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 218,
+        "greedy_hard": 0,
+        "base_reward": -105513.02,
+        "greedy_reward": 64742.58,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 319.77,
+      "task_id": "golden-staer_bulk-10029"
+    },
+    {
+      "floor_id": "staer_bulk",
+      "seed": 10048,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 216,
+        "greedy_hard": 0,
+        "base_reward": -116074.69,
+        "greedy_reward": 52167.11,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 66,
+        "n_jobs": 32
+      },
+      "golden_score": 317.77,
+      "task_id": "golden-staer_bulk-10048"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 297,
+        "greedy_hard": 0,
+        "base_reward": -167444.32,
+        "greedy_reward": 53119.88,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 84,
+        "n_jobs": 36
+      },
+      "golden_score": 425.77,
+      "task_id": "golden-staer_outbound-10038"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10003,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 287,
+        "greedy_hard": 0,
+        "base_reward": -177865.49,
+        "greedy_reward": 37361.71,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 81,
+        "n_jobs": 36
+      },
+      "golden_score": 411.27,
+      "task_id": "golden-staer_outbound-10003"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10034,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 282,
+        "greedy_hard": 0,
+        "base_reward": -159308.41,
+        "greedy_reward": 48982.69,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 82,
+        "n_jobs": 36
+      },
+      "golden_score": 407.77,
+      "task_id": "golden-staer_outbound-10034"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 277,
+        "greedy_hard": 0,
+        "base_reward": -153488.06,
+        "greedy_reward": 47791.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 81,
+        "n_jobs": 36
+      },
+      "golden_score": 401.27,
+      "task_id": "golden-staer_outbound-10000"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 276,
+        "greedy_hard": 0,
+        "base_reward": -156660.11,
+        "greedy_reward": 48366.99,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 80,
+        "n_jobs": 36
+      },
+      "golden_score": 398.77,
+      "task_id": "golden-staer_outbound-10033"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10021,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 275,
+        "greedy_hard": 0,
+        "base_reward": -160919.3,
+        "greedy_reward": 42736.2,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 80,
+        "n_jobs": 36
+      },
+      "golden_score": 397.77,
+      "task_id": "golden-staer_outbound-10021"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10079,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 274,
+        "greedy_hard": 0,
+        "base_reward": -149695.57,
+        "greedy_reward": 50282.63,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 80,
+        "n_jobs": 36
+      },
+      "golden_score": 396.77,
+      "task_id": "golden-staer_outbound-10079"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10067,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 277,
+        "greedy_hard": 0,
+        "base_reward": -164462.54,
+        "greedy_reward": 43298.36,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 77,
+        "n_jobs": 36
+      },
+      "golden_score": 395.27,
+      "task_id": "golden-staer_outbound-10067"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10032,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 272,
+        "greedy_hard": 0,
+        "base_reward": -149540.44,
+        "greedy_reward": 49063.96,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 80,
+        "n_jobs": 36
+      },
+      "golden_score": 394.77,
+      "task_id": "golden-staer_outbound-10032"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10024,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 272,
+        "greedy_hard": 0,
+        "base_reward": -151018.15,
+        "greedy_reward": 48211.15,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 79,
+        "n_jobs": 36
+      },
+      "golden_score": 393.27,
+      "task_id": "golden-staer_outbound-10024"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 273,
+        "greedy_hard": 0,
+        "base_reward": -146468.9,
+        "greedy_reward": 49743.2,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 78,
+        "n_jobs": 36
+      },
+      "golden_score": 392.77,
+      "task_id": "golden-staer_outbound-10059"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 269,
+        "greedy_hard": 0,
+        "base_reward": -149419.76,
+        "greedy_reward": 48082.24,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 79,
+        "n_jobs": 36
+      },
+      "golden_score": 390.27,
+      "task_id": "golden-staer_outbound-10008"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10077,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 269,
+        "greedy_hard": 0,
+        "base_reward": -153529.93,
+        "greedy_reward": 46851.07,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 78,
+        "n_jobs": 36
+      },
+      "golden_score": 388.77,
+      "task_id": "golden-staer_outbound-10077"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10042,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 268,
+        "greedy_hard": 0,
+        "base_reward": -148842.2,
+        "greedy_reward": 46164.5,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 384.77,
+      "task_id": "golden-staer_outbound-10042"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 265,
+        "greedy_hard": 0,
+        "base_reward": -151334.93,
+        "greedy_reward": 44024.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 78,
+        "n_jobs": 36
+      },
+      "golden_score": 384.77,
+      "task_id": "golden-staer_outbound-10044"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 266,
+        "greedy_hard": 0,
+        "base_reward": -149972.5,
+        "greedy_reward": 43500.3,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 77,
+        "n_jobs": 36
+      },
+      "golden_score": 384.27,
+      "task_id": "golden-staer_outbound-10009"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10055,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 267,
+        "greedy_hard": 0,
+        "base_reward": -158928.57,
+        "greedy_reward": 40189.93,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 383.77,
+      "task_id": "golden-staer_outbound-10055"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 263,
+        "greedy_hard": 0,
+        "base_reward": -153137.83,
+        "greedy_reward": 43366.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 379.77,
+      "task_id": "golden-staer_outbound-10005"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10026,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 263,
+        "greedy_hard": 0,
+        "base_reward": -156712.81,
+        "greedy_reward": 37696.59,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 379.77,
+      "task_id": "golden-staer_outbound-10026"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10057,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 262,
+        "greedy_hard": 0,
+        "base_reward": -152834.37,
+        "greedy_reward": 41428.03,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 378.77,
+      "task_id": "golden-staer_outbound-10057"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10048,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 260,
+        "greedy_hard": 0,
+        "base_reward": -145030.9,
+        "greedy_reward": 43343.8,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 77,
+        "n_jobs": 36
+      },
+      "golden_score": 378.27,
+      "task_id": "golden-staer_outbound-10048"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10082,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 260,
+        "greedy_hard": 0,
+        "base_reward": -143981.26,
+        "greedy_reward": 47495.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 77,
+        "n_jobs": 36
+      },
+      "golden_score": 378.27,
+      "task_id": "golden-staer_outbound-10082"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 258,
+        "greedy_hard": 0,
+        "base_reward": -144305.87,
+        "greedy_reward": 42844.13,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 374.77,
+      "task_id": "golden-staer_outbound-10001"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10025,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 261,
+        "greedy_hard": 0,
+        "base_reward": -151059.82,
+        "greedy_reward": 41878.78,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 74,
+        "n_jobs": 36
+      },
+      "golden_score": 374.77,
+      "task_id": "golden-staer_outbound-10025"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10076,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 259,
+        "greedy_hard": 0,
+        "base_reward": -133927.85,
+        "greedy_reward": 52909.45,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 75,
+        "n_jobs": 36
+      },
+      "golden_score": 374.27,
+      "task_id": "golden-staer_outbound-10076"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10016,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 257,
+        "greedy_hard": 0,
+        "base_reward": -145892.1,
+        "greedy_reward": 44762.6,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 373.77,
+      "task_id": "golden-staer_outbound-10016"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10083,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 257,
+        "greedy_hard": 0,
+        "base_reward": -139356.01,
+        "greedy_reward": 44978.49,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 373.77,
+      "task_id": "golden-staer_outbound-10083"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 258,
+        "greedy_hard": 0,
+        "base_reward": -146424.49,
+        "greedy_reward": 42405.41,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 75,
+        "n_jobs": 36
+      },
+      "golden_score": 373.27,
+      "task_id": "golden-staer_outbound-10060"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10074,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 258,
+        "greedy_hard": 0,
+        "base_reward": -144675.15,
+        "greedy_reward": 44771.95,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 75,
+        "n_jobs": 36
+      },
+      "golden_score": 373.27,
+      "task_id": "golden-staer_outbound-10074"
+    },
+    {
+      "floor_id": "staer_outbound",
+      "seed": 10041,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 256,
+        "greedy_hard": 0,
+        "base_reward": -138888.22,
+        "greedy_reward": 48250.48,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 76,
+        "n_jobs": 36
+      },
+      "golden_score": 372.77,
+      "task_id": "golden-staer_outbound-10041"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 156,
+        "greedy_hard": 0,
+        "base_reward": -74779.66,
+        "greedy_reward": 47147.44,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 20
+      },
+      "golden_score": 227.77,
+      "task_id": "golden-staer_maintenance-10084"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 152,
+        "greedy_hard": 0,
+        "base_reward": -82084.62,
+        "greedy_reward": 36612.18,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 47,
+        "n_jobs": 20
+      },
+      "golden_score": 225.27,
+      "task_id": "golden-staer_maintenance-10009"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10029,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 148,
+        "greedy_hard": 0,
+        "base_reward": -81736.83,
+        "greedy_reward": 34222.57,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 46,
+        "n_jobs": 20
+      },
+      "golden_score": 219.77,
+      "task_id": "golden-staer_maintenance-10029"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10032,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 148,
+        "greedy_hard": 0,
+        "base_reward": -81353.53,
+        "greedy_reward": 34934.17,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 20
+      },
+      "golden_score": 218.27,
+      "task_id": "golden-staer_maintenance-10032"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 147,
+        "greedy_hard": 0,
+        "base_reward": -74478.74,
+        "greedy_reward": 41380.36,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 45,
+        "n_jobs": 20
+      },
+      "golden_score": 217.27,
+      "task_id": "golden-staer_maintenance-10033"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 146,
+        "greedy_hard": 0,
+        "base_reward": -76528.98,
+        "greedy_reward": 37110.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 43,
+        "n_jobs": 20
+      },
+      "golden_score": 213.27,
+      "task_id": "golden-staer_maintenance-10005"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 145,
+        "greedy_hard": 0,
+        "base_reward": -66022.49,
+        "greedy_reward": 45968.81,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 43,
+        "n_jobs": 20
+      },
+      "golden_score": 212.27,
+      "task_id": "golden-staer_maintenance-10050"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 143,
+        "greedy_hard": 0,
+        "base_reward": -76053.45,
+        "greedy_reward": 36244.35,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 44,
+        "n_jobs": 20
+      },
+      "golden_score": 211.77,
+      "task_id": "golden-staer_maintenance-10061"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10070,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 144,
+        "greedy_hard": 0,
+        "base_reward": -73147.4,
+        "greedy_reward": 38900.0,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 43,
+        "n_jobs": 20
+      },
+      "golden_score": 211.27,
+      "task_id": "golden-staer_maintenance-10070"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10053,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 142,
+        "greedy_hard": 0,
+        "base_reward": -74371.44,
+        "greedy_reward": 36101.46,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 44,
+        "n_jobs": 20
+      },
+      "golden_score": 210.77,
+      "task_id": "golden-staer_maintenance-10053"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10011,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -64522.5,
+        "greedy_reward": 44771.4,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 43,
+        "n_jobs": 20
+      },
+      "golden_score": 208.27,
+      "task_id": "golden-staer_maintenance-10011"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10085,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 141,
+        "greedy_hard": 0,
+        "base_reward": -68919.7,
+        "greedy_reward": 41228.7,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 206.77,
+      "task_id": "golden-staer_maintenance-10085"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10068,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 136,
+        "greedy_hard": 0,
+        "base_reward": -61760.55,
+        "greedy_reward": 43771.85,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 44,
+        "n_jobs": 20
+      },
+      "golden_score": 204.77,
+      "task_id": "golden-staer_maintenance-10068"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10023,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 137,
+        "greedy_hard": 0,
+        "base_reward": -71831.41,
+        "greedy_reward": 35823.59,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 43,
+        "n_jobs": 20
+      },
+      "golden_score": 204.27,
+      "task_id": "golden-staer_maintenance-10023"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 138,
+        "greedy_hard": 0,
+        "base_reward": -74545.52,
+        "greedy_reward": 33507.78,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 203.77,
+      "task_id": "golden-staer_maintenance-10086"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10015,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 137,
+        "greedy_hard": 0,
+        "base_reward": -63402.01,
+        "greedy_reward": 42605.69,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 202.77,
+      "task_id": "golden-staer_maintenance-10015"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10031,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 137,
+        "greedy_hard": 0,
+        "base_reward": -73260.35,
+        "greedy_reward": 33054.55,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 202.77,
+      "task_id": "golden-staer_maintenance-10031"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10010,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -67656.84,
+        "greedy_reward": 37552.36,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 43,
+        "n_jobs": 20
+      },
+      "golden_score": 202.27,
+      "task_id": "golden-staer_maintenance-10010"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10074,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 136,
+        "greedy_hard": 0,
+        "base_reward": -60461.12,
+        "greedy_reward": 44587.68,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 201.77,
+      "task_id": "golden-staer_maintenance-10074"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10000,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -73886.5,
+        "greedy_reward": 32100.7,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 200.77,
+      "task_id": "golden-staer_maintenance-10000"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -69024.25,
+        "greedy_reward": 36787.85,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 200.77,
+      "task_id": "golden-staer_maintenance-10044"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10018,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 136,
+        "greedy_hard": 0,
+        "base_reward": -68415.06,
+        "greedy_reward": 37108.04,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 41,
+        "n_jobs": 20
+      },
+      "golden_score": 200.27,
+      "task_id": "golden-staer_maintenance-10018"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10024,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 134,
+        "greedy_hard": 0,
+        "base_reward": -67456.96,
+        "greedy_reward": 36925.44,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 42,
+        "n_jobs": 20
+      },
+      "golden_score": 199.77,
+      "task_id": "golden-staer_maintenance-10024"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10060,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 137,
+        "greedy_hard": 0,
+        "base_reward": -77241.42,
+        "greedy_reward": 30372.28,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 40,
+        "n_jobs": 20
+      },
+      "golden_score": 199.77,
+      "task_id": "golden-staer_maintenance-10060"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10019,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -64076.75,
+        "greedy_reward": 41009.65,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 41,
+        "n_jobs": 20
+      },
+      "golden_score": 199.27,
+      "task_id": "golden-staer_maintenance-10019"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10048,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -69830.89,
+        "greedy_reward": 35686.81,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 41,
+        "n_jobs": 20
+      },
+      "golden_score": 199.27,
+      "task_id": "golden-staer_maintenance-10048"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10051,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -67131.72,
+        "greedy_reward": 38669.18,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 41,
+        "n_jobs": 20
+      },
+      "golden_score": 199.27,
+      "task_id": "golden-staer_maintenance-10051"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10004,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 134,
+        "greedy_hard": 0,
+        "base_reward": -68801.44,
+        "greedy_reward": 35245.86,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 41,
+        "n_jobs": 20
+      },
+      "golden_score": 198.27,
+      "task_id": "golden-staer_maintenance-10004"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10036,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 134,
+        "greedy_hard": 0,
+        "base_reward": -69676.51,
+        "greedy_reward": 35012.59,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 41,
+        "n_jobs": 20
+      },
+      "golden_score": 198.27,
+      "task_id": "golden-staer_maintenance-10036"
+    },
+    {
+      "floor_id": "staer_maintenance",
+      "seed": 10012,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 135,
+        "greedy_hard": 0,
+        "base_reward": -74324.16,
+        "greedy_reward": 31770.64,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 40,
+        "n_jobs": 20
+      },
+      "golden_score": 197.77,
+      "task_id": "golden-staer_maintenance-10012"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10029,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 108,
+        "greedy_hard": 0,
+        "base_reward": -54087.36,
+        "greedy_reward": 30830.34,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 33,
+        "n_jobs": 14
+      },
+      "golden_score": 160.27,
+      "task_id": "golden-staer_audit-10029"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10053,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 105,
+        "greedy_hard": 0,
+        "base_reward": -57176.58,
+        "greedy_reward": 24802.02,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 33,
+        "n_jobs": 14
+      },
+      "golden_score": 157.27,
+      "task_id": "golden-staer_audit-10053"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10009,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 103,
+        "greedy_hard": 0,
+        "base_reward": -52896.35,
+        "greedy_reward": 27727.05,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 32,
+        "n_jobs": 14
+      },
+      "golden_score": 153.77,
+      "task_id": "golden-staer_audit-10009"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10084,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 103,
+        "greedy_hard": 0,
+        "base_reward": -48544.17,
+        "greedy_reward": 32285.43,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 152.27,
+      "task_id": "golden-staer_audit-10084"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10002,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 99,
+        "greedy_hard": 0,
+        "base_reward": -58365.68,
+        "greedy_reward": 20007.72,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 33,
+        "n_jobs": 14
+      },
+      "golden_score": 151.27,
+      "task_id": "golden-staer_audit-10002"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10012,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 102,
+        "greedy_hard": 0,
+        "base_reward": -60425.22,
+        "greedy_reward": 20284.38,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 151.27,
+      "task_id": "golden-staer_audit-10012"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10014,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 102,
+        "greedy_hard": 0,
+        "base_reward": -50290.58,
+        "greedy_reward": 28862.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 151.27,
+      "task_id": "golden-staer_audit-10014"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10034,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 102,
+        "greedy_hard": 0,
+        "base_reward": -58824.26,
+        "greedy_reward": 21850.54,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 151.27,
+      "task_id": "golden-staer_audit-10034"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10016,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 99,
+        "greedy_hard": 0,
+        "base_reward": -52064.48,
+        "greedy_reward": 25757.32,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 32,
+        "n_jobs": 14
+      },
+      "golden_score": 149.77,
+      "task_id": "golden-staer_audit-10016"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10050,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 100,
+        "greedy_hard": 0,
+        "base_reward": -44363.06,
+        "greedy_reward": 33554.34,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 149.27,
+      "task_id": "golden-staer_audit-10050"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10036,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 99,
+        "greedy_hard": 0,
+        "base_reward": -54317.88,
+        "greedy_reward": 22971.12,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 148.27,
+      "task_id": "golden-staer_audit-10036"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10004,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 98,
+        "greedy_hard": 0,
+        "base_reward": -52029.23,
+        "greedy_reward": 25043.07,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 147.27,
+      "task_id": "golden-staer_audit-10004"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10075,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 98,
+        "greedy_hard": 0,
+        "base_reward": -50718.03,
+        "greedy_reward": 26296.87,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 31,
+        "n_jobs": 14
+      },
+      "golden_score": 147.27,
+      "task_id": "golden-staer_audit-10075"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10061,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 99,
+        "greedy_hard": 0,
+        "base_reward": -49501.86,
+        "greedy_reward": 28439.74,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 146.77,
+      "task_id": "golden-staer_audit-10061"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10038,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 97,
+        "greedy_hard": 0,
+        "base_reward": -44775.68,
+        "greedy_reward": 31198.82,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 144.77,
+      "task_id": "golden-staer_audit-10038"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10017,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 98,
+        "greedy_hard": 0,
+        "base_reward": -47897.79,
+        "greedy_reward": 28273.61,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 144.27,
+      "task_id": "golden-staer_audit-10017"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10033,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 96,
+        "greedy_hard": 0,
+        "base_reward": -48111.73,
+        "greedy_reward": 27347.37,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 143.77,
+      "task_id": "golden-staer_audit-10033"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10059,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 96,
+        "greedy_hard": 0,
+        "base_reward": -46995.19,
+        "greedy_reward": 27824.21,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 143.77,
+      "task_id": "golden-staer_audit-10059"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10062,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 96,
+        "greedy_hard": 0,
+        "base_reward": -46011.31,
+        "greedy_reward": 29129.99,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 143.77,
+      "task_id": "golden-staer_audit-10062"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10005,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 96,
+        "greedy_hard": 0,
+        "base_reward": -46712.38,
+        "greedy_reward": 27919.22,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 142.27,
+      "task_id": "golden-staer_audit-10005"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10079,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 96,
+        "greedy_hard": 0,
+        "base_reward": -53336.17,
+        "greedy_reward": 21946.73,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 142.27,
+      "task_id": "golden-staer_audit-10079"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10001,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 94,
+        "greedy_hard": 0,
+        "base_reward": -44955.81,
+        "greedy_reward": 28154.29,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 141.77,
+      "task_id": "golden-staer_audit-10001"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10028,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 94,
+        "greedy_hard": 0,
+        "base_reward": -48482.15,
+        "greedy_reward": 25208.65,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 141.77,
+      "task_id": "golden-staer_audit-10028"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10008,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 95,
+        "greedy_hard": 0,
+        "base_reward": -47855.46,
+        "greedy_reward": 26636.94,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 141.27,
+      "task_id": "golden-staer_audit-10008"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10044,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 95,
+        "greedy_hard": 0,
+        "base_reward": -52435.85,
+        "greedy_reward": 22258.85,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 141.27,
+      "task_id": "golden-staer_audit-10044"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10056,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 95,
+        "greedy_hard": 0,
+        "base_reward": -45172.49,
+        "greedy_reward": 28959.81,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 141.27,
+      "task_id": "golden-staer_audit-10056"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10086,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 95,
+        "greedy_hard": 0,
+        "base_reward": -49806.88,
+        "greedy_reward": 24455.02,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 29,
+        "n_jobs": 14
+      },
+      "golden_score": 141.27,
+      "task_id": "golden-staer_audit-10086"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10027,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 93,
+        "greedy_hard": 0,
+        "base_reward": -44339.79,
+        "greedy_reward": 28705.31,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 140.77,
+      "task_id": "golden-staer_audit-10027"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10030,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 93,
+        "greedy_hard": 0,
+        "base_reward": -48268.63,
+        "greedy_reward": 24483.87,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 30,
+        "n_jobs": 14
+      },
+      "golden_score": 140.77,
+      "task_id": "golden-staer_audit-10030"
+    },
+    {
+      "floor_id": "staer_audit",
+      "seed": 10052,
+      "reward_mode": "strict",
+      "difficulty": {
+        "base_hard": 96,
+        "greedy_hard": 0,
+        "base_reward": -40380.19,
+        "greedy_reward": 34665.51,
+        "strong_reward": 0.955,
+        "weak_reward": 0.2625,
+        "headroom": 0.6925,
+        "total_ops": 28,
+        "n_jobs": 14
+      },
+      "golden_score": 140.77,
+      "task_id": "golden-staer_audit-10052"
+    }
+  ]
+}

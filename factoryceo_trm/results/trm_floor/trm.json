@@ -1,0 +1,13 @@
+{
+  "kind": "json_repair_policy",
+  "default_op": "expedite_material",
+  "policy": {
+    "material_shortage": "expedite_material",
+    "no_error": "safety_check"
+  },
+  "action_counts": {
+    "expedite_material": 499,
+    "warn_customer": 84,
+    "safety_check": 252
+  }
+}

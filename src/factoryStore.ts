@@ -60,6 +60,19 @@ export function useFactories() {
     })
   }, [])
 
+  const removeFloor = useCallback((factoryId: string, floorId: string) => {
+    setState((s) => {
+      const factories = s.factories.map((f) =>
+        f.id === factoryId ? { ...f, floors: f.floors.filter((fl) => fl.id !== floorId) } : f,
+      )
+      return {
+        ...s,
+        factories,
+        currentFloorId: s.currentFloorId === floorId ? null : s.currentFloorId,
+      }
+    })
+  }, [])
+
   const selectFactory = useCallback((id: string) => {
     setState((s) => ({ ...s, currentFactoryId: id, currentFloorId: null }))
   }, [])
@@ -102,7 +115,7 @@ export function useFactories() {
 
   return {
     state, currentFactory, currentFloor,
-    addFactory, renameFactory, removeFactory, selectFactory,
+    addFactory, renameFactory, removeFactory, removeFloor, selectFactory,
     startFloor, openFloor, saveRun,
   }
 }

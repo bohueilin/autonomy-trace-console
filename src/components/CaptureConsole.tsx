@@ -65,18 +65,18 @@ export function CaptureConsole({
       <div className="capture-shell">
         <button className="btn ghost back" onClick={onBack}>← Back</button>
         <div className="capture-head">
-          <span className="flow-kicker">New floor capture</span>
-          <h1>Give the brain a shift brief.</h1>
+          <span className="flow-kicker">New factory context</span>
+          <h1>Give the brain the operating context.</h1>
           <p className="flow-sub">
-            Write what a lead operator would say at handoff: what must ship, which machines are risky,
-            who is unavailable, and where a robot must never go.
+            Describe what must ship, machine health, staffing, materials, quality checks, customer commitments,
+            safety rules, and where a robot must never go.
           </p>
         </div>
 
         <div className="capture-workspace">
           <div className="brief-card">
             <label className="field">
-              <span className="field-label">Shift brief</span>
+              <span className="field-label">Operating brief</span>
               <textarea
                 autoFocus
                 className="field-input shift-brief"
@@ -97,7 +97,7 @@ export function CaptureConsole({
                 Attach photos, video, SOPs{items.length ? ` (${items.length})` : ''}
               </button>
               <button className="btn primary hero-action" onClick={build} disabled={!canContinue || extracting}>
-                {extracting ? 'Reading floor evidence…' : 'Build verified plan →'}
+                {extracting ? 'Reading floor evidence…' : 'Build verified operating plan →'}
               </button>
             </div>
           </div>

@@ -1,0 +1,382 @@
+{
+  "kind": "measured_floor_hud_runs",
+  "model": "shiftbench-qwen36-27b",
+  "checkpoint": "step-000001",
+  "reward_mode": "shaped",
+  "group": 6,
+  "updated_at": "2026-06-21T13:28:15.626734+00:00",
+  "runs": {
+    "staer_crossdock": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0533,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.04,
+          0.04,
+          0.08,
+          0.08,
+          0.04
+        ],
+        "advantages": [
+          -0.0133,
+          -0.0133,
+          -0.0133,
+          0.0267,
+          0.0267,
+          -0.0133
+        ],
+        "mean_reward": 0.0533,
+        "best_rollout": "R04"
+      },
+      "measured_at": "2026-06-21T13:18:23.023385+00:00",
+      "rollout_s": 57.54
+    },
+    "staer_pickpack": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0617,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.01,
+          0.08,
+          0.08,
+          0.08,
+          0.04,
+          0.08
+        ],
+        "advantages": [
+          -0.0517,
+          0.0183,
+          0.0183,
+          0.0183,
+          -0.0217,
+          0.0183
+        ],
+        "mean_reward": 0.0617,
+        "best_rollout": "R02"
+      },
+      "measured_at": "2026-06-21T13:19:16.565762+00:00",
+      "rollout_s": 53.56
+    },
+    "staer_coldchain": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0567,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.04,
+          0.01,
+          0.08,
+          0.13,
+          0.04
+        ],
+        "advantages": [
+          -0.0167,
+          -0.0167,
+          -0.0467,
+          0.0233,
+          0.0733,
+          -0.0167
+        ],
+        "mean_reward": 0.0567,
+        "best_rollout": "R05"
+      },
+      "measured_at": "2026-06-21T13:20:09.578887+00:00",
+      "rollout_s": 53.01
+    },
+    "staer_returnsort": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0533,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.08,
+          0.08,
+          0.04,
+          0.04,
+          0.04
+        ],
+        "advantages": [
+          -0.0133,
+          0.0267,
+          0.0267,
+          -0.0133,
+          -0.0133,
+          -0.0133
+        ],
+        "mean_reward": 0.0533,
+        "best_rollout": "R02"
+      },
+      "measured_at": "2026-06-21T13:21:02.973416+00:00",
+      "rollout_s": 53.39
+    },
+    "staer_nightops": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0667,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.08,
+          0.08,
+          0.08,
+          0.04,
+          0.08
+        ],
+        "advantages": [
+          -0.0267,
+          0.0133,
+          0.0133,
+          0.0133,
+          -0.0267,
+          0.0133
+        ],
+        "mean_reward": 0.0667,
+        "best_rollout": "R02"
+      },
+      "measured_at": "2026-06-21T13:21:57.988971+00:00",
+      "rollout_s": 55.02
+    },
+    "staer_charging": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0533,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.04,
+          0.04,
+          0.08,
+          0.04,
+          0.08
+        ],
+        "advantages": [
+          -0.0133,
+          -0.0133,
+          -0.0133,
+          0.0267,
+          -0.0133,
+          0.0267
+        ],
+        "mean_reward": 0.0533,
+        "best_rollout": "R04"
+      },
+      "measured_at": "2026-06-21T13:22:51.420411+00:00",
+      "rollout_s": 53.43
+    },
+    "staer_quarantine": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.055,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.08,
+          0.01,
+          0.04,
+          0.04,
+          0.08,
+          0.08
+        ],
+        "advantages": [
+          0.025,
+          -0.045,
+          -0.015,
+          -0.015,
+          0.025,
+          0.025
+        ],
+        "mean_reward": 0.055,
+        "best_rollout": "R01"
+      },
+      "measured_at": "2026-06-21T13:23:45.492922+00:00",
+      "rollout_s": 54.07
+    },
+    "staer_kitting": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.06,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.08,
+          0.08,
+          0.08,
+          0.04,
+          0.04,
+          0.04
+        ],
+        "advantages": [
+          0.02,
+          0.02,
+          0.02,
+          -0.02,
+          -0.02,
+          -0.02
+        ],
+        "mean_reward": 0.06,
+        "best_rollout": "R01"
+      },
+      "measured_at": "2026-06-21T13:24:41.513597+00:00",
+      "rollout_s": 56.02
+    },
+    "staer_bulk": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0483,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.08,
+          0.04,
+          0.04,
+          0.08,
+          0.01,
+          0.04
+        ],
+        "advantages": [
+          0.0317,
+          -0.0083,
+          -0.0083,
+          0.0317,
+          -0.0383,
+          -0.0083
+        ],
+        "mean_reward": 0.0483,
+        "best_rollout": "R01"
+      },
+      "measured_at": "2026-06-21T13:25:34.711922+00:00",
+      "rollout_s": 53.2
+    },
+    "staer_outbound": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0417,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.08,
+          0.04,
+          0.04,
+          0.04,
+          0.01,
+          0.04
+        ],
+        "advantages": [
+          0.0383,
+          -0.0017,
+          -0.0017,
+          -0.0017,
+          -0.0317,
+          -0.0017
+        ],
+        "mean_reward": 0.0417,
+        "best_rollout": "R01"
+      },
+      "measured_at": "2026-06-21T13:26:28.377931+00:00",
+      "rollout_s": 53.67
+    },
+    "staer_maintenance": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.03,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.01,
+          0.04,
+          0.04,
+          0.04,
+          0.01
+        ],
+        "advantages": [
+          0.01,
+          -0.02,
+          0.01,
+          0.01,
+          0.01,
+          -0.02
+        ],
+        "mean_reward": 0.03,
+        "best_rollout": "R01"
+      },
+      "measured_at": "2026-06-21T13:27:21.708674+00:00",
+      "rollout_s": 53.33
+    },
+    "staer_audit": {
+      "measured": true,
+      "model": "shiftbench-qwen36-27b",
+      "checkpoint": "step-000001",
+      "reward_mode": "shaped",
+      "hud_reward": 0.0483,
+      "grpo": {
+        "n_rollouts": 6,
+        "group_size": 6,
+        "rollout_rewards": [
+          0.04,
+          0.08,
+          0.04,
+          0.01,
+          0.08,
+          0.04
+        ],
+        "advantages": [
+          -0.0083,
+          0.0317,
+          -0.0083,
+          -0.0383,
+          0.0317,
+          -0.0083
+        ],
+        "mean_reward": 0.0483,
+        "best_rollout": "R02"
+      },
+      "measured_at": "2026-06-21T13:28:15.625612+00:00",
+      "rollout_s": 53.92
+    }
+  }
+}

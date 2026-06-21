@@ -15,11 +15,13 @@ import { useFactories } from './factoryStore'
 // A separate ShiftBench report page presents the eval. Saved work lives under
 // the profile's factories/floors.
 type View = 'landing' | 'capture' | 'studio' | 'benchmark'
+type Json = Record<string, any>
 
 function App() {
   const fac = useFactories()
   const [view, setView] = useState<View>('landing')
   const [brain, setBrain] = useState<BrainInput | null>(null)
+  const [cachedRun, setCachedRun] = useState<Json | null>(null)
 
   function deriveBrainInput(req: EnvironmentRequirement, frames: BrainFile[]): BrainInput {
     const text = [req.outcome, req.notes, (req.attachments ?? []).join('; ')].filter(Boolean).join('\n')
@@ -29,6 +31,7 @@ function App() {
   function handleCapture(req: EnvironmentRequirement, _cap: CaptureManifest, frames: BrainFile[] = []) {
     const input = deriveBrainInput(req, frames)
     setBrain(input)
+    setCachedRun(null)
     fac.startFloor(req.outcome, input)
     setView('studio')
   }
@@ -38,6 +41,7 @@ function App() {
     const f = fac.state.factories.find((x) => x.id === factoryId)
     const fl = f?.floors.find((x) => x.id === floorId)
     setBrain(fl?.brainInput ?? null)
+    setCachedRun(fl?.run ?? null)
     setView('studio')
   }
 
@@ -48,20 +52,20 @@ function App() {
           <span className="appbrand-mark">SB</span>
           <span className="appbrand-text">
             <span className="appbrand-name">ShiftBench</span>
-            <span className="appbrand-sub">verified shift ops</span>
+            <span className="appbrand-sub">verified factory ops</span>
           </span>
         </button>
         <div className="appnav-links">
           <button className={`navlink ${view === 'benchmark' ? 'on' : ''}`} onClick={() => setView('benchmark')}>Report</button>
-          <ProfileMenu fac={fac} onOpenFloor={openSavedFloor} onNewFloor={() => setView('capture')} />
-          <button className="btn primary navlink-cta" onClick={() => setView('capture')}>Capture floor</button>
+          <ProfileMenu fac={fac} onOpenFloor={openSavedFloor} onNewFloor={() => { setCachedRun(null); setView('capture') }} />
+          <button className="btn primary navlink-cta" onClick={() => { setCachedRun(null); setView('capture') }}>Capture floor</button>
         </div>
       </nav>
 
       {view === 'landing' && (
         <Landing
-          onCreate={() => { setBrain(null); setView('studio') }}
-          onSample={() => setView('capture')}
+          onCreate={() => { setBrain(null); setCachedRun(null); setView('studio') }}
+          onSample={() => { setCachedRun(null); setView('capture') }}
         />
       )}
 
@@ -74,7 +78,9 @@ function App() {
       {view === 'studio' && (
         <section className="flow-shell" style={{ paddingTop: 16 }}>
           <FactoryCeoPanel
+            key={fac.currentFloor?.id ?? 'studio'}
             initial={brain}
+            initialRun={cachedRun}
             onRestart={() => setView('capture')}
             onRun={(run) => fac.saveRun(run)}
             customerId={fac.currentFactory?.id}

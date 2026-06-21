@@ -23,12 +23,33 @@ Example leaderboard (mean partial credit): `trm 1.000 · greedy 0.798 · naive 0
 (naive leaves 16-28 hard violations on the long-horizon tasks; the verifier-gated
 TRM is feasible everywhere).
 
-**Real HUD cloud rollout** (graded HUD Runs, gateway LLM vs the TRM agent) — needs
+**Real HUD cloud rollout** (graded HUD Runs, open/fallback gateway LLM vs the TRM agent) — needs
 `HUD_API_KEY` and the 3.12 venv, and spends HUD credits:
 
 ```bash
-./.venv-hud/bin/python distill/hud_run.py            # TRM vs Claude Haiku, same env
+HUD_BASELINE_MODEL=gemma ./.venv-hud/bin/python distill/hud_run.py
 ```
+
+**Real HUD TrainingClient RL** (preferred — [HUD rl-training cookbook](https://github.com/hud-evals/hud-python/tree/main/cookbooks/rl-training)) —
+roll out golden floor tasks, `trainer.step()` promotes weights on the same model string:
+
+```bash
+HUD_TRAIN_MODEL=shiftbench-qwen36-27b \
+  ./.venv-hud/bin/python distill/hud_train_open_student.py \
+  --golden-tasks results/golden_hard_tasks.json --golden-sample 6 \
+  --reward-mode format --steps 4 --group 6 --max-concurrent 2 \
+  --out results/hud_floor_grpo.json
+```
+
+Measured rollouts only (no training):
+
+```bash
+./.venv-hud/bin/python distill/hud_floor_eval.py \
+  --model shiftbench-qwen36-27b --max-floors 12 --group 6
+```
+
+Fireworks managed RL (`distill/hud_train_fireworks.py`) provisions B200 and is slow;
+use only if HUD TrainingClient is unavailable.
 
 ## Is HUD in the prod request path?
 No. The live brain (`api.py`) calls only the pure reward funcs

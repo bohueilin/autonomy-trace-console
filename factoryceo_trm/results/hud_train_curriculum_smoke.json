@@ -1,0 +1,147 @@
+{
+  "kind": "hud_trainingclient_open_student",
+  "model": "shiftbench-qwen36-27b",
+  "floors": [
+    "staer_crossdock",
+    "staer_pickpack"
+  ],
+  "generic_env": true,
+  "curriculum": true,
+  "phases": [
+    {
+      "mode": "format",
+      "steps": 3
+    }
+  ],
+  "group": 4,
+  "learning_rate": 1e-05,
+  "loss_fn": "importance_sampling",
+  "curriculum_jobs": 3,
+  "dry_run": false,
+  "ok": true,
+  "baseline_reward": 0.4875,
+  "final_reward": 0.3687,
+  "lift": -0.1188,
+  "lift_pct": -24.37,
+  "phase_results": [
+    {
+      "phase": "format",
+      "baseline_reward": 0.4875,
+      "final_reward": 0.3687,
+      "lift": -0.1188,
+      "steps": [
+        {
+          "phase": "format",
+          "step": 0,
+          "reward": 0.425,
+          "reward_std": 0.2332,
+          "rewards": [
+            0.6,
+            0.2,
+            0.6,
+            0.2,
+            0.6,
+            0.8,
+            0.2,
+            0.2
+          ],
+          "runs": 8,
+          "tokens": 28000,
+          "rollout_s": 99.551,
+          "train_s": 10.765,
+          "loss": 8.03875732421875,
+          "optim_step": 3,
+          "skipped_optim": false
+        },
+        {
+          "phase": "format",
+          "step": 1,
+          "reward": 0.4188,
+          "reward_std": 0.34,
+          "rewards": [
+            0.8,
+            0.8,
+            0.05,
+            0.05,
+            0.8,
+            0.6,
+            0.2,
+            0.05
+          ],
+          "runs": 8,
+          "tokens": 28000,
+          "rollout_s": 103.339,
+          "train_s": 9.893,
+          "loss": 0.7001953125,
+          "optim_step": 4,
+          "skipped_optim": false
+        },
+        {
+          "phase": "format",
+          "step": 2,
+          "reward": 0.6312,
+          "reward_std": 0.2947,
+          "rewards": [
+            0.8,
+            0.8,
+            0.2,
+            0.8,
+            0.8,
+            0.05,
+            0.8,
+            0.8
+          ],
+          "runs": 8,
+          "tokens": 28000,
+          "rollout_s": 98.057,
+          "train_s": 9.646,
+          "loss": 35.492431640625,
+          "optim_step": 5,
+          "skipped_optim": false
+        }
+      ],
+      "baseline_samples": [
+        {
+          "reward": 0.6,
+          "has_json": true,
+          "chars": 9118,
+          "snippet": "The user wants an ActionPlan JSON object based on the provided factory state, customer email, operator notes, inventory, machine logs, HR info, and current jobs.\n\nKey constraints & inputs:\n- Customer email: Need 10,000 units by day 12. Same ABS as last time. Can you do $0.20/unit? -> Matches RFQ R17.\n- Operator note: M4 sounded rough; might need maintenance.\n- Inventory: ABS=220kg, Nylon=80kg, PP=40kg.\n- Machine log: M1=95%, M2=90%, M3=92%, M4=88%.\n- HR: O2 out sick one day this period. (Already"
+        },
+        {
+          "reward": 0.2,
+          "has_json": true,
+          "chars": 10271,
+          "snippet": "The user wants me to act as an autonomous operations brain for a high-mix factory.\nI need to generate a JSON ActionPlan based on the provided inputs: customer email, operator note, inventory, machine log, HR status, current jobs, and canonical state.\nThe output must be strictly a JSON object starting with `{` and ending with `}`, no markdown, no explanation.\n\nLet's analyze the inputs:\n- Customer email: Need 10,000 units by day 12. Same ABS as last time. Can you do $0.20/unit? -> Matches RFQ R17."
+        },
+        {
+          "reward": 0.05,
+          "has_json": false,
+          "chars": 7575,
+          "snippet": "The user wants an ActionPlan JSON object based on the provided canonical state and input context.\nInput context:\n- Customer email: Need 10,000 units by day 12. Same ABS as last time. Can you do $0.20/unit? -> This matches RFQ R17 (Acme, ABS, 10000 units, due day 12, target price 0.20, est unit cost 0.14).\n- Operator note: M4 sounded rough this afternoon; might need maintenance. -> M4 uptime is 0.88, note suggests scheduling maintenance.\n- Inventory: ABS=220kg, Nylon=80kg, PP=40kg.\n- Machine log:"
+        }
+      ],
+      "final_samples": [
+        {
+          "reward": 0.8,
+          "has_json": true,
+          "chars": 9511,
+          "snippet": "The user wants me to generate an ActionPlan JSON object based on the provided canonical state and additional context (customer email, operator note, inventory, machine log, HR, current jobs).\n\nLet's break down the requirements:\n1.  **Format**: Strict JSON only. Starts with `{`, ends with `}`. No markdown.\n2.  **Context**:\n    *   Customer Email: 10,000 units, Day 12, ABS, $0.20/unit. (Matches RFQ R17).\n    *   Operator Note: M4 sounded rough (maintenance risk).\n    *   Inventory: ABS=220kg, Nylo"
+        },
+        {
+          "reward": 0.8,
+          "has_json": true,
+          "chars": 8697,
+          "snippet": "The user wants an ActionPlan JSON object based on the provided state.\nThe state includes:\n- Horizon: 14 days\n- Machines: M1 (mold, maint 240-246), M2 (mold, deburr), M3 (cnc), M4 (cnc, deburr)\n- Operators: O1, O2 (sick one day), O3, R1 (robot)\n- Materials: ABS (220kg), Nylon (80kg), PP (40kg)\n- Jobs: J100 (PP, due day 9, low pri), J101 (ABS, due day 4, low pri), J102 (ABS, due day 8, med pri)\n- RFQs: R17 (ABS, 10k units, due day 12, $0.20/unit, est cost $0.14), R18 (Nylon, 3k units, due day 13, "
+        },
+        {
+          "reward": 0.2,
+          "has_json": true,
+          "chars": 8299,
+          "snippet": "The user wants a JSON ActionPlan for a factory operation.\nI need to:\n1.  Process the `rfqs` (R17, R18).\n2.  Schedule existing jobs (J100, J101, J102) and new jobs (from accepted RFQs).\n3.  Handle procurement for materials.\n4.  Address machine maintenance (M4).\n5.  Handle operator availability (O2 sick).\n6.  Generate customer messages.\n7.  Ensure safety and quality.\n\nLet's break down the inputs:\n- Horizon: 14 days = 14 * 24 = 336 hours.\n- Machines:\n  - M1: mold, uptime 0.95. Maintenance 240-246.\n"
+        }
+      ]
+    }
+  ],
+  "elapsed_s": 543.296,
+  "note": "TrainingClient promoted weights behind the same HUD model string when a step had reward variance."
+}

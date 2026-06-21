@@ -183,16 +183,15 @@ customer_comms / quality / safety), `constraints` (generation params), a
     → `hybrid_reward` → `group_relative` GRPO advantages.
   - *Hosted (works):* `distill/hud_app.py` is a real HUD v6 `Environment`
     (`@env.template`, graded by our verifier). `./.venv-hud/bin/python
-    distill/hud_run.py` drives a HUD **gateway agent** (Claude) through it →
-    a graded `Run`. Needs `HUD_API_KEY` + the **`.venv-hud`** (Python 3.12;
-    `hud-python` doesn't support 3.14). Verified: a one-shot Claude-Haiku scores
-    **~0.0** — the raw-LLM baseline that motivates the verifier + TRM repair.
-    The **TRM runs as a real HUD agent too** (`distill/hud_trm_agent.py` — a
-    gateway-agent subclass whose brain is the TRM controller; `distill/hud_run.py`
-    runs the head-to-head). Real HUD Runs, same env, same task:
-    **TRM (2,954 params) = 0.979  vs  Claude Haiku (gateway) = 0.000** — the tiny
-    student beats a frontier LLM one-shot on HUD's leaderboard. (TRM *training*
-    stays local in `grpo.py`; it isn't a gateway LLM.)
+    distill/hud_run.py` drives a HUD gateway baseline through it → a graded `Run`.
+    Prefer an open baseline with `HUD_BASELINE_MODEL=gemma` or `qwen`; Claude is
+    only a fallback registry sanity check. Needs `HUD_API_KEY` + the **`.venv-hud`**.
+    The **TRM/JSON repair policy runs as a real HUD agent too**
+    (`distill/hud_trm_agent.py` — a gateway-agent subclass whose brain is the TRM
+    controller; `distill/hud_run.py` runs the head-to-head). Recent smoke:
+    **TRM/JSON repair policy = 0.971 vs fallback gateway = 0.000** on the same HUD
+    task. This is HUD grading; Gemma/Qwen GRPO weight updates are the separate
+    open-student training path fed by the local `grpo.py` advantages.
 - **Humanoid (3 backends, one `Executor` interface).** All consume the verified
   plan's task queue (`isaac/plan_to_isaac.py`) and feed frames to V-JEPA 2
   (`src/jepa.py`):

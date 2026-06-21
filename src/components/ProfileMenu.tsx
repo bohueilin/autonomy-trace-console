@@ -17,6 +17,13 @@ export function ProfileMenu({ fac, onOpenFloor, onNewFloor }: {
   }, [])
 
   const cur = fac.currentFactory
+
+  function deleteFloor(factoryId: string, floorId: string, floorName: string) {
+    const ok = window.confirm(`Delete floor "${floorName}"? This only removes local saved work.`)
+    if (!ok) return
+    fac.removeFloor(factoryId, floorId)
+  }
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button className="navlink" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
@@ -34,9 +41,9 @@ export function ProfileMenu({ fac, onOpenFloor, onNewFloor }: {
             <div key={f.id} style={{ marginBottom: 6 }}>
               <div
                 onClick={() => fac.selectFactory(f.id)}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 8px', borderRadius: 8, cursor: 'pointer', background: f.id === cur?.id ? 'var(--panel-2)' : 'transparent' }}
+                style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'center', padding: '7px 8px', borderRadius: 8, cursor: 'pointer', background: f.id === cur?.id ? 'var(--panel-2)' : 'transparent' }}
               >
-                <span style={{ fontWeight: f.id === cur?.id ? 600 : 400 }}>{f.name}</span>
+                <span style={{ fontWeight: f.id === cur?.id ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>{f.floors.length} floor{f.floors.length === 1 ? '' : 's'}</span>
               </div>
               {f.id === cur?.id && (
@@ -45,13 +52,22 @@ export function ProfileMenu({ fac, onOpenFloor, onNewFloor }: {
                   {f.floors.map((fl) => (
                     <div key={fl.id} role="menuitem"
                       onClick={() => { onOpenFloor(f.id, fl.id); setOpen(false) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 6px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, color: 'var(--text)' }}
+                      style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto auto', alignItems: 'center', gap: 8, padding: '6px 6px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, color: 'var(--text)' }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--panel-2)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: fl.verified ? 'var(--pos)' : 'var(--muted)' }} />
                       <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fl.name}</span>
                       {fl.industry && <span style={{ fontSize: 10, color: 'var(--muted)' }}>{fl.industry}</span>}
+                      <button
+                        type="button"
+                        aria-label={`Delete floor ${fl.name}`}
+                        title="Delete floor"
+                        onClick={(e) => { e.stopPropagation(); deleteFloor(f.id, fl.id, fl.name) }}
+                        style={{ border: '1px solid var(--line)', background: 'transparent', color: 'var(--muted)', borderRadius: 7, padding: '3px 7px', fontSize: 11, cursor: 'pointer' }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -59,8 +75,7 @@ export function ProfileMenu({ fac, onOpenFloor, onNewFloor }: {
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--line)', marginTop: 8, paddingTop: 10 }}>
-            <button className="btn ghost" style={{ flex: 1 }} onClick={() => { const n = prompt('New factory name?'); if (n) fac.addFactory(n); }}>+ Factory</button>
-            <button className="btn primary" style={{ flex: 1 }} onClick={() => { onNewFloor(); setOpen(false) }}>+ New floor</button>
+            <button className="btn primary" style={{ flex: 1 }} onClick={() => { onNewFloor(); setOpen(false) }}>+ Floor</button>
           </div>
         </div>
       )}
