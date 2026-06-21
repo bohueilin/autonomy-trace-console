@@ -58,6 +58,26 @@ function RollingChart() {
   )
 }
 
+function ContinualNote() {
+  const c = useGet('/factoryceo/continual.json')
+  if (!c?.series?.length) return null
+  const rounds = c.series.length
+  const traces = c.series[rounds - 1]?.traces ?? 0
+  return (
+    <div style={{ marginTop: 14, padding: '14px 16px', border: '1px solid var(--line)', borderRadius: 12, background: 'var(--panel)' }}>
+      <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Continual training</div>
+      <p style={{ ...prose, fontSize: 14, margin: 0 }}>
+        Run continually (synth → verified traces → train the TRM → run the sim), here {rounds} rounds
+        generating <strong>{traces} verified traces</strong> the student retrains on each round. Honest
+        note: the deterministic verifier <em>guarantees</em> feasibility, so the compounding profit comes
+        from <strong>proper decisions every cycle</strong> — not from the TRM training. The continual loop's
+        job is to distil those decisions into a tiny student that can run standalone; the profit curve above
+        is the value the verifier secures, which the LLM-alone baseline never reaches.
+      </p>
+    </div>
+  )
+}
+
 export function BenchmarkReport({ onBack }: { onBack: () => void }) {
   const evalr = useGet('/eval_report')
   const bench = useGet('/benchmark')
@@ -125,6 +145,7 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
         planner that bleeds on infeasible days.
       </p>
       <RollingChart />
+      <ContinualNote />
 
       {/* standard instances */}
       <div style={{ ...kicker, marginTop: 36 }}>03 · Grounding</div>

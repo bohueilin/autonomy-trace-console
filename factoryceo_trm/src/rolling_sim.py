@@ -31,7 +31,12 @@ SCRAP_PER_VIOLATION = 1600.0  # an infeasible op is a stoppage / safety incident
 BANKRUPT_DAYS = 10         # bankrupt if cash < 0 for this many consecutive days
 
 
-def run_rolling_sim(seed: int = 0, days: int = 90, repair: bool = True) -> dict:
+def run_rolling_sim(seed: int = 0, days: int = 90, repair: bool = True,
+                    op_selector=None, K: int = 120) -> dict:
+    """Roll the floor day by day. `repair` uses the verifier-gated loop; pass an
+    `op_selector` (e.g. a trained TRM's pick_op) to drive repair with a learned
+    policy under a fixed compute budget `K` — a better policy fixes more days
+    within budget, so its bank balance compounds higher."""
     rng = random.Random(seed)
     cash = STARTING_CASH
     traj = []
@@ -44,7 +49,7 @@ def run_rolling_sim(seed: int = 0, days: int = 90, repair: bool = True) -> dict:
         # each step is a short planning window (the day's incoming batch).
         state = generate_state(seed=seed * 1009 + d, horizon_days=7, n_jobs=n_jobs)
         if repair:
-            plan, _ = repair_loop(state, greedy(state), K=120)   # verifier-gated
+            plan, _ = repair_loop(state, greedy(state), K=K, op_selector=op_selector)
         else:
             plan = corrupt_plan(state, greedy(state), seed=d, n_corruptions=4)  # raw
         res = evaluate(state, plan)
