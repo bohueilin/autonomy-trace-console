@@ -1,32 +1,51 @@
-// Phase 1 landing screen — sells the Physical AI licensing story and routes the
-// operator into the intake flow (or the prebuilt sample eval).
+// Landing — the first page. A frontier-lab, proof-first descent:
+// hook → proof → how → moat → personalized brain → breadth → why-now → who → ask.
+// AI proposes; the deterministic oracle judges. Bright, restrained, one signature
+// device (the finish / escalate / refuse decision triad).
 
-const DOMAINS = ['Factories', 'Hospitals', 'Eldercare', 'Warehouses', 'Logistics', 'Labs']
+import { ScrollVideo } from './ScrollVideo'
 
-const WHY_NOW = [
-  'Robotics bodies are becoming available before most sites know how to license them.',
-  'Physical AI mistakes are not bad text outputs; they can injure people or halt operations.',
-  'Every site needs proof of when a robot should finish, escalate, or refuse.',
+const FLOW = [
+  { n: '01', t: 'Media intake', d: 'Video, photos, floor plan, SOPs, and Drive links — how the work really happens.' },
+  { n: '02', t: 'Understood workflow', d: 'A site map, storyboard, and finish / escalate / refuse rules you confirm.' },
+  { n: '03', t: 'Deterministic oracle', d: 'A BFS oracle and hard-gated reward score the agent — never an LLM.' },
+  { n: '04', t: 'Autonomy license', d: 'FAR/FRR calibration, reward-hack checks, and a portable evidence pack.' },
 ]
 
-const WHY_US = [
-  'Deterministic oracle and hard-gated reward, not an LLM judge.',
-  'FAR/FRR calibration as the headline safety metric.',
-  'Tamper-evident evidence path inherited from the trace console shell.',
+const PROOF = [
+  { v: 'Deterministic', l: 'oracle — never an LLM judge' },
+  { v: '0% / 0%', l: 'FAR / FRR on the sample eval' },
+  { v: 'Evidence-backed', l: 'tamper-evident, reproducible' },
+]
+
+const WHO = [
+  { t: 'Safety & ops leads', d: 'Sign off with evidence, not vendor promises.' },
+  { t: 'Robotics integrators', d: 'Ship faster with a portable readiness report.' },
+  { t: 'Insurers & risk', d: 'Price autonomy against a measured operating point.' },
 ]
 
 export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample: () => void }) {
   return (
     <section className="landing">
+      {/* ---------- hero ---------- */}
       <div className="landing-top">
         <div className="landing-hero">
-          <span className="landing-eyebrow">Autonomy License for Physical AI</span>
-          <h1 className="landing-headline">Turn factory footage into a robot safety eval.</h1>
+          <span className="landing-eyebrow">The driving test for Physical AI</span>
+          <h1 className="landing-headline">Turn real-world footage into a robot safety license.</h1>
           <p className="landing-sub">
-            Upload real workplace footage, confirm what we understood, and run a deterministic eval
-            that proves when a robot should <strong>finish</strong>, <strong>escalate</strong>, or{' '}
-            <strong>refuse</strong> — then earn its autonomy license for that exact site.
+            Robots are moving into factories, hospitals, and homes faster than anyone can prove
+            they’re safe. Upload how the work really happens, confirm what we understood, and run a
+            deterministic eval that decides when a robot may <strong>finish</strong>, must{' '}
+            <strong>escalate</strong>, or must <strong>refuse</strong> — then issue the autonomy
+            license it earned for that exact site.
           </p>
+
+          {/* Signature device: the three calls we license. */}
+          <div className="decision-triad" role="img" aria-label="The licensed calls: finish, escalate, refuse">
+            <span className="dt-seg dt-finish">Finish</span>
+            <span className="dt-seg dt-escalate">Escalate</span>
+            <span className="dt-seg dt-refuse">Refuse</span>
+          </div>
 
           <div className="landing-cta">
             <button className="btn primary hero-action" onClick={onCreate}>
@@ -36,22 +55,13 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
               See sample evaluation report
             </button>
           </div>
-
-          <div className="landing-domains">
-            {DOMAINS.map((d) => (
-              <span key={d} className="landing-domain-chip">
-                {d}
-              </span>
-            ))}
-          </div>
           <p className="landing-trust">
-            Deterministic oracle decides finish / escalate / refuse — never an LLM. Demo captures
-            local metadata only; nothing is uploaded or parsed.
+            AI proposes; the deterministic oracle judges. Demo captures local metadata only —
+            nothing is uploaded or parsed.
           </p>
         </div>
 
-        {/* Hero vision film — autoplaying muted loop, non-interactive (no controls,
-            no enlarge). pointer-events disabled in CSS so it reads as ambient media. */}
+        {/* Hero vision film — ambient, non-interactive (no controls, no enlarge). */}
         <aside className="hero-video" aria-hidden="true">
           <div className="hv-frame">
             <video
@@ -64,22 +74,66 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
               disablePictureInPicture
               controls={false}
             />
+            <span className="hv-scrim" />
             <span className="hv-tag">Vision film</span>
           </div>
           <p className="hv-caption">Physical AI, working safely alongside people.</p>
         </aside>
       </div>
 
-      <ol className="landing-bento" aria-label="How it works">
-        <li><span className="lb-step">1 · Media intake</span><p>Video, photos, floor plan, SOPs, Drive links.</p></li>
-        <li className="lb-arrow" aria-hidden="true">→</li>
-        <li><span className="lb-step">2 · Understood workflow</span><p>Site map, storyboard, finish/escalate/refuse rules you approve.</p></li>
-        <li className="lb-arrow" aria-hidden="true">→</li>
-        <li><span className="lb-step">3 · Deterministic oracle</span><p>BFS oracle + hard-gated reward score the agent.</p></li>
-        <li className="lb-arrow" aria-hidden="true">→</li>
-        <li><span className="lb-step">4 · Safety case</span><p>FAR/FRR, reward-hack trace, evidence pack.</p></li>
+      {/* ---------- proof bar ---------- */}
+      <section className="proof-bar" aria-label="Why this is credible">
+        {PROOF.map((p) => (
+          <div className="pb-stat" key={p.l}>
+            <span className="pb-v">{p.v}</span>
+            <span className="pb-l">{p.l}</span>
+          </div>
+        ))}
+      </section>
+
+      {/* ---------- how it works (one canonical flow) ---------- */}
+      <ol className="flow-bento" aria-label="How it works">
+        {FLOW.map((s) => (
+          <li key={s.n}>
+            <span className="fb-num">{s.n}</span>
+            <strong>{s.t}</strong>
+            <p>{s.d}</p>
+          </li>
+        ))}
       </ol>
 
+      {/* ---------- the moat: how the oracle decides ---------- */}
+      <section className="trust-diagram" aria-label="How the oracle decides">
+        <div className="panel-kicker">How the oracle decides</div>
+        <h2>AI proposes. You approve. A deterministic oracle judges.</h2>
+        <ol className="td-flow">
+          <li className="td-node">
+            <span className="td-step">Declared</span>
+            <p>Your footage, floor plan, SOPs, and safety rules.</p>
+          </li>
+          <li className="td-arrow" aria-hidden="true">→</li>
+          <li className="td-node">
+            <span className="td-step td-ai">AI-interpreted</span>
+            <p>A draft site map and rules — a proposal, never the judge.</p>
+          </li>
+          <li className="td-arrow" aria-hidden="true">→</li>
+          <li className="td-node">
+            <span className="td-step">You approve</span>
+            <p>Edit, then freeze the workflow into the eval.</p>
+          </li>
+          <li className="td-arrow" aria-hidden="true">→</li>
+          <li className="td-node">
+            <span className="td-step td-oracle">Oracle scores</span>
+            <p>A BFS oracle and hard-gated reward decide finish / escalate / refuse.</p>
+          </li>
+        </ol>
+        <p className="td-note">
+          Uploaded media and AI interpretation never set rewards, labels, or the license. The
+          deterministic oracle is the source of truth.
+        </p>
+      </section>
+
+      {/* ---------- personalized AI brain ---------- */}
       <section className="brain-feature" aria-label="Build the ultimate personalized AI brain">
         <div className="bf-media">
           <img src="/physical-ai-brain.png" alt="Physical AI humanoid brain concept" loading="lazy" />
@@ -115,6 +169,7 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         </div>
       </section>
 
+      {/* ---------- breadth: across human spaces ---------- */}
       <section className="footage-section" aria-label="Reference footage across human spaces">
         <div className="footage-head">
           <div className="panel-kicker">Reference footage</div>
@@ -126,109 +181,78 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         </div>
         <div className="footage-row">
           <article className="footage-card">
-            <div className="phone-shell">
-              <div className="phone">
-                <span className="phone-notch" aria-hidden="true" />
-                <iframe
-                  src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
-                  title="Manufacturing reference footage"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-            </div>
+            <ScrollVideo id="h4SQUglSsH4" title="Manufacturing reference footage" />
             <div className="footage-body">
               <div className="panel-kicker">Manufacturing floor</div>
               <p>
                 Lifting and moving near people and machines.{' '}
                 <a href="https://www.youtube.com/shorts/h4SQUglSsH4" target="_blank" rel="noreferrer">
                   Open the Short
-                </a>{' '}
-                if the embed is blocked.
+                </a>
+                .
               </p>
             </div>
           </article>
           <article className="footage-card">
-            <div className="phone-shell">
-              <div className="phone">
-                <span className="phone-notch" aria-hidden="true" />
-                <iframe
-                  src="https://www.youtube.com/embed/L7i_KE5z_GY?autoplay=1&mute=1&playsinline=1&loop=1&playlist=L7i_KE5z_GY&controls=0&rel=0"
-                  title="Home assistance reference footage"
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  loading="lazy"
-                />
-              </div>
-            </div>
+            <ScrollVideo id="L7i_KE5z_GY" title="Home and care reference footage" />
             <div className="footage-body">
               <div className="panel-kicker">Beyond the factory</div>
               <p>
                 The same eval licenses robots in homes and care settings.{' '}
                 <a href="https://www.youtube.com/shorts/L7i_KE5z_GY" target="_blank" rel="noreferrer">
                   Open the Short
-                </a>{' '}
-                if the embed is blocked.
+                </a>
+                .
               </p>
             </div>
           </article>
         </div>
       </section>
 
-      <ol className="landing-steps" aria-label="Workflow stages">
-        <li>
-          <span className="ls-num">1</span>
-          <div>
-            <strong>Capture the workflow</strong>
-            <p>Upload a video, paste a Drive link, and declare the safety rules for the site.</p>
-          </div>
-        </li>
-        <li>
-          <span className="ls-num">2</span>
-          <div>
-            <strong>Align on understanding</strong>
-            <p>Edit the proposed site map, storyboard, and finish/escalate/refuse rules.</p>
-          </div>
-        </li>
-        <li>
-          <span className="ls-num">3</span>
-          <div>
-            <strong>Freeze into a safety case</strong>
-            <p>FAR/FRR calibration, reward-hacking checks, and what the robot may, must escalate, or must refuse.</p>
-          </div>
-        </li>
-      </ol>
+      {/* ---------- why now / origin wedge ---------- */}
+      <section className="origin" aria-label="Why now">
+        <div className="panel-kicker">Why now</div>
+        <h2>It started with a worried son.</h2>
+        <p className="origin-lead">
+          A founder watched a robot get installed on his dad’s factory floor and realized no one
+          could answer the only question that mattered: <em>is it safe to let it work next to him?</em>{' '}
+          Capability is arriving; permission isn’t. This is the layer that earns it.
+        </p>
+        <ul className="origin-points">
+          <li>Humanoids and AMRs are shipping into human spaces before sites can license them.</li>
+          <li>A physical mistake isn’t a bad paragraph — it injures people or halts a line.</li>
+          <li>Capability ≠ permission. Every robot needs proof of when to act, escalate, or refuse.</li>
+        </ul>
+      </section>
 
-      <div className="landing-market">
-        <section className="market-panel">
-          <div className="panel-kicker">Why now</div>
-          <h2>Robots are leaving demos and entering human spaces.</h2>
-          <ul>
-            {WHY_NOW.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </section>
-        <section className="market-panel">
-          <div className="panel-kicker">Why us</div>
-          <h2>We make autonomy measurable before it becomes permission.</h2>
-          <ul>
-            {WHY_US.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </section>
-      </div>
+      {/* ---------- who it's for + credibility ---------- */}
+      <section className="audience" aria-label="Who it's for">
+        <div className="panel-kicker">Who it’s for</div>
+        <h2>For everyone who has to answer “is it safe to deploy?”</h2>
+        <div className="audience-grid">
+          {WHO.map((w) => (
+            <div className="audience-card" key={w.t}>
+              <strong>{w.t}</strong>
+              <span>{w.d}</span>
+            </div>
+          ))}
+        </div>
+        <div className="credibility">
+          <span>Aligned with the emerging AIUC-1 standard</span>
+          <span>OWASP agentic-risk crosswalk</span>
+          <span className="cred-pilot">In pilot — talk to us</span>
+        </div>
+      </section>
 
+      {/* ---------- pilot package ---------- */}
       <section className="pilot-package">
         <div>
           <div className="panel-kicker">Pilot package</div>
           <h2>What a customer gives us, and what they get back.</h2>
           <p>
             Start with a small workplace slice: the task outcome, robot type, SOPs, floor plan,
-            unsafe examples, and escalation rules. The current demo captures local metadata only;
-            the evaluation remains deterministic.
+            unsafe examples, and escalation rules. The current demo captures local metadata only; the
+            evaluation stays deterministic.
           </p>
         </div>
         <div className="pilot-grid">
@@ -251,11 +275,24 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         </div>
       </section>
 
-      <p className="landing-disclaimer">
-        Autonomy License is a readiness evidence pack today, not a regulatory certification
-        authority. The wedge is simple: certification can attest controls; we train and measure the
-        physical behavior underneath.
-      </p>
+      {/* ---------- closing ---------- */}
+      <section className="closing" aria-label="Get started">
+        <h2>Prove it before it moves near someone.</h2>
+        <p>Turn your site into the test a robot has to pass.</p>
+        <div className="closing-cta">
+          <button className="btn primary hero-action" onClick={onCreate}>
+            <span aria-hidden="true">↑</span> Upload workflow video
+          </button>
+          <button className="btn ghost" onClick={onSample}>
+            See sample evaluation report
+          </button>
+        </div>
+        <p className="landing-disclaimer">
+          Autonomy License is a readiness evidence pack today, not a regulatory certification
+          authority. Certification attests controls; we train and measure the physical behavior
+          underneath.
+        </p>
+      </section>
     </section>
   )
 }
