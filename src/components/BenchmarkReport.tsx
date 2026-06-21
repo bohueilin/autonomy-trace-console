@@ -24,6 +24,40 @@ const prose: React.CSSProperties = { color: 'var(--text)', lineHeight: 1.7, font
 const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontFamily: mono, fontSize: 10.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '2px solid var(--line)' }
 const td: React.CSSProperties = { padding: '9px 10px', fontSize: 13.5, borderBottom: '1px solid var(--line)' }
 
+function RollingChart() {
+  const sim = useGet('/rolling_sim')
+  if (!sim) return <div style={{ fontFamily: mono, fontSize: 12, color: 'var(--muted)', padding: '10px 0' }}>running the year-long sim…</div>
+  const brain = sim.brain?.trajectory ?? []
+  const naive = sim.naive?.trajectory ?? []
+  const days = sim.days ?? 120
+  const all = [...brain, ...naive].map((t: Json) => t.cash)
+  const lo = Math.min(0, ...all), hi = Math.max(1, ...all)
+  const W = 820, H = 280, padL = 64, padB = 28, padT = 12
+  const x = (d: number) => padL + (d / Math.max(1, days - 1)) * (W - padL - 12)
+  const y = (c: number) => padT + (1 - (c - lo) / (hi - lo)) * (H - padT - padB)
+  const path = (traj: Json[]) => traj.map((t, i) => `${i ? 'L' : 'M'}${x(t.day).toFixed(1)} ${y(t.cash).toFixed(1)}`).join(' ')
+  const fmt = (v: number) => (Math.abs(v) >= 1000 ? `$${Math.round(v / 1000)}k` : `$${Math.round(v)}`)
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', background: 'var(--panel)', border: '1px solid var(--line)', borderRadius: 12 }}>
+        {[0, 0.5, 1].map((f) => { const c = lo + f * (hi - lo); const yy = y(c)
+          return <g key={f}><line x1={padL} y1={yy} x2={W - 12} y2={yy} stroke="var(--line)" strokeWidth={0.6} />
+            <text x={padL - 8} y={yy + 3} textAnchor="end" fontFamily={mono} fontSize={10} fill="var(--muted)">{fmt(c)}</text></g> })}
+        <line x1={padL} y1={y(0)} x2={W - 12} y2={y(0)} stroke="var(--muted)" strokeWidth={0.8} strokeDasharray="3 3" />
+        <path d={path(naive)} fill="none" stroke="var(--neg)" strokeWidth={2} />
+        <path d={path(brain)} fill="none" stroke="var(--pos)" strokeWidth={2.5} />
+        <text x={W - 14} y={y(brain[brain.length - 1]?.cash ?? 0) - 6} textAnchor="end" fontFamily={mono} fontSize={11} fill="var(--pos)">brain {fmt(sim.brain?.final_cash ?? 0)}</text>
+        <text x={x(naive.length - 1) + 6} y={y(naive[naive.length - 1]?.cash ?? 0) + 4} fontFamily={mono} fontSize={11} fill="var(--neg)">{sim.naive?.bankrupt ? `bankrupt · day ${sim.naive.bankrupt_day}` : `naive ${fmt(sim.naive?.final_cash ?? 0)}`}</text>
+        <text x={padL} y={H - 8} fontFamily={mono} fontSize={10} fill="var(--muted)">day 0</text>
+        <text x={W - 12} y={H - 8} textAnchor="end" fontFamily={mono} fontSize={10} fill="var(--muted)">day {days}</text>
+      </svg>
+      <p style={{ ...prose, fontSize: 14, color: 'var(--muted)', marginTop: 12 }}>
+        Bank balance over {days} days of rolling operations. The verifier-gated brain stays feasible and compounds; the raw planner scraps work on infeasible days and goes bankrupt. Small per-day differences compound into a large gap — the long-horizon coherence Vending-Bench measures.
+      </p>
+    </div>
+  )
+}
+
 export function BenchmarkReport({ onBack }: { onBack: () => void }) {
   const evalr = useGet('/eval_report')
   const bench = useGet('/benchmark')
@@ -81,8 +115,19 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
+      {/* long-horizon rolling sim (Vending-Bench-style) */}
+      <div style={{ ...kicker, marginTop: 36 }}>02 · Long-horizon business sim</div>
+      <h2 style={h2}>FactoryRun: bank balance over a rolling year</h2>
+      <p style={prose}>
+        A long-horizon operations sim in the spirit of Vending-Bench: the brain runs the floor day by
+        day against fresh work and disruptions, banking revenue minus costs. It rewards <strong>coherence
+        over time</strong>, not one-shot scheduling — and separates a verifier-gated brain from a raw
+        planner that bleeds on infeasible days.
+      </p>
+      <RollingChart />
+
       {/* standard instances */}
-      <div style={{ ...kicker, marginTop: 36 }}>02 · Grounding</div>
+      <div style={{ ...kicker, marginTop: 36 }}>03 · Grounding</div>
       <h2 style={h2}>Standard JSSP instances vs best-known solutions</h2>
       <p style={prose}>
         To ground the eval in the operations-research literature, we load classic job-shop instances
@@ -114,7 +159,7 @@ export function BenchmarkReport({ onBack }: { onBack: () => void }) {
       )}
 
       {/* methodology */}
-      <div style={{ ...kicker, marginTop: 36 }}>03 · Methodology</div>
+      <div style={{ ...kicker, marginTop: 36 }}>04 · Methodology</div>
       <h2 style={h2}>How the brain is built and graded</h2>
       {[
         ['Deterministic verifier', 'Every plan is checked against hard constraints (overlap, capability, availability, material, maintenance, precedence) and scored on a profit + safety objective. Pass/fail is reproducible — no LLM judge.'],

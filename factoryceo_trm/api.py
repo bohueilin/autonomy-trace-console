@@ -497,6 +497,15 @@ def library():
     return _LIBRARY_CACHE
 
 
+@app.get("/rolling_sim")
+def rolling_sim(seed: int = 1, days: int = 120):
+    """FactoryRun: a long-horizon rolling operations sim (Vending-Bench-style).
+    Returns bank-balance trajectories for the verifier-gated brain vs a raw
+    planner — the brain compounds; the raw planner bleeds on infeasible days."""
+    from src.rolling_sim import compare
+    return compare(seed=seed, days=days)
+
+
 @app.get("/benchmark")
 def benchmark():
     """Standard JSSP instances (OR-Library / Fisher-Thompson / Lawrence) graded vs
