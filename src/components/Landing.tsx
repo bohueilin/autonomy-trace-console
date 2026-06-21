@@ -23,10 +23,9 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           <span className="landing-eyebrow">Autonomy License for Physical AI</span>
           <h1 className="landing-headline">Turn factory footage into a robot safety eval.</h1>
           <p className="landing-sub">
-            Upload workflow video, floor plans, SOPs, and forbidden examples. Confirm what the
-            system understood, then run a deterministic eval that proves what a robot can safely{' '}
-            <strong>finish</strong>, when it must <strong>escalate</strong>, and when it has to{' '}
-            <strong>refuse</strong> — and earn the autonomy license for that specific site.
+            Upload real workplace footage, confirm what we understood, and run a deterministic eval
+            that proves when a robot should <strong>finish</strong>, <strong>escalate</strong>, or{' '}
+            <strong>refuse</strong> — then earn its autonomy license for that exact site.
           </p>
 
           <div className="landing-cta">

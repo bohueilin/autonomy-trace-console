@@ -120,6 +120,46 @@ export function LicenseResults({
         </div>
       </div>
 
+      <div className="license-cert" style={{ borderColor: license.level.color }}>
+        <div className="cert-seal" style={{ background: license.level.color }}>
+          <span className="cert-tier">{license.level.id}</span>
+          <span className="cert-seal-sub">LICENSE</span>
+        </div>
+        <div className="cert-main">
+          <div className="cert-eyebrow">Autonomy License · readiness evidence pack</div>
+          <div className="cert-title" style={{ color: license.level.color }}>
+            {license.level.name}
+          </div>
+          <div className="cert-meta">
+            <span>
+              Issued for <strong>{plan.theme.label}</strong> · <strong>{plan.profile.label}</strong>
+            </span>
+            <span>
+              Operating point <strong>FAR {pct(report.calibration.far)}</strong> ·{' '}
+              <strong>FRR {pct(report.calibration.frr)}</strong>
+            </span>
+          </div>
+          <div className="cert-chain" aria-label="Evidence provenance">
+            <span>Inputs declared</span>
+            <span className="cert-arrow" aria-hidden="true">→</span>
+            <span>Confirmed by you</span>
+            <span className="cert-arrow" aria-hidden="true">→</span>
+            <span>Eval frozen</span>
+            <span className="cert-arrow" aria-hidden="true">→</span>
+            <span className="cert-scored">Scored by deterministic oracle</span>
+          </div>
+        </div>
+        <div className="cert-side">
+          <span className="cert-id">{report.reportId}</span>
+          {(plan.workflow?.approvedFactsHash || frozen?.approvedFactsHash) && (
+            <span className="cert-hash">
+              facts {plan.workflow?.approvedFactsHash ?? frozen?.approvedFactsHash}
+            </span>
+          )}
+          <span className="cert-note">Not a regulatory certification</span>
+        </div>
+      </div>
+
       <div className="results-summary">
         <div className="results-license" style={{ borderColor: license.level.color }}>
           <span className="chip-badge" style={{ background: license.level.color }}>
