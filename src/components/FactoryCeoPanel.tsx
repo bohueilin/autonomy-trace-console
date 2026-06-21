@@ -330,13 +330,13 @@ function FactoryInput({ onResult }: { onResult: (r: Json) => void }) {
 // ---- live floor plan: the CEO drag-selects (lasso) a region to optimize ----
 type Rect = { x: number; y: number; w: number; h: number }
 
+const CELL_W = 168, CELL_H = 118, GAP = 26, PAD = 30, BOX_W = 138, BOX_H = 88
 function layout(machines: Json[]): Record<string, { x: number; y: number; w: number; h: number }> {
   const cols = Math.max(1, Math.ceil(Math.sqrt(machines.length || 1)))
-  const cellW = 150, cellH = 96, gap = 22, pad = 24, boxW = 110, boxH = 64
   const out: Record<string, { x: number; y: number; w: number; h: number }> = {}
   machines.forEach((m, i) => {
     const r = Math.floor(i / cols), c = i % cols
-    out[m.id] = { x: pad + c * (cellW + gap) + (cellW - boxW) / 2, y: pad + r * (cellH + gap), w: boxW, h: boxH }
+    out[m.id] = { x: PAD + c * (CELL_W + GAP) + (CELL_W - BOX_W) / 2, y: PAD + r * (CELL_H + GAP), w: BOX_W, h: BOX_H }
   })
   return out
 }
@@ -345,15 +345,23 @@ function intersects(a: Rect, b: { x: number; y: number; w: number; h: number }) 
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
 }
 
+// capability -> glyph + color, so each station reads as a piece of equipment.
+const CAP_STYLE: Record<string, { glyph: string; color: string }> = {
+  mold: { glyph: '◳', color: 'var(--accent)' },
+  cnc: { glyph: '⚙', color: 'var(--warn)' },
+  deburr: { glyph: '✦', color: 'var(--pos)' },
+  assembly: { glyph: '⛭', color: 'var(--brand)' },
+  inspect: { glyph: '◎', color: 'var(--brand)' },
+}
+const capStyle = (caps: string[] = []) => CAP_STYLE[caps[0]] ?? { glyph: '▰', color: 'var(--muted)' }
+
 function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r: Json) => void }) {
   const pos = useMemo(() => layout(machines), [machines])
   const cols = Math.max(1, Math.ceil(Math.sqrt(machines.length || 1)))
   const rows = Math.max(1, Math.ceil((machines.length || 1) / cols))
-  const W = 24 * 2 + cols * 150 + (cols - 1) * 22
-  const H = 24 * 2 + rows * 96
+  const W = PAD * 2 + cols * CELL_W + (cols - 1) * GAP
+  const H = PAD * 2 + (rows - 1) * CELL_H + BOX_H
   const svgRef = useRef<SVGSVGElement>(null)
-  const { data: fpData } = useJson('/factoryceo/floorplans/manifest.json')
-  const [fpIdx, setFpIdx] = useState(0)
   const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
   const [sel, setSel] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
@@ -398,39 +406,67 @@ function FloorPlanLasso({ machines, onResult }: { machines: Json[]; onResult: (r
   }
 
   const dr = drag ? rect(drag) : null
-  const plan = (fpData?.plans ?? [])[fpIdx]
   return (
     <div style={{ ...card, borderColor: 'var(--accent)' }}>
-      <Label n="02">Live floor plan, calibrate toward a region/task (lasso)</Label>
-      <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
-        Drag a box across the stations you want the brain to focus on. The verifier + TRM optimize that region and the humanoid runs it.
+      <Label n="02">Floor plan — lasso the stations to optimize</Label>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        Drag a box across the equipment you want the brain to focus on; it re-plans just that region.
       </p>
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: W, background: 'var(--bg)', border: '1px solid var(--line)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', userSelect: 'none' }}
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxWidth: W, borderRadius: 14, touchAction: 'none', cursor: 'crosshair', userSelect: 'none', display: 'block' }}
         onPointerDown={down} onPointerMove={move} onPointerUp={up}>
-        {plan && <image href={plan.file} x={0} y={0} width={W} height={H} preserveAspectRatio="xMidYMid slice" opacity={0.16} />}
+        <defs>
+          <pattern id="fp-grid" width="22" height="22" patternUnits="userSpaceOnUse">
+            <path d="M22 0 L0 0 0 22" fill="none" stroke="var(--line)" strokeWidth="0.6" opacity="0.6" />
+          </pattern>
+          <filter id="fp-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="var(--accent)" floodOpacity="0.45" />
+          </filter>
+          <filter id="fp-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" floodColor="#0d0d0f" floodOpacity="0.10" />
+          </filter>
+        </defs>
+        <rect x={0} y={0} width={W} height={H} rx={14} fill="var(--panel-2)" />
+        <rect x={0} y={0} width={W} height={H} rx={14} fill="url(#fp-grid)" />
+        <rect x={0.5} y={0.5} width={W - 1} height={H - 1} rx={14} fill="none" stroke="var(--line)" />
         {machines.map((m) => {
-          const b = pos[m.id], on = sel.includes(m.id)
+          const b = pos[m.id], on = sel.includes(m.id), cs = capStyle(m.capabilities)
           return (
-            <g key={m.id}>
-              <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={8}
-                fill={on ? 'var(--accent)' : 'var(--panel)'} stroke={on ? 'var(--accent)' : 'var(--line)'} strokeWidth={1.5} opacity={on ? 0.92 : 1} />
-              <text x={b.x + b.w / 2} y={b.y + 26} textAnchor="middle" fontFamily={mono} fontSize={14} fill={on ? '#0c0f17' : 'var(--text)'}>{m.id}</text>
-              <text x={b.x + b.w / 2} y={b.y + 44} textAnchor="middle" fontFamily={mono} fontSize={9} fill={on ? '#0c0f17' : 'var(--muted)'}>{(m.capabilities ?? []).join('/')}</text>
+            <g key={m.id} filter={on ? 'url(#fp-glow)' : 'url(#fp-shadow)'} style={{ transition: 'all .15s' }}>
+              <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={12}
+                fill="var(--panel)" stroke={on ? 'var(--accent)' : 'var(--line)'} strokeWidth={on ? 2.5 : 1} />
+              {on && <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={12} fill="var(--accent)" fillOpacity={0.06} />}
+              {/* capability chip */}
+              <rect x={b.x + 12} y={b.y + 12} width={26} height={26} rx={8} fill={cs.color} fillOpacity={0.16} />
+              <text x={b.x + 25} y={b.y + 30} textAnchor="middle" fontSize={15} fill={cs.color}>{cs.glyph}</text>
+              {/* id + caps */}
+              <text x={b.x + 46} y={b.y + 25} fontFamily="var(--font-display)" fontWeight={800} fontSize={16} fill="var(--text)">{m.id}</text>
+              <text x={b.x + 46} y={b.y + 40} fontFamily={mono} fontSize={8.5} fill="var(--muted)">{(m.capabilities ?? []).join(' · ')}</text>
+              {/* status row */}
+              <circle cx={b.x + 16} cy={b.y + b.h - 16} r={3} fill={(m.uptime ?? 1) >= 0.9 ? 'var(--pos)' : 'var(--warn)'} />
+              <text x={b.x + 26} y={b.y + b.h - 12} fontFamily={mono} fontSize={8.5} fill="var(--muted)">
+                {(m.uptime ?? 1) >= 0.9 ? 'healthy' : 'degraded'}
+              </text>
+              {on && (
+                <g>
+                  <circle cx={b.x + b.w - 16} cy={b.y + 16} r={9} fill="var(--accent)" />
+                  <text x={b.x + b.w - 16} y={b.y + 20} textAnchor="middle" fontSize={11} fill="#fff" fontWeight={700}>✓</text>
+                </g>
+              )}
             </g>
           )
         })}
         {dr && dr.w * dr.h >= 40 && (
-          <rect x={dr.x} y={dr.y} width={dr.w} height={dr.h} fill="var(--accent)" fillOpacity={0.12} stroke="var(--accent)" strokeDasharray="5 4" strokeWidth={1.5} />
+          <rect x={dr.x} y={dr.y} width={dr.w} height={dr.h} rx={6} fill="var(--accent)" fillOpacity={0.10} stroke="var(--accent)" strokeWidth={1.5} strokeDasharray="6 4">
+            <animate attributeName="stroke-dashoffset" from="0" to="20" dur="0.6s" repeatCount="indefinite" />
+          </rect>
         )}
       </svg>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
         <button className="btn primary" onClick={optimize} disabled={busy || !sel.length}>{busy ? 'Optimizing…' : `▶ Optimize region (${sel.length})`}</button>
-        {(fpData?.plans ?? []).length > 1 && (
-          <button className="btn ghost" onClick={() => setFpIdx((i) => (i + 1) % (fpData?.plans?.length || 1))}>⟳ floor plan</button>
-        )}
-        {sel.length > 0 && <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--muted)' }}>selected: {sel.join(', ')}</span>}
+        {sel.length > 0
+          ? <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--accent)' }}>selected: {sel.join(', ')}</span>
+          : <span style={{ fontFamily: mono, fontSize: 12, color: 'var(--muted)' }}>drag to select stations</span>}
       </div>
-      {plan && <div style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--muted)', marginTop: 8 }}>backdrop: {fpData?.attribution}</div>}
       {err && <div style={{ marginTop: 10, color: 'var(--neg)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
     </div>
   )
