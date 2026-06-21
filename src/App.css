@@ -4095,3 +4095,45 @@ select.field-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* Homepage "How do you handle accuracy?" disclosure (under the proof bar). */
+.home-faq {
+  margin: 12px 0 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.home-faq > summary {
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.home-faq > summary::-webkit-details-marker {
+  display: none;
+}
+.home-faq > summary::after {
+  content: ' ▾';
+  color: var(--muted);
+}
+.home-faq[open] > summary::after {
+  content: ' ▴';
+}
+.home-faq p {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--text-soft);
+  line-height: 1.6;
+  max-width: 760px;
+}
+.home-faq strong {
+  color: var(--text);
+}
+.home-faq abbr {
+  text-decoration-style: dotted;
+  cursor: help;
+}

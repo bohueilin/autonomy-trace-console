@@ -14,7 +14,7 @@ const FLOW = [
 
 const PROOF = [
   { v: 'Deterministic scoring', l: 'a fixed algorithm decides — not an AI’s opinion' },
-  { v: 'FAR / FRR', l: 'measured and tunable per site — never promised' },
+  { v: 'Calibrated per site', l: 'tune safety vs. access live — no blanket accuracy promises' },
   { v: 'Evidence-backed', l: 'tamper-evident and reproducible' },
 ]
 
@@ -90,6 +90,18 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
           </div>
         ))}
       </section>
+
+      <details className="home-faq">
+        <summary>How do you handle accuracy?</summary>
+        <p>
+          No two sites are identical, so we don’t make blanket accuracy claims. For each location we
+          measure two kinds of mistake — acting when it should have stopped (a{' '}
+          <strong>false accept</strong>), and refusing a job it could have safely done (a{' '}
+          <strong>false reject</strong>), together written{' '}
+          <abbr title="False-Accept Rate / False-Reject Rate">FAR / FRR</abbr>. You tune the balance
+          between strict safety and smooth operation to fit the site — measured live, never promised.
+        </p>
+      </details>
 
       {/* ---------- how it works (one canonical flow) ---------- */}
       <ol className="flow-bento" aria-label="How it works">
