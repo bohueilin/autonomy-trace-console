@@ -88,6 +88,42 @@ export function Landing({ onCreate, onSample }: { onCreate: () => void; onSample
         <li><span className="lb-step">4 · Safety case</span><p>FAR/FRR, reward-hack trace, evidence pack.</p></li>
       </ol>
 
+      <section className="media-showcase" aria-label="Physical AI media">
+        <article className="media-card brain-card">
+          <div className="media-frame">
+            <img src="/physical-ai-brain.png" alt="Physical AI humanoid brain concept" loading="lazy" />
+          </div>
+          <div className="media-body">
+            <div className="panel-kicker">Build the Physical AI brain for this site</div>
+            <p>
+              Capture the real workplace, and we shape the deployment context the robot must reason
+              about — before it ever moves near a person.
+            </p>
+          </div>
+        </article>
+        <article className="media-card video-card">
+          <div className="video-frame">
+            <iframe
+              src="https://www.youtube.com/embed/h4SQUglSsH4?autoplay=1&mute=1&playsinline=1&loop=1&playlist=h4SQUglSsH4&controls=0&rel=0"
+              title="Manufacturing reference footage"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+          <div className="media-body">
+            <div className="panel-kicker">Manufacturing reference footage</div>
+            <p>
+              Placeholder reference footage — illustration only, not parsed evidence.{' '}
+              <a href="https://www.youtube.com/shorts/h4SQUglSsH4" target="_blank" rel="noreferrer">
+                Open the Short
+              </a>{' '}
+              if the embed is blocked.
+            </p>
+          </div>
+        </article>
+      </section>
+
       <ol className="landing-steps" aria-label="Workflow stages">
         <li>
           <span className="ls-num">1</span>

@@ -30,6 +30,13 @@ export interface DescriptiveSiteMap {
   obstacles: GridPos[]
   hazards: GridPos[]
   humanOnly: GridPos[]
+  /**
+   * Intended robot deployment positions (R1, R2, …) — DESCRIPTIVE ONLY. They
+   * capture the operator's multi-robot deployment intent for storytelling and a
+   * future multi-robot simulation. They never reach the oracle/reward/license:
+   * `frozenToPlanInput` does not pass the site map, so robots stay pure provenance.
+   */
+  robots: GridPos[]
 }
 
 export interface WorkflowUnderstanding {
@@ -89,6 +96,7 @@ function defaultMap(): DescriptiveSiteMap {
     ],
     hazards: [{ x: 4, y: 1 }],
     humanOnly: [{ x: 4, y: 3 }],
+    robots: [{ x: 0, y: 0 }],
   }
 }
 
@@ -176,6 +184,7 @@ export function freezeWorkflow(draft: WorkflowUnderstanding): FrozenWorkflow {
       obstacles: draft.siteMap.obstacles.map((p) => ({ ...p })),
       hazards: draft.siteMap.hazards.map((p) => ({ ...p })),
       humanOnly: draft.siteMap.humanOnly.map((p) => ({ ...p })),
+      robots: (draft.siteMap.robots ?? []).map((p) => ({ ...p })),
     },
     storyboard: confirmFacts(draft.storyboard),
     terminalRules: {

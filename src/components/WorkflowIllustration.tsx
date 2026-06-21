@@ -95,6 +95,19 @@ export function WorkflowIllustration({
                 )
               })}
             </div>
+            <div className="site-legend sim-legend">
+              <span className="lg-sid">S Start</span>
+              <span className="lg-sid">I Item</span>
+              <span className="lg-sid">D Drop</span>
+              <span className="lg-robot">● Robot (live)</span>
+              <span className="lg-hazard">! Hazard</span>
+              <span className="lg-human">H Human-only</span>
+            </div>
+            <p className="deploy-note">
+              Planned deployment intent: {(frozen.siteMap.robots ?? []).length} robot
+              {(frozen.siteMap.robots ?? []).length === 1 ? '' : 's'} — descriptive only; the oracle
+              scores one representative robot on the canonical task.
+            </p>
           </div>
 
           <div className="simulation-copy">

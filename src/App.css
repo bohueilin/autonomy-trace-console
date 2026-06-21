@@ -2412,9 +2412,9 @@ select.field-input {
   padding: 5px 9px;
   font-size: 11px;
   font-weight: 800;
-  color: #cbd0df;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--text-soft);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
 }
 .align-grid {
   display: grid;
@@ -2423,10 +2423,11 @@ select.field-input {
   margin-top: 18px;
 }
 .align-panel {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--line);
   border-radius: 18px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
 }
 .site-map-panel p,
 .simulation-copy p {
@@ -2441,18 +2442,27 @@ select.field-input {
 }
 .site-cell {
   aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--line);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #cbd0df;
-  font-size: 10px;
+  background: #fff;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
+}
+.site-cell:hover {
+  border-color: var(--accent);
 }
 .cell-S,
 .cell-I,
 .cell-D {
-  background: rgba(108, 140, 255, 0.2);
-  color: #dfe5ff;
+  background: rgba(47, 109, 246, 0.14);
+  color: var(--accent-ink);
+}
+.cell-robot {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
 }
 .cell-hazard {
   background: rgba(255, 107, 107, 0.16);
@@ -2491,7 +2501,7 @@ select.field-input {
   font-size: 12.5px;
 }
 .prov-ai_proposed {
-  color: #b9c5ff;
+  color: var(--accent-ink);
 }
 .prov-edited {
   color: var(--warn);
@@ -2501,9 +2511,10 @@ select.field-input {
 }
 .simulation-stage,
 .simulation-copy {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--line);
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
   padding: 18px;
 }
 .stage-caption {
@@ -2523,21 +2534,23 @@ select.field-input {
 .sim-cell {
   aspect-ratio: 1;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.035);
-  color: var(--muted);
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text-soft);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
+  font-size: 17px;
 }
 .sim-cell.path {
-  background: rgba(108, 140, 255, 0.12);
+  background: rgba(47, 109, 246, 0.12);
 }
 .sim-cell.robot {
-  background: var(--paper);
+  background: var(--accent);
   color: #ffffff;
-  box-shadow: 0 12px 30px rgba(244, 239, 230, 0.2);
+  border-color: var(--accent);
+  box-shadow: 0 10px 24px rgba(47, 109, 246, 0.34);
 }
 .simulation-copy h2 {
   margin: 8px 0 0;
@@ -3043,5 +3056,187 @@ select.field-input {
   .navlink-cta {
     flex: 1;
     text-align: center;
+  }
+}
+
+/* ============================================================ */
+/* DEPLOYMENT PLANNER POLISH: bigger map text, robot palette,   */
+/* richer legend, brain image + manufacturing video cards.      */
+/* ============================================================ */
+
+/* +3px readability bumps — scoped to site-map / simulation only. */
+.site-map-panel .panel-kicker {
+  font-size: 14px;
+}
+.site-map-panel p {
+  font-size: 15.5px;
+}
+.site-legend span {
+  font-size: 14px;
+}
+.site-cell {
+  font-size: 16px;
+}
+.sim-cell {
+  font-size: 20px;
+}
+.sim-legend span {
+  font-size: 14px;
+}
+.deploy-note {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* Placement tool palette. */
+.map-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.tool-btn {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text-soft);
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tool-btn:hover {
+  border-color: var(--accent);
+}
+.tool-btn.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(47, 109, 246, 0.28);
+}
+.tool-btn.tool-robot.on {
+  background: var(--accent);
+}
+
+/* Robot deployment controls. */
+.robot-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.robot-count {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.robot-count strong {
+  color: var(--accent-ink);
+  font-size: 15px;
+}
+.robot-buttons {
+  display: flex;
+  gap: 8px;
+}
+.robot-buttons .btn {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+/* Legend badge accents — readable on the bright map. */
+.site-legend .lg-sid,
+.sim-legend .lg-sid {
+  color: var(--accent-ink);
+  background: rgba(47, 109, 246, 0.1);
+  border-color: rgba(47, 109, 246, 0.28);
+}
+.site-legend .lg-robot,
+.sim-legend .lg-robot {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.site-legend .lg-hazard,
+.sim-legend .lg-hazard {
+  color: var(--neg);
+  background: rgba(229, 72, 77, 0.12);
+  border-color: rgba(229, 72, 77, 0.3);
+}
+.site-legend .lg-human,
+.sim-legend .lg-human {
+  color: var(--warn);
+  background: rgba(185, 116, 0, 0.12);
+  border-color: rgba(185, 116, 0, 0.3);
+}
+.site-legend .lg-wall {
+  color: var(--text-soft);
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+/* ---------- media showcase: brain image + manufacturing video ---------- */
+.media-showcase {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 42px 0 0;
+}
+.media-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.media-frame {
+  aspect-ratio: 16 / 9;
+  background: #0f172a;
+  overflow: hidden;
+}
+.media-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0f172a;
+  overflow: hidden;
+}
+.video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.media-body {
+  padding: 16px 18px;
+}
+.media-body p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.media-body a {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+@media (max-width: 860px) {
+  .media-showcase {
+    grid-template-columns: 1fr;
   }
 }
