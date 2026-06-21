@@ -29,7 +29,7 @@ from src.hud_env import hybrid_reward, normalized_reward
 from src.data_export import build_episode
 from src.intake import intake_state
 from src.llm import (DeterministicPlanner, FireworksPlanner, AnthropicPlanner,
-                     VLLMPlanner, vision_caption, chat_json)
+                     VLLMPlanner, vision_caption, chat_json, fireworks_key)
 from isaac.plan_to_isaac import plan_to_tasks
 
 app = FastAPI(title="FactoryCEO-TRM", version="1.0",
@@ -375,6 +375,87 @@ def get_checkpoint(customer_id: str):
         m["loadable"] = has_pt
         return m
     return {"customer_id": cid, "trained": False, "loadable": False}
+
+
+class PipelineReq(BaseModel):
+    seed: int = 0
+    teacher: str = "deterministic"     # deterministic (free) | fireworks (Qwen synth)
+    n_episodes: int = 12
+    epochs: int = 40
+    run_hud: bool = False              # True spends HUD credits (graded cloud rollout)
+
+
+@app.post("/pipeline")
+def pipeline(req: PipelineReq):
+    """One button: Fireworks/seed synth -> TRM train -> V-JEPA eval (-> optional
+    HUD graded rollout, which spends credits). Returns a staged report. Gemma
+    fine-tune is a separate paid step (not auto-run)."""
+    out: dict = {"seed": req.seed, "teacher": req.teacher, "stages": {}}
+
+    # 1) synth corpus (Fireworks teacher when requested; deterministic is free)
+    key = _safe_id(f"pipeline-{req.seed}")
+    ckpt_dir = CKPT_ROOT / key
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    eps_path = str(ckpt_dir / "episodes.jsonl")
+    if req.teacher == "fireworks" and fireworks_key():
+        _os.environ.setdefault("FIREWORKS_MODEL", "accounts/fireworks/models/qwen3p7-plus")
+        import subprocess
+        subprocess.run([sys.executable, "distill/gen_corpus.py", "--teacher", "fireworks",
+                        "--scenarios", str(req.n_episodes), "--out", eps_path],
+                       cwd=str(_Path(__file__).resolve().parent), timeout=300)
+        n_traces = sum(len(json.loads(l).get("repair_trace", [])) for l in open(eps_path))
+    else:
+        n_traces = _build_episodes_jsonl(eps_path, req.n_episodes, seed0=req.seed)
+    out["stages"]["synth"] = {"source": req.teacher, "episodes": req.n_episodes,
+                              "trace_steps": int(n_traces), "ok": True}
+
+    # 2) train the TRM student on the synth
+    try:
+        import torch
+        from src.trm_student import train as trm_train, build_dataset
+        model = trm_train(eps_path, out_dir=str(ckpt_dir), epochs=req.epochs)
+        X, y = build_dataset(eps_path)
+        with torch.no_grad():
+            acc = float((model(torch.tensor(X)).argmax(-1) == torch.tensor(y)).float().mean())
+        params = int(sum(p.numel() for p in model.parameters()))
+        out["stages"]["trm"] = {"params": params, "train_acc": round(acc, 4), "ok": True}
+    except Exception as e:
+        out["stages"]["trm"] = {"ok": False, "error": f"{type(e).__name__}: {e}"[:160]}
+
+    # 3) V-JEPA perceptual eval on a MuJoCo rollout of a verified plan
+    try:
+        from src.closed_loop import MuJoCoExecutor
+        from src.jepa import VJEPAWorldModel
+        st = generate_state(seed=req.seed, horizon_days=30)
+        final, _ = repair_loop(st, greedy(st), K=80)
+        tasks = plan_to_tasks(st, final)
+        achieved, goal = MuJoCoExecutor().rollout(tasks)
+        jepa = VJEPAWorldModel()
+        score = jepa.success_score(achieved, goal)
+        out["stages"]["jepa"] = {"score": round(float(score), 4),
+                                 "real": jepa.available, "frames": len(achieved), "ok": True}
+    except Exception as e:
+        out["stages"]["jepa"] = {"ok": False, "error": f"{type(e).__name__}: {e}"[:160]}
+
+    # 4) optional HUD graded rollout (SPENDS HUD CREDITS)
+    if req.run_hud:
+        try:
+            import subprocess
+            root = str(_Path(__file__).resolve().parent)
+            hud_py = root + "/.venv-hud/bin/python"
+            env = dict(_os.environ)
+            r = subprocess.run([hud_py, "distill/hud_run.py", "--seed", str(req.seed)],
+                               cwd=root, env=env, capture_output=True, text=True, timeout=300)
+            out["stages"]["hud"] = {"ok": r.returncode == 0,
+                                    "output": (r.stdout or r.stderr).strip()[-600:]}
+        except Exception as e:
+            out["stages"]["hud"] = {"ok": False, "error": f"{type(e).__name__}: {e}"[:160]}
+    else:
+        out["stages"]["hud"] = {"ok": None, "note": "skipped (set run_hud=true to spend HUD credits)"}
+
+    out["stages"]["gemma"] = {"ok": None,
+                              "note": "paid Fireworks fine-tune — run distill/fireworks_finetune.sh to launch"}
+    return out
 
 
 @app.get("/eval_report")

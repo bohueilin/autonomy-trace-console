@@ -669,6 +669,70 @@ function TrainDistill({ rows, n, customerId, customerName, taskId, state }: { ro
   )
 }
 
+// One-button pipeline: Fireworks/seed synth -> TRM train -> V-JEPA eval
+// (-> optional HUD graded rollout, which spends credits). Gemma is a gated step.
+function Pipeline({ n }: { n: string }) {
+  const [d, setD] = useState<Json | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [teacher, setTeacher] = useState<'deterministic' | 'fireworks'>('deterministic')
+  const [err, setErr] = useState<string | null>(null)
+  async function run(run_hud: boolean) {
+    setBusy(run_hud ? 'hud' : 'run'); setErr(null)
+    try {
+      const r = await fetch(`${BRAIN}/pipeline`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seed: 3, teacher, n_episodes: 12, epochs: 40, run_hud }),
+      })
+      if (!r.ok) throw new Error(String(r.status))
+      setD(await r.json())
+    } catch { setErr(`Brain unreachable at ${BRAIN}.`) } finally { setBusy(null) }
+  }
+  const s = d?.stages ?? {}
+  const Stage = ({ k, label, body, state }: { k: string; label: string; body: string; state: any }) => {
+    const ok = state?.ok
+    const color = ok === true ? 'var(--pos)' : ok === false ? 'var(--neg)' : 'var(--muted)'
+    const dot = ok === true ? '●' : ok === false ? '✕' : '○'
+    return (
+      <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 0', borderBottom: '1px solid var(--line)' }}>
+        <span style={{ color, fontFamily: mono, fontSize: 13, width: 14 }}>{dot}</span>
+        <span style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', width: 70 }}>{k}</span>
+        <span style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{label}</span>
+        <span style={{ fontFamily: mono, fontSize: 12, color }}>{body}</span>
+      </div>
+    )
+  }
+  return (
+    <div style={{ ...card, borderColor: 'var(--brand)' }}>
+      <Label n={n}>One-button training pipeline (synth → TRM → JEPA → HUD)</Label>
+      <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
+        Press once: generate synthetic verified traces (Fireworks/seed), distil the TRM, score execution with V-JEPA. The HUD graded rollout spends real HUD credits; Gemma fine-tune is a separate paid step.
+      </p>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+        <div style={{ display: 'inline-flex', border: '1px solid var(--line)', borderRadius: 8, overflow: 'hidden' }}>
+          {(['deterministic', 'fireworks'] as const).map((t) => (
+            <button key={t} onClick={() => setTeacher(t)} style={{ border: 'none', padding: '7px 12px', fontSize: 12, cursor: 'pointer', background: teacher === t ? 'var(--accent)' : 'var(--panel)', color: teacher === t ? '#fff' : 'var(--muted)' }}>
+              {t === 'fireworks' ? 'Qwen synth' : 'free synth'}
+            </button>
+          ))}
+        </div>
+        <button className="btn primary" onClick={() => run(false)} disabled={!!busy}>{busy === 'run' ? 'Running…' : '▶ Run pipeline'}</button>
+        <button className="btn" onClick={() => run(true)} disabled={!!busy} title="Spends HUD credits">{busy === 'hud' ? 'Running + HUD…' : '▶ Run + HUD rollout (credits)'}</button>
+      </div>
+      {err && <div style={{ marginBottom: 10, color: 'var(--neg)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
+      {d && (
+        <div>
+          <Stage k="synth" label={`synthetic traces (${s.synth?.source})`} state={s.synth} body={`${s.synth?.trace_steps ?? 0} steps`} />
+          <Stage k="trm" label="distil tiny recursive model" state={s.trm} body={s.trm?.ok ? `${s.trm.params?.toLocaleString()} params · ${Math.round((s.trm.train_acc ?? 0) * 100)}% acc` : (s.trm?.error ?? '—')} />
+          <Stage k="jepa" label={`V-JEPA execution eval${s.jepa?.real ? ' (real)' : ' (stub)'}`} state={s.jepa} body={s.jepa?.ok ? `score ${s.jepa.score}` : (s.jepa?.error ?? '—')} />
+          <Stage k="hud" label="HUD graded rollout (credits)" state={s.hud} body={s.hud?.ok === null ? 'skipped' : (s.hud?.output ? 'see output' : (s.hud?.error ?? 'done'))} />
+          <Stage k="gemma" label="Gemma fine-tune (paid)" state={s.gemma} body="gated" />
+          {s.hud?.output && <pre style={{ fontFamily: mono, fontSize: 11, whiteSpace: 'pre-wrap', marginTop: 10, color: 'var(--text)', background: 'var(--bg)', padding: 10, borderRadius: 8 }}>{s.hud.output}</pre>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Long-horizon manufacturing eval (DragonBench-style): naive / greedy / TRM across
 // the HUD Taskset (14-60 day scenarios), partial-credit leaderboard + per-task.
 function EvalReport({ n }: { n: string }) {
@@ -921,6 +985,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
               {baseline && <Baseline b={baseline} n="04" />}
               {/* step 3: teacher → TRM (+Gemma) */}
               {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} taskId={isLive ? taskId : undefined} state={fs} />}
+              <Pipeline n="05b" />
               {/* before -> after: the verifier's value, made visible */}
               {live?.naive_isaac_tasks && tasks && (
                 <BeforeAfter naive={live.naive_isaac_tasks} verified={tasks}
