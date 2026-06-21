@@ -12,7 +12,7 @@ import { useFactories } from './factoryStore'
 // One simple flow: landing → capture (messy inputs / videos) → studio (the brain
 // reasons, plans, you approve, it shows the LLM-alone baseline, the TRM/Gemma it
 // trains, the MuJoCo before/after, and actionable feedback to patch the humanoid).
-// A separate FactoryBench report page presents the eval. Saved work lives under
+// A separate ShiftBench report page presents the eval. Saved work lives under
 // the profile's factories/floors.
 type View = 'landing' | 'capture' | 'studio' | 'benchmark'
 
@@ -44,17 +44,17 @@ function App() {
   return (
     <div className="console">
       <nav className="appnav">
-        <button className="appbrand" onClick={() => setView('landing')} aria-label="FactoryCEO home">
-          <span className="appbrand-mark">FC</span>
+        <button className="appbrand" onClick={() => setView('landing')} aria-label="ShiftBench home">
+          <span className="appbrand-mark">SB</span>
           <span className="appbrand-text">
-            <span className="appbrand-name">FactoryCEO</span>
-            <span className="appbrand-sub">verifiable operations brain</span>
+            <span className="appbrand-name">ShiftBench</span>
+            <span className="appbrand-sub">verified shift ops</span>
           </span>
         </button>
         <div className="appnav-links">
-          <button className={`navlink ${view === 'benchmark' ? 'on' : ''}`} onClick={() => setView('benchmark')}>FactoryBench</button>
+          <button className={`navlink ${view === 'benchmark' ? 'on' : ''}`} onClick={() => setView('benchmark')}>Report</button>
           <ProfileMenu fac={fac} onOpenFloor={openSavedFloor} onNewFloor={() => setView('capture')} />
-          <button className="btn primary navlink-cta" onClick={() => setView('capture')}>New capture</button>
+          <button className="btn primary navlink-cta" onClick={() => setView('capture')}>Capture floor</button>
         </div>
       </nav>
 

@@ -56,37 +56,74 @@ export function CaptureConsole({
     const outcome = text.trim() || 'Plan this floor safely.'
     const req: EnvironmentRequirement = { outcome, domain: DOMAIN, embodiment: EMBODIMENT, notes: outcome, attachments: items.map((i) => i.name) }
     const manifest = createCaptureManifest({ outcome, domain: DOMAIN, expectedEmbodiment: EMBODIMENT, description: outcome, safetyRules: [], items })
-    let frames: BrainFile[] = []
-    try { frames = await gatherFrames() } finally { setExtracting(false) }
+    const frames = await gatherFrames().finally(() => setExtracting(false))
     onAnalyze(req, manifest, frames)
   }
 
   return (
     <section className="capture">
-      <div className="flow-shell" style={{ maxWidth: 720 }}>
+      <div className="capture-shell">
         <button className="btn ghost back" onClick={onBack}>← Back</button>
-        <h1 style={{ marginTop: 10 }}>New floor plan</h1>
-        <p className="flow-sub">Describe your floor (machines, jobs, materials, what's off-limits), or attach a video/photos. The brain plans it.</p>
-
-        <textarea
-          autoFocus
-          className="field-input"
-          rows={6}
-          placeholder="e.g. 4 CNC + 2 mold cells, ~16 jobs this week in ABS and Nylon, M2 overheating, one operator out Thursday. Never run M2 unattended; finish the Acme bracket order first."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          style={{ width: '100%', marginTop: 6 }}
-        />
-
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
-          <input ref={inputRef} className="sr-only" type="file" multiple accept={VIDEO_ACCEPT}
-            onChange={(e) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); e.currentTarget.value = '' }} />
-          <button className="btn" onClick={() => inputRef.current?.click()}>📎 Attach files{items.length ? ` (${items.length})` : ''}</button>
-          <button className="btn primary hero-action" onClick={build} disabled={!canContinue || extracting}>
-            {extracting ? 'Reading…' : 'Build the plan →'}
-          </button>
-          <span className="trust-note">Local only · nothing uploaded</span>
+        <div className="capture-head">
+          <span className="flow-kicker">New floor capture</span>
+          <h1>Give the brain a shift brief.</h1>
+          <p className="flow-sub">
+            Write what a lead operator would say at handoff: what must ship, which machines are risky,
+            who is unavailable, and where a robot must never go.
+          </p>
         </div>
+
+        <div className="capture-workspace">
+          <div className="brief-card">
+            <label className="field">
+              <span className="field-label">Shift brief</span>
+              <textarea
+                autoFocus
+                className="field-input shift-brief"
+                rows={8}
+                placeholder="Example: 4 CNC + 2 mold cells, 16 jobs this week in ABS and Nylon. M2 is overheating, one operator is out Thursday, and the Acme bracket order ships first. Never run M2 unattended."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+              <span className="field-hint">
+                Include priorities, blocked areas, machine status, operator coverage, material constraints, and escalation rules.
+              </span>
+            </label>
+
+            <div className="capture-actions">
+              <input ref={inputRef} className="sr-only" type="file" multiple accept={VIDEO_ACCEPT}
+                onChange={(e) => { if (e.currentTarget.files) addFiles(e.currentTarget.files); e.currentTarget.value = '' }} />
+              <button className="btn" onClick={() => inputRef.current?.click()}>
+                Attach photos, video, SOPs{items.length ? ` (${items.length})` : ''}
+              </button>
+              <button className="btn primary hero-action" onClick={build} disabled={!canContinue || extracting}>
+                {extracting ? 'Reading floor evidence…' : 'Build verified plan →'}
+              </button>
+            </div>
+          </div>
+
+          <aside className="brief-guide" aria-label="What to include">
+            <div className="panel-kicker">What makes a good brief</div>
+            <ul>
+              <li><strong>Demand:</strong> orders, due dates, takt pressure, priority customers.</li>
+              <li><strong>Capacity:</strong> machines, robots, operators, absences, maintenance windows.</li>
+              <li><strong>Risk:</strong> hot zones, human-only cells, unsafe shortcuts, irreversible actions.</li>
+              <li><strong>Evidence:</strong> floor video, photos, SOPs, part lists, or current dispatch board.</li>
+            </ul>
+            <div className="local-proof">
+              <strong>Local preview</strong>
+              <span>Files are sampled in-browser for this prototype. The verifier still decides if the plan is safe.</span>
+            </div>
+          </aside>
+        </div>
+
+        {items.length > 0 && (
+          <div className="attached-list" aria-label="Attached files">
+            {items.map((item) => (
+              <span key={item.id}>{item.name}</span>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

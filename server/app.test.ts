@@ -11,6 +11,7 @@ const config: AppConfig = {
   isProd: false,
   nebius: {},
   insforge: {},
+  minimax: {},
   episodeSecret: 'app-test-secret',
   warnings: [],
 }

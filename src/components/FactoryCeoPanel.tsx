@@ -66,8 +66,8 @@ export async function extractFrames(src: string, count = 2): Promise<string[]> {
   })
 }
 
-// Hosted floor library: pre-built, pre-verified archetype floors. A user opens one
-// and gets a 0-violation plan with zero input (the "no input required" path).
+// Hosted sample fixtures: pre-built archetype floors for inspecting the report
+// format when the user has not uploaded a real shift brief yet.
 function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
   // The library is the brain's precomputed output (built offline by build_library).
   // Serve the static catalog/runs (reliable, exact, all archetypes); the live brain
@@ -97,10 +97,10 @@ function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
     } finally { setBusy(null) }
   }
   return (
-    <div style={{ ...card, borderColor: 'var(--brand)' }}>
-      <Label n="00">Pre-trained floor library — open one, zero input</Label>
+    <div style={card}>
+      <Label n="00">Sample shift fixtures</Label>
       <p style={{ margin: '0 0 14px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
-        Hosted floor archetypes, already compiled and verified. Open one and the brain's plan is ready instantly — no description needed.
+        Use these only to inspect the report format. Your real flow should start from an uploaded shift brief, photos, video, or SOPs.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
         {floors.map((f) => {
@@ -117,18 +117,18 @@ function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
             <div key={f.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 16, background: 'var(--panel)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15 }}>{f.label}</span>
-                {f.verified && <span style={{ fontFamily: mono, fontSize: 10, color: 'var(--pos)' }}>✓ verified</span>}
+                {f.verified && <span style={{ fontFamily: mono, fontSize: 10, color: 'var(--pos)' }}>verified fixture</span>}
               </div>
-              {/* the why: brain banks profit by fixing what a frontier LLM breaks */}
               <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--text)', lineHeight: 1.45 }}>
-                A frontier LLM leaves <b style={{ color: 'var(--neg)' }}>{nv} hard violations</b> here; the brain fixes <b style={{ color: 'var(--pos)' }}>all of them</b> and banks <b style={{ color: 'var(--brand)' }}>${f.metrics?.reward?.toLocaleString()}</b>.
+                Test fixture with <b>{f.n_jobs} jobs</b> across a <b>{f.horizon_days ?? 30}-day</b> horizon.
+                Raw baseline violations: <b style={{ color: 'var(--neg)' }}>{nv}</b>. Verified result: <b style={{ color: 'var(--pos)' }}>0 hard violations</b>.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                 {tags.map((tg, i) => (
                   <span key={i} style={{ fontFamily: mono, fontSize: 10, color: tg.c, border: `1px solid ${tg.c === 'var(--muted)' ? 'var(--line)' : tg.c}`, borderRadius: 999, padding: '2px 8px' }}>{tg.t}</span>
                 ))}
               </div>
-              <button className="btn primary" style={{ width: '100%' }} disabled={busy === f.id} onClick={() => open(f)}>{busy === f.id ? 'Opening…' : 'Open floor →'}</button>
+              <button className="btn" style={{ width: '100%' }} disabled={busy === f.id} onClick={() => open(f)}>{busy === f.id ? 'Opening…' : 'Inspect sample report'}</button>
             </div>
           )
         })}
@@ -575,7 +575,7 @@ function Baseline({ b, n }: { b: Json; n: string }) {
   const cell = (v: any, good: boolean) => <td style={{ padding: '7px 8px', textAlign: 'right', color: good ? 'var(--pos)' : 'var(--neg)' }}>{v}</td>
   return (
     <div style={{ ...card, borderColor: 'var(--neg)' }}>
-      <Label n={n}>Baseline, synthetic data shows a frontier LLM alone isn't safe</Label>
+      <Label n={n}>Baseline comparison on the sample fixture</Label>
       <p style={{ margin: '0 0 18px', color: 'var(--text)', lineHeight: 1.6 }}>{b.headline}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         <div>
@@ -746,7 +746,7 @@ function TrainDistill({ rows, n, customerId, customerName, taskId, state }: { ro
     <div style={card}>
       <Label n={n}>Teacher → student: train a TRM (+ optional Gemma) on verified traces</Label>
       <p style={{ margin: '0 0 14px', color: 'var(--text)', lineHeight: 1.6, fontSize: 13.5 }}>
-        The serverless teacher (Qwen3.7 on Fireworks) proposes plans; the verifier + recursive repair turn each into a <b>verified reasoning trace</b>. Those traces distill a ~3K-param <b>TRM</b> that drives the repair loop, and can fine-tune a small Gemma fallback. This is the Sillon/RATP recipe: narrow domain + synthetic data + verified traces + a real verifier ⇒ a small specialist beats the frontier LLM alone.
+        The serverless teacher proposes plans; the verifier + recursive repair turn each proposal into a <b>verified reasoning trace</b>. Those traces can train a small specialist for this narrow scheduling domain, while the verifier remains the gate before execution.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, fontFamily: mono, fontSize: 11 }}>
         {['seed corpus', 'teacher amplifies', 'verifier gates', 'verified traces', 'distill TRM', 'Gemma fallback'].map((s, i) => (
@@ -1059,6 +1059,85 @@ function WhatWasFixed({ ep, naiveHard, n }: { ep: Json; naiveHard?: number; n: s
   )
 }
 
+function IntakeThinking({ busy, err, brainUrl }: { busy: boolean; err: string | null; brainUrl: string }) {
+  return (
+    <div style={{ ...card, borderColor: busy ? 'var(--accent)' : err ? 'var(--warn)' : 'var(--line)' }}>
+      <Label n="01">Analyzing your shift brief</Label>
+      <h2 style={{ margin: '0 0 10px', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em' }}>
+        Building the plan through the brain, not a page jump.
+      </h2>
+      <p style={{ margin: '0 0 16px', color: 'var(--muted)', lineHeight: 1.55, maxWidth: 700 }}>
+        The upload is sent to the brain service, which asks Fireworks for the planning pass when configured,
+        then runs the deterministic verifier and repair loop before showing an executable shift plan.
+      </p>
+      <div className="thinking-steps">
+        <div className="thinking-step on">
+          <span>1</span>
+          <strong>Read operator brief</strong>
+          <small>Text, photos, and video frames are converted into a factory state.</small>
+        </div>
+        <div className={`thinking-step ${busy ? 'on' : ''}`}>
+          <span>2</span>
+          <strong>Fireworks planning pass</strong>
+          <small>Qwen/Gemma proposes the shift plan when `FIREWORKS_API_KEY` is available.</small>
+        </div>
+        <div className={`thinking-step ${busy ? 'on' : ''}`}>
+          <span>3</span>
+          <strong>Verifier + repair</strong>
+          <small>Hard constraints are checked and repaired before anything is marked runnable.</small>
+        </div>
+      </div>
+      {busy && <div style={{ marginTop: 16, color: 'var(--accent)', fontFamily: mono, fontSize: 12 }}>calling {brainUrl}/plan_from_input with planner=fireworks...</div>}
+      {err && <div style={{ marginTop: 16, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{err}</div>}
+    </div>
+  )
+}
+
+function ReasoningPanel({ live }: { live: Json }) {
+  const reasoning = live.reasoning ?? {}
+  const planner = live.planner ?? {}
+  const observations: string[] = Array.isArray(reasoning.observations) ? reasoning.observations : []
+  const assumptions: string[] = Array.isArray(reasoning.assumptions) ? reasoning.assumptions : []
+  const plan: string[] = Array.isArray(reasoning.plan) ? reasoning.plan : []
+  const risks: string[] = Array.isArray(reasoning.risks) ? reasoning.risks : []
+  const rows = [
+    ['Planner', planner.actual === 'fireworks' ? 'Fireworks' : planner.actual ?? 'deterministic'],
+    ['Requested', planner.requested ?? 'fireworks'],
+    ['Model', planner.model ?? 'fallback'],
+    ['Intake', live.intake?.source ?? 'compiled'],
+  ]
+  return (
+    <div style={{ ...card, borderColor: planner.actual === 'fireworks' ? 'var(--accent)' : 'var(--warn)' }}>
+      <Label n="00">Reasoning + provenance</Label>
+      <div className="reasoning-grid">
+        <div>
+          <div className="panel-kicker">Operator-facing rationale</div>
+          {[...observations, ...assumptions].slice(0, 5).map((item, i) => (
+            <p key={i} className="reasoning-line">{item}</p>
+          ))}
+        </div>
+        <div>
+          <div className="panel-kicker">Plan of attack</div>
+          {plan.slice(0, 4).map((item, i) => (
+            <p key={i} className="reasoning-line">{item}</p>
+          ))}
+          {risks.slice(0, 2).map((item, i) => (
+            <p key={`risk-${i}`} className="reasoning-line warn">{item}</p>
+          ))}
+        </div>
+        <dl className="reasoning-meta">
+          {rows.map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  )
+}
+
 export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, customerName, taskId }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void; customerId?: string; customerName?: string; taskId?: string } = {}) {
   const { data: run } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
@@ -1085,7 +1164,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
     setAutoBusy(true); setAutoErr(null)
     fetch(`${BRAIN}/plan_from_input`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: initial.text, files: initial.files }),
+      body: JSON.stringify({ text: initial.text, files: initial.files, planner: 'fireworks', return_reasoning: true }),
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((j) => { if (!cancelled) applyRun(j) })
@@ -1099,7 +1178,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
     try {
       const r = await fetch(`${BRAIN}/plan_from_input`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ ...input, planner: 'fireworks', return_reasoning: true }),
       })
       if (!r.ok) throw new Error(String(r.status))
       applyRun(await r.json())
@@ -1113,16 +1192,22 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
   const fs = ep?.observation?.factory_state ?? {}
   const isLive = !!live
   const m = ep?.verifier_after?.metrics ?? {}
+  const hasCapturedInput = !!initial && (!!initial.text || !!initial.files?.length)
 
   // ── library-first: no floor open → just the library grid ──
   if (!live) {
+    if (hasCapturedInput || autoBusy || autoErr) {
+      return <IntakeThinking busy={autoBusy} err={autoErr} brainUrl={BRAIN} />
+    }
     return (
       <div>
-        <div style={{ marginBottom: 18 }}>
-          <Label n="·">Floor library</Label>
-          <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em' }}>Pick a floor — the brain already planned it.</h2>
-          <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 620, fontSize: 14 }}>Each floor is pre-compiled and verified. Open one to see the plan, exactly which constraints the brain fixed, and the humanoid run.</p>
-          {onRestart && <button className="btn ghost" style={{ marginTop: 14 }} onClick={onRestart}>↑ Upload your own floor</button>}
+        <div style={{ ...card, marginBottom: 18, borderColor: 'var(--brand)' }}>
+          <Label n="·">Start with your shift</Label>
+          <h2 style={{ margin: '0 0 6px', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, letterSpacing: '-0.03em' }}>Upload the real floor context first.</h2>
+          <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 700, fontSize: 14 }}>
+            ShiftBench should reason over your current jobs, machine status, staffing, constraints, and floor evidence. Samples below are just fixtures for checking the report layout.
+          </p>
+          {onRestart && <button className="btn primary" style={{ marginTop: 16 }} onClick={onRestart}>Capture my floor</button>}
         </div>
         {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
         <FloorLibrary onResult={applyRun} />
@@ -1167,6 +1252,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
 
       {ep && (
         <>
+          <ReasoningPanel live={live} />
           {/* compiled floor (concise) */}
           <div style={card}>
             <Label n="01">{`Compiled floor · ${live.intake?.industry} · ${live.intake?.n_jobs} jobs`}</Label>

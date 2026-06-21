@@ -38,7 +38,17 @@ def _machine_free(state: FactoryState, mid: str, start: int, end: int,
     return not any(s < end and start < e for s, e in busy[mid])
 
 
-def greedy(state: FactoryState) -> ActionPlan:
+def schedule_in_order(state: FactoryState, job_order: list[Job]) -> ActionPlan:
+    """Build a *feasible* plan, dispatching jobs in the supplied order.
+
+    This is the workhorse `greedy` delegates to. The only learnable decision the
+    RL policy controls is `job_order` -- the dispatch sequence. Procurement and
+    inventory allocation stay the sensible EDD default (a material policy, not the
+    scheduling decision we train). Crucially, placement is identical to greedy: an
+    op is only ever placed in a free, capable, qualified, available slot, so the
+    resulting plan is feasible *regardless of order*. When machine/operator
+    capacity binds, the order decides which jobs win the scarce slots -- and that,
+    not feasibility, is what moves profit. (See `src/rl_train.py`.)"""
     plan = ActionPlan()
     horizon_h = state.horizon_days * 24
 
@@ -66,11 +76,11 @@ def greedy(state: FactoryState) -> ActionPlan:
         else:
             job_earliest[j.id] = material_arrival[j.material]
 
-    # ---- schedule jobs EDD, then by priority
+    # ---- schedule jobs in the supplied dispatch order
     machine_busy: dict[str, list[tuple[int, int]]] = defaultdict(list)
     operator_busy: dict[str, list[tuple[int, int]]] = defaultdict(list)
 
-    for job in sorted(state.jobs, key=lambda j: (j.due_day, -j.priority)):
+    for job in job_order:
         op_end: dict[str, int] = {}
         for op in job.operations:  # operations are already in precedence order
             earliest = job_earliest[job.id]
@@ -97,7 +107,12 @@ def greedy(state: FactoryState) -> ActionPlan:
                     if placed:
                         break
                 t += 1
-            # if not placed within horizon, leave unscheduled (verifier penalizes)
+            if not placed:
+                # capacity ran out -- stop here so no later op is scheduled without
+                # its (now-unplaced) predecessor (that would be a precedence
+                # violation). The job is simply left partially/un-scheduled, which
+                # the verifier scores as lost revenue, never as an infeasibility.
+                break
 
         # warn customer if the job finished late
         if op_end:
@@ -115,6 +130,12 @@ def greedy(state: FactoryState) -> ActionPlan:
             price_per_unit=rfq.target_price_per_unit if accept else 0.0,
             promised_day=rfq.due_day if accept else 0))
     return plan
+
+
+def greedy(state: FactoryState) -> ActionPlan:
+    """Earliest-due-date dispatch (ties broken by higher priority)."""
+    order = sorted(state.jobs, key=lambda j: (j.due_day, -j.priority))
+    return schedule_in_order(state, order)
 
 
 def base_plan(state: FactoryState) -> ActionPlan:

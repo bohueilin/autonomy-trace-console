@@ -137,6 +137,57 @@ class InputReq(BaseModel):
     text: str = ""
     files: list[InputFile] = []
     horizon_days: Optional[int] = None
+    planner: str = "deterministic"           # deterministic|fireworks|anthropic|vllm
+    return_reasoning: bool = True
+
+
+def _planner_status(name: str, planner) -> dict:
+    available = bool(getattr(planner, "available", True))
+    requested = name if name in PLANNERS else "deterministic"
+    return {
+        "requested": requested,
+        "actual": requested if available else "deterministic",
+        "available": available,
+        "model": getattr(planner, "model", None),
+    }
+
+
+def _operator_reasoning(text: str, info: dict, status: dict,
+                        vision_caption: Optional[str]) -> dict:
+    system = (
+        "You are a senior manufacturing operations analyst. Return ONLY JSON with "
+        "keys: observations (array of 2-4 short strings), assumptions (array of "
+        "1-3 short strings), plan (array of 2-4 short strings), risks (array of "
+        "1-3 short strings). Do not reveal hidden chain-of-thought; give concise "
+        "operator-facing rationale."
+    )
+    user = json.dumps({
+        "operator_brief": text[:4000],
+        "vision_caption": vision_caption,
+        "compiled_intake": info,
+        "planner": status,
+    })
+    if status["actual"] != "deterministic":
+        out = chat_json(system, user, max_tokens=1200)
+        if isinstance(out, dict):
+            return out
+    return {
+        "observations": [
+            info.get("summary") or "Compiled the shift brief into a bounded factory scheduling scenario.",
+            f"Built a {info.get('n_jobs', 'multi-job')} job plan over {info.get('horizon_days', '?')} days.",
+        ],
+        "assumptions": [
+            "The deterministic verifier, not the planner, decides whether the plan can run.",
+        ],
+        "plan": [
+            "Generate a candidate shift plan.",
+            "Run hard-constraint verification.",
+            "Repair violations until the plan is executable.",
+        ],
+        "risks": [
+            "No Fireworks key was available, so the planner used the deterministic fallback.",
+        ] if status["requested"] == "fireworks" and status["actual"] == "deterministic" else [],
+    }
 
 
 @app.post("/plan_from_input")
@@ -154,7 +205,14 @@ def plan_from_input(req: InputReq):
         files_text = f"{files_text}\n[from uploaded footage] {caption}".strip()
     state, info = intake_state(req.text, files_text, horizon_days=req.horizon_days)
     info["vision_caption"] = caption
-    cand = corrupt_plan(state, greedy(state), seed=0, n_corruptions=6)  # rough proposal
+    requested_planner = req.planner if req.planner in PLANNERS else "deterministic"
+    planner = _planner(requested_planner)
+    planner_status = _planner_status(requested_planner, planner)
+    cand = planner.plan(state)
+    # If the model-backed planner fell back to the greedy backbone, keep a visibly
+    # imperfect raw proposal so the verifier/repair trace remains demonstrable.
+    if planner_status["actual"] == "deterministic":
+        cand = corrupt_plan(state, cand, seed=0, n_corruptions=6)
     episode = build_episode(state, cand, seed=0, K=60)
     final, _ = repair_loop(state, cand, K=60)
     return {"episode": episode,
@@ -163,7 +221,11 @@ def plan_from_input(req: InputReq):
             # floor comparison: same scene, naive vs verified.
             "naive_isaac_tasks": plan_to_tasks(state, cand),
             "naive_verdict": {"hard_violations": evaluate(state, cand).n_hard},
-            "intake": info, "reward": hybrid_reward(state, final)}
+            "intake": info,
+            "planner": planner_status,
+            "reasoning": _operator_reasoning(req.text, info, planner_status, caption)
+                if req.return_reasoning else None,
+            "reward": hybrid_reward(state, final)}
 
 
 class RegionReq(BaseModel):
@@ -554,6 +616,26 @@ def eval_report():
                      f"partial credit; naive leaves hard violations on every long-horizon task, "
                      f"the verifier-gated TRM is feasible on all {n}.") if (naive and trm) else "",
     }
+
+
+_RL_CACHE: dict = {}
+
+
+@app.get("/rl_train")
+def rl_train(episodes: int = 80, batch: int = 16, lr: float = 0.05, quick: int = 0):
+    """SimRLFab-style RL: train a dispatch-ordering policy with REINFORCE so that
+    *training genuinely lifts profit* (reward = the verifier's profit on a
+    capacity-binding floor) while feasibility stays the verifier's invariant
+    (hard-violation rate flat at 0). Returns the learning curve + learned weights.
+    `quick=1` runs the fast config used by the live 're-run' button; the page loads
+    the richer precomputed curve (public/factoryceo/rl_curve.json) by default."""
+    from src.rl_train import train_policy
+    if quick:
+        episodes, batch, lr = 80, 16, 0.05
+    key = (episodes, batch, lr)
+    if key not in _RL_CACHE:
+        _RL_CACHE[key] = train_policy(episodes=episodes, batch=batch, lr=lr)
+    return _RL_CACHE[key]
 
 
 @app.post("/episode")
