@@ -156,43 +156,54 @@ export function StockGallery({ onPick, busyId }: { onPick: (clip: Json, input: B
   )
 }
 
-// MuJoCo physics floor: renders the verified plan in the MuJoCo simulator
-// (server-side) and shows the captured frames. Falls back quietly if unavailable.
-function MujocoFloor({ tasks, n }: { tasks: Json; n: string }) {
-  const [data, setData] = useState<Json | null>(null)
+// MuJoCo physics render, before -> after: the raw plan and the verified plan each
+// rolled out in the MuJoCo simulator (server-side) and shown as frame strips.
+function MujocoFloor({ naive, verified, naiveHard, n }:
+  { naive?: Json; verified: Json; naiveHard?: number; n: string }) {
+  const [before, setBefore] = useState<Json | null>(null)
+  const [after, setAfter] = useState<Json | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  async function call(tasks: Json) {
+    const r = await fetch(`${BRAIN}/mujoco_floor`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isaac_tasks: tasks }),
+    })
+    if (!r.ok) throw new Error(String(r.status))
+    return r.json()
+  }
   async function render() {
     setBusy(true); setErr(null)
     try {
-      const r = await fetch(`${BRAIN}/mujoco_floor`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isaac_tasks: tasks }),
-      })
-      if (!r.ok) throw new Error(String(r.status))
-      const j = await r.json()
-      setData(j)
-      if (!j.available) setErr(j.error || 'MuJoCo unavailable on the brain host.')
+      const [b, a] = await Promise.all([naive ? call(naive) : Promise.resolve(null), call(verified)])
+      setBefore(b); setAfter(a)
+      if (a && !a.available) setErr(a.error || 'MuJoCo unavailable on the brain host.')
     } catch { setErr(`Brain unreachable at ${BRAIN}.`) } finally { setBusy(false) }
   }
+  const strip = (label: string, sub: string, color: string, d: Json | null) => (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14 }}>{label}</span>
+        <span style={{ fontFamily: mono, fontSize: 11, color }}>{sub}</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${(d?.frames ?? []).length || 3}, 1fr)`, gap: 8 }}>
+        {(d?.frames ?? []).map((f: string, i: number) => (
+          <img key={i} src={f} alt={`mujoco ${label} ${i}`} style={{ width: '100%', borderRadius: 10, border: `1px solid ${color}`, background: '#000' }} />
+        ))}
+      </div>
+    </div>
+  )
   return (
     <div style={card}>
-      <Label n={n}>MuJoCo physics floor, render the verified plan</Label>
+      <Label n={n}>MuJoCo physics render — before → after</Label>
       <p style={{ margin: '0 0 12px', color: 'var(--muted)', fontSize: 12.5, lineHeight: 1.5 }}>
-        The same verified queue, rolled out in the MuJoCo simulator (the executor V-JEPA scores). Frames are rendered server-side.
+        The raw plan and the verified plan, each rolled out in the MuJoCo simulator (the executor V-JEPA scores). Rendered server-side.
       </p>
-      {!data?.available && <button className="btn primary" onClick={render} disabled={busy}>{busy ? 'Rendering…' : '▶ Render in MuJoCo'}</button>}
+      {!after?.available && <button className="btn primary" onClick={render} disabled={busy}>{busy ? 'Rendering…' : '▶ Render before & after'}</button>}
       {err && <div style={{ marginTop: 10, color: 'var(--warn)', fontFamily: mono, fontSize: 12 }}>{err}</div>}
-      {data?.available && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${data.frames.length}, 1fr)`, gap: 10 }}>
-            {data.frames.map((f: string, i: number) => (
-              <img key={i} src={f} alt={`mujoco frame ${i}`} style={{ width: '100%', borderRadius: 8, border: '1px solid var(--line)' }} />
-            ))}
-          </div>
-          <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>{data.n_frames} frames · start → mid → end · engine: {data.engine}</div>
-        </div>
-      )}
+      {before?.available && strip('Before · raw plan', `${naiveHard ?? '?'} hard violations`, 'var(--neg)', before)}
+      {after?.available && strip('After · verified plan', '0 hard violations', 'var(--pos)', after)}
+      {after?.available && <div style={{ fontFamily: mono, fontSize: 11, color: 'var(--muted)', marginTop: 10 }}>{after.n_frames} frames each · start → mid → end · engine: {after.engine}</div>}
     </div>
   )
 }
@@ -1075,13 +1086,11 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
                 <BeforeAfter naive={live.naive_isaac_tasks} verified={tasks}
                   naiveHard={live.naive_verdict?.hard_violations ?? 0} n="06" />
               )}
-              {/* execution viewers, side by side (3D + physics) */}
-              {tasks && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 20 }}>
-                  <FloorScene3D tasks={tasks} n="07" />
-                  <MujocoFloor tasks={tasks} n="07b" />
-                </div>
-              )}
+              {/* animated 3D execution of the verified plan */}
+              {tasks && <FloorScene3D tasks={tasks} n="07" />}
+              {/* MuJoCo physics render, before -> after */}
+              {tasks && <MujocoFloor naive={live?.naive_isaac_tasks} verified={tasks}
+                naiveHard={live?.naive_verdict?.hard_violations} n="07b" />}
               {tasks && <Humanoid tasks={tasks} n="08" />}
               {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="09" />}
               {/* long-horizon benchmark: how we improve manufacturing evals */}
