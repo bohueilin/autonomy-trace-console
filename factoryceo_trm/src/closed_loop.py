@@ -34,7 +34,7 @@ from .repair_loop import repair_loop
 from .jepa import VJEPAWorldModel
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from isaac.plan_to_isaac import plan_to_tasks      # noqa: E402
+from isaac.floor_layout import mjcf_from_floor_layout  # noqa: E402
 
 
 class Executor:
@@ -91,13 +91,20 @@ class MuJoCoExecutor(Executor):
     def rollout(self, isaac_tasks: dict):
         import numpy as np
         import mujoco
-        model = (mujoco.MjModel.from_xml_path(self.model_xml) if self.model_xml
-                 else mujoco.MjModel.from_xml_string(_MJCF_FLOOR))
+        floor_layout = (isaac_tasks.get("meta") or {}).get("floor_layout")
+        if self.model_xml:
+            model = mujoco.MjModel.from_xml_path(self.model_xml)
+        elif floor_layout:
+            model = mujoco.MjModel.from_xml_string(mjcf_from_floor_layout(floor_layout))
+        else:
+            model = mujoco.MjModel.from_xml_string(_MJCF_FLOOR)
         data = mujoco.MjData(model)
         renderer = mujoco.Renderer(model, self.height, self.width)
         q = next(iter(isaac_tasks.get("robot_queues", {}).values()), [])
+        if not q:
+            q = next(iter(isaac_tasks.get("all_queues", {}).values()), [])
         waypoints = [t["machine_xy"] for t in q] or [[0.0, 0.0]]
-        cam = "iso" if self.model_xml is None else -1
+        cam = "iso" if (floor_layout or self.model_xml is None) else -1
         frames = []
         for k in range(self.n_frames):
             # walk the humanoid along the scheduled waypoints (kinematic mocap)

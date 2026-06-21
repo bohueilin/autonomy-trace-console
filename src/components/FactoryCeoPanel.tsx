@@ -746,8 +746,17 @@ function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false, annotat
   const stationDiffsRef = useRef(stationDiffs)
   stationDiffsRef.current = stationDiffs
   const [caption, setCaption] = useState('')
+  const floorLayout = tasks.meta?.floor_layout as Json | undefined
+  const bounds = (floorLayout?.bounds as Json) ?? { width: 12, depth: 12 }
+  const floorW = Number(bounds.width ?? 12)
+  const floorD = Number(bounds.depth ?? 12)
+  const stationMap: Record<string, Json> = (floorLayout?.stations as Record<string, Json>) ?? {}
   const machineXY: Record<string, number[]> = tasks.meta?.machines ?? {}
-  const stationIds = Object.keys(machineXY)
+  const stationEntries = Object.keys(stationMap).length
+    ? Object.entries(stationMap)
+    : Object.entries(machineXY).map(([id, xy]) => [id, { x: xy[0], y: xy[1], kind: 'machine' }] as [string, Json])
+  const stationIds = stationEntries.map(([id]) => id)
+  const kindCounts = (floorLayout?.kinds as Json) ?? {}
   useEffect(() => {
     const el = mount.current
     if (!el) return
@@ -762,6 +771,30 @@ function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false, annotat
       head: hex('--panel', 0xffffff),
       removed: hex('--neg', 0xc0392b), added: hex('--pos', 0x2ecc71),
       changed: hex('--warn', 0xe67e22),
+      dock: hex('--brand', 0x2f6fed), aisle: hex('--line', 0xb0b8c4),
+      staging: hex('--warn', 0xe6a817), target: hex('--pos', 0x3d9970),
+      machine: hex('--accent', 0x3f5fe0), source: hex('--muted', 0x888888),
+      no_go: hex('--neg', 0xc0392b),
+    }
+    const kindColor = (kind: string) => {
+      if (kind === 'dock') return C.dock
+      if (kind === 'aisle') return C.aisle
+      if (kind === 'staging') return C.staging
+      if (kind === 'target') return C.target
+      if (kind === 'machine') return C.machine
+      if (kind === 'source') return C.source
+      if (kind === 'no_go') return C.no_go
+      return C.station
+    }
+    const kindSize = (kind: string): [number, number, number] => {
+      if (kind === 'dock') return [1.35, 0.55, 1.0]
+      if (kind === 'aisle') return [0.35, 0.85, 0.35]
+      if (kind === 'staging') return [1.05, 0.5, 0.75]
+      if (kind === 'target') return [0.85, 0.55, 0.85]
+      if (kind === 'machine') return [1.0, 0.6, 1.0]
+      if (kind === 'source') return [0.45, 0.35, 0.45]
+      if (kind === 'no_go') return [1.0, 0.08, 1.0]
+      return [0.9, 0.55, 0.9]
     }
     const diffColor = (kind: string) => {
       if (kind === 'removed') return C.removed
@@ -773,29 +806,42 @@ function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false, annotat
     const W = el.clientWidth || 640, H = height
     const scene = new THREE.Scene()
     scene.background = null
-    const cam = new THREE.PerspectiveCamera(45, W / H, 0.1, 100)
-    cam.position.set(6, 7, 9); cam.lookAt(2, 0, 2)
+    const cx = floorW / 2
+    const cz = floorD / 2
+    const cam = new THREE.PerspectiveCamera(45, W / H, 0.1, Math.max(100, floorW + floorD))
+    cam.position.set(floorW * 0.75, Math.max(8, floorW * 0.55), floorD * 1.15)
+    cam.lookAt(cx, 0, cz)
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setSize(W, H); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
     el.appendChild(renderer.domElement)
     scene.add(new THREE.AmbientLight(0xffffff, 0.7))
-    const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(5, 10, 7); scene.add(key)
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: C.floor, roughness: 1 }))
-    floor.rotation.x = -Math.PI / 2; floor.position.set(2, 0, 2); scene.add(floor)
-    const grid = new THREE.GridHelper(12, 12, C.grid, C.grid); grid.position.set(2, 0.01, 2); scene.add(grid)
+    const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(floorW, floorD, 10); scene.add(key)
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorW, floorD), new THREE.MeshStandardMaterial({ color: C.floor, roughness: 1 }))
+    floor.rotation.x = -Math.PI / 2; floor.position.set(cx, 0, cz); scene.add(floor)
+    const gridDiv = Math.max(8, Math.round(Math.max(floorW, floorD) / 1.35))
+    const grid = new THREE.GridHelper(Math.max(floorW, floorD), gridDiv, C.grid, C.grid)
+    grid.position.set(cx, 0.01, cz); scene.add(grid)
     const stationMesh: Record<string, THREE.Mesh> = {}
     const stationRing: Record<string, THREE.Mesh> = {}
-    const pos3 = (xy: number[]) => new THREE.Vector3(xy[0] * 2, 0, xy[1] * 2)
-    ids.forEach((id) => {
-      const p = pos3(machineXY[id])
-      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), new THREE.MeshStandardMaterial({ color: C.station }))
-      m.position.set(p.x, 0.3, p.z); scene.add(m); stationMesh[id] = m
+    const pos3 = (xy: number[]) => new THREE.Vector3(xy[0], 0, xy[1])
+    stationEntries.forEach(([id, st]) => {
+      const kind = String(st.kind ?? 'machine')
+      const xy = [Number(st.x ?? 0), Number(st.y ?? 0)]
+      const [sx, sy, sz] = kindSize(kind)
+      const p = pos3(xy)
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(sx, sy, sz),
+        new THREE.MeshStandardMaterial({ color: kindColor(kind) }),
+      )
+      m.position.set(p.x, sy / 2, p.z); scene.add(m); stationMesh[id] = m
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.72, 0.06, 8, 32),
+        new THREE.TorusGeometry(Math.max(sx, sz) * 0.72, 0.06, 8, 32),
         new THREE.MeshStandardMaterial({ color: C.changed, transparent: true, opacity: 0 }),
       )
       ring.rotation.x = Math.PI / 2; ring.position.set(p.x, 0.02, p.z); scene.add(ring); stationRing[id] = ring
     })
+    const kindById: Record<string, string> = {}
+    stationEntries.forEach(([id, st]) => { kindById[id] = String(st.kind ?? 'machine') })
     const accent = new THREE.Color(C.accent)
     const robots = Object.entries(queues).map(([rid, q]) => {
       const g = new THREE.Group()
@@ -825,7 +871,7 @@ function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false, annotat
           ringMat.opacity = 0.55 * pulse
           ringMat.color.setHex(diffColor(dk))
         } else {
-          mat.color.setHex(C.station)
+          mat.color.setHex(kindColor(kindById[id] ?? 'machine'))
           mat.emissive.setHex(0)
           mat.emissiveIntensity = 0
           ringMat.opacity = 0
@@ -859,14 +905,19 @@ function FloorScene3D({ tasks, n, accentVar, height = 320, bare = false, annotat
     const onResize = () => { const w = el.clientWidth || 640; cam.aspect = w / H; cam.updateProjectionMatrix(); renderer.setSize(w, H) }
     window.addEventListener('resize', onResize)
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize); renderer.dispose(); el.removeChild(renderer.domElement) }
-  }, [tasks, accentVar, height, annotated, stationIds.join(','), simHr !== undefined])
+  }, [tasks, accentVar, height, annotated, stationIds.join(','), simHr !== undefined, floorW, floorD])
   const canvas = (
     <div style={{ position: 'relative', width: '100%', height, borderRadius: 10, overflow: 'hidden', background: 'var(--bg)' }}>
       {annotated && stationIds.length > 0 && (
         <div style={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', gap: 6, flexWrap: 'wrap', zIndex: 2, pointerEvents: 'none' }}>
-          {stationIds.map((id) => (
-            <span key={id} style={{ fontFamily: mono, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'color-mix(in srgb, var(--panel) 88%, transparent)', border: '1px solid var(--line)', color: 'var(--muted)' }}>{id} station</span>
+          {Object.entries(kindCounts).filter(([, n]) => Number(n) > 0).map(([kind, n]) => (
+            <span key={kind} style={{ fontFamily: mono, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'color-mix(in srgb, var(--panel) 88%, transparent)', border: '1px solid var(--line)', color: 'var(--muted)' }}>
+              {n} {kind}
+            </span>
           ))}
+          <span style={{ fontFamily: mono, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'color-mix(in srgb, var(--panel) 88%, transparent)', border: '1px solid var(--line)', color: 'var(--muted)' }}>
+            {stationIds.length} stations · {floorW.toFixed(0)}×{floorD.toFixed(0)}m
+          </span>
           <span style={{ fontFamily: mono, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'color-mix(in srgb, var(--accent) 12%, transparent)', border: '1px solid var(--line)', color: 'var(--accent)' }}>● robot path</span>
         </div>
       )}

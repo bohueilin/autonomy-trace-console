@@ -32,7 +32,7 @@ from src.data_export import build_episode
 from src.intake import intake_state, warehouse_intake_state
 from src.llm import (DeterministicPlanner, FireworksPlanner, AnthropicPlanner,
                      VLLMPlanner, vision_caption, chat_json, fireworks_key)
-from isaac.plan_to_isaac import plan_to_tasks
+from isaac.plan_to_isaac import plan_to_tasks, layout_kwargs_from_stream
 
 app = FastAPI(title="FactoryCEO-TRM", version="1.0",
               description="Verifiable autonomous factory-operations brain.")
@@ -223,11 +223,14 @@ def plan_from_input(req: InputReq):
         cand = corrupt_plan(state, cand, seed=0, n_corruptions=6)
     episode = build_episode(state, cand, seed=0, K=60)
     final, _ = repair_loop(state, cand, K=60)
+    isaac_kw = layout_kwargs_from_stream(
+        layout=info.get("layout"), job_source=info.get("job_source"), floorplan=info.get("floorplan"),
+    )
     return {"episode": episode,
-            "isaac_tasks": plan_to_tasks(state, final),
+            "isaac_tasks": plan_to_tasks(state, final, **isaac_kw),
             # the RAW (pre-repair) plan as a humanoid queue, for the before->after
             # floor comparison: same scene, naive vs verified.
-            "naive_isaac_tasks": plan_to_tasks(state, cand),
+            "naive_isaac_tasks": plan_to_tasks(state, cand, **isaac_kw),
             "naive_verdict": {"hard_violations": evaluate(state, cand).n_hard},
             "intake": info,
             "planner": planner_status,
@@ -322,10 +325,13 @@ def plan_from_input_stream(req: InputReq):
             yield _sse({"type": "stage", "stage": "rationale", "message": "Generating operator-facing rationale from the final plan."})
             reasoning = _operator_reasoning(req.text, info, planner_status, caption)
 
+        isaac_kw = layout_kwargs_from_stream(
+            layout=info.get("layout"), job_source=info.get("job_source"), floorplan=info.get("floorplan"),
+        )
         result = {
             "episode": episode,
-            "isaac_tasks": plan_to_tasks(state, final),
-            "naive_isaac_tasks": plan_to_tasks(state, cand),
+            "isaac_tasks": plan_to_tasks(state, final, **isaac_kw),
+            "naive_isaac_tasks": plan_to_tasks(state, cand, **isaac_kw),
             "naive_verdict": {"hard_violations": verdict.n_hard},
             "intake": info,
             "planner": planner_status,

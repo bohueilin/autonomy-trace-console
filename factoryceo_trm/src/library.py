@@ -130,6 +130,14 @@ def build_run(arch: dict, base: int = 1) -> dict:
     res = evaluate(st, final)
     m = res.metrics
     naive_hard = evaluate(st, cand).n_hard
+    isaac_kw = {
+        "layout": arch.get("layout"),
+        "target_stations": job_stream.get("targets"),
+        "source_locations": sorted({
+            line["source_location"] for j in job_stream.get("jobs", []) for line in j.get("lines", [])
+        }),
+        "floorplan_id": arch.get("floorplan", {}).get("id"),
+    }
     catalog = {
         "id": arch["id"], "label": arch["label"], "industry": arch["seed"] or "general",
         "machines": [mm.id for mm in st.machines], "n_jobs": len(st.jobs),
@@ -145,8 +153,8 @@ def build_run(arch: dict, base: int = 1) -> dict:
     }
     return {
         "episode": ep,
-        "isaac_tasks": plan_to_tasks(st, final),
-        "naive_isaac_tasks": plan_to_tasks(st, cand),
+        "isaac_tasks": plan_to_tasks(st, final, **isaac_kw),
+        "naive_isaac_tasks": plan_to_tasks(st, cand, **isaac_kw),
         "naive_verdict": {"hard_violations": naive_hard},
         "intake": {"industry": "warehouse_ops", "n_jobs": len(st.jobs),
                    "source": "staer_warehouse_fixture", "summary": arch["label"],

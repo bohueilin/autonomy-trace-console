@@ -3511,10 +3511,10 @@
                     "reward": 0.794,
                     "advantage": 0.392,
                     "trace_id": "7eec4599002846b0b1b9cad72595b8bb",
-                    "has_json": false,
+                    "has_json": true,
                     "chars": 6260,
                     "response_excerpt": "{\"quote_decisions\":[{\"rfq_id\":\"R17\",\"accept\":true,\"price_per_unit\":0.2,\"promised_day\":12},{\"rfq_id\":\"R18\",\"accept\":false}],\"procurement\":[{\"material\":\"ABS\",\"quantity_kg\":1449.2,\"expedite\":false},{\"material\":\"Nylon\",\"quantity_kg\":529.2,\"expedite\":false},{\"material\":\"PP\",\"quantity_kg\":363.9,\"expedite\":false}],\"schedule\":[{\"job_id\":\"J103\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":0,\"end\":5,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":5,\"end\":11,\"overtime\":false},{\"job_id\":\"J103\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":11,\"end\":15,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":15,\"end\":18,\"overtime\":false},{\"job_id\":\"J112\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":18,\"end\":24,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":24,\"end\":29,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":29,\"end\":33,\"overtime\":false},{\"job_id\":\"J105\",\"operation_id\":\"op2\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":33,\"end\":36,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":36,\"end\":39,\"overtime\":false},{\"job_id\":\"J115\",\"operation_id\":\"op1\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":39,\"end\":42,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op0\",\"machine_id\":\"R1\",\"operator_id\":\"R1\",\"start\":42,\"end\":48,\"overtime\":false},{\"job_id\":\"J120\",\"operation_id\":\"op1\",\"",
-                    "hard_violations": null
+                    "hard_violations": 47
                   }
                 ],
                 "sim_rollout": "R02"

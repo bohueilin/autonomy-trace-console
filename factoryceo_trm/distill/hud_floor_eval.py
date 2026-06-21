@@ -41,7 +41,8 @@ from hud.eval import Job, Taskset  # noqa: E402
 
 from distill.hud_app import operate_floor  # noqa: E402
 from distill.hud_rollout_util import run_taskset_with_retry  # noqa: E402
-from isaac.plan_to_isaac import plan_to_tasks  # noqa: E402
+from isaac.plan_to_isaac import plan_to_tasks, layout_kwargs_from_stream  # noqa: E402
+from src.job_sources import build_job_stream  # noqa: E402
 from src.floor_prompt import JSON_SYSTEM_PROMPT, floor_prompt_and_state  # noqa: E402
 from src.hud_env import extract_json_object, group_relative  # noqa: E402
 from src.library import ARCHETYPES  # noqa: E402
@@ -143,12 +144,19 @@ def _model_candidate_from_answer(*, floor_id: str, seed: int, model: str, answer
         state = floor_prompt_and_state(floor_id, seed)[1]
         plan = ActionPlan.model_validate(raw)
         res = evaluate(state, plan)
+        arch = next((a for a in ARCHETYPES if a["id"] == floor_id), None)
+        isaac_kw = {}
+        if arch:
+            js = build_job_stream(arch, seed)
+            isaac_kw = layout_kwargs_from_stream(
+                layout=arch.get("layout"), job_source=js, floorplan=arch.get("floorplan"),
+            )
         candidate.update({
             "ok": True,
             "hard_violations": res.n_hard,
             "verifier_reward": round(res.reward, 2),
             "metrics": res.metrics,
-            "isaac_tasks": plan_to_tasks(state, plan),
+            "isaac_tasks": plan_to_tasks(state, plan, **isaac_kw),
         })
     except Exception as exc:  # pragma: no cover - artifact should preserve the failure reason
         candidate.update({"ok": False, "error": f"{type(exc).__name__}: {exc}"[:300]})
