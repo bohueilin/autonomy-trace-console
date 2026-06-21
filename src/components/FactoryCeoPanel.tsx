@@ -69,7 +69,11 @@ export async function extractFrames(src: string, count = 2): Promise<string[]> {
 // Hosted floor library: pre-built, pre-verified archetype floors. A user opens one
 // and gets a 0-violation plan with zero input (the "no input required" path).
 function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
-  const { data } = useJson(`${BRAIN}/library`)
+  // brain-first; fall back to the precomputed static catalog only if the brain
+  // is momentarily unreachable, so the entry never shows blank.
+  const live = useJson(`${BRAIN}/library`)
+  const stat = useJson('/factoryceo/library.json')
+  const data = live.data ?? stat.data
   const floors: Json[] = data?.floors ?? []
   const [busy, setBusy] = useState<string | null>(null)
   if (!floors.length) return null
@@ -80,7 +84,14 @@ function FloorLibrary({ onResult }: { onResult: (r: Json) => void }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: `${f.label} factory, ${f.n_jobs} jobs` }),
       })
-      if (r.ok) onResult(await r.json())
+      if (r.ok) { onResult(await r.json()); return }
+      throw new Error(String(r.status))
+    } catch {
+      // brain blip → static precomputed run for this floor
+      try {
+        const s = await fetch(`/factoryceo/library/${f.id}.json`)
+        if (s.ok) onResult(await s.json())
+      } catch { /* ignore */ }
     } finally { setBusy(null) }
   }
   return (
@@ -937,6 +948,60 @@ function TeacherFeedback({ live, n }: { live: Json | null; n: string }) {
   )
 }
 
+// Legible "what the verifier caught" — the actual hard constraints the raw plan
+// broke, grouped and explained, then driven to zero. This is the real before/after.
+const VIO_LABEL: Record<string, string> = {
+  machine_overlap: 'Machine double-booked (two ops at once)',
+  capability_mismatch: 'Wrong machine for the operation',
+  operator_unavailable: 'Operator not on shift',
+  operator_unqualified: 'Operator lacks the skill',
+  material_shortage: 'Not enough material',
+  material_late: 'Material arrives after the op starts',
+  maintenance_conflict: 'Scheduled during machine maintenance',
+  precedence_violation: 'Operation order broken',
+  hallucinated_entity: 'References a machine/job that does not exist',
+  unscheduled_operation: 'Operation left unscheduled',
+  bad_window: 'Operation outside its allowed time window',
+  overlap: 'Two operations overlap',
+}
+
+function WhatWasFixed({ ep, naiveHard, n }: { ep: Json; naiveHard?: number; n: string }) {
+  const errs: Json[] = ep?.verifier_before?.errors ?? []
+  const before = ep?.verifier_before?.n_hard ?? naiveHard ?? errs.length
+  const after = ep?.verifier_after?.n_hard ?? 0
+  const groups: Record<string, Json[]> = {}
+  errs.forEach((e) => { (groups[e.type] ??= []).push(e) })
+  const sorted = Object.entries(groups).sort((a, b) => b[1].length - a[1].length)
+  return (
+    <div style={card}>
+      <Label n={n}>What the verifier caught — and the brain fixed</Label>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 16 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: 'var(--neg)' }}>{before}</span>
+        <span style={{ fontFamily: mono, color: 'var(--muted)' }}>broken in the raw plan</span>
+        <span style={{ color: 'var(--muted)', fontSize: 18 }}>→</span>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 30, color: 'var(--pos)' }}>{after}</span>
+        <span style={{ fontFamily: mono, color: 'var(--muted)' }}>after repair</span>
+      </div>
+      {sorted.length === 0 ? (
+        <div style={{ color: 'var(--muted)', fontFamily: mono, fontSize: 12 }}>raw plan was already feasible.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {sorted.map(([type, list]) => (
+            <div key={type} style={{ display: 'flex', gap: 12, alignItems: 'baseline', paddingBottom: 10, borderBottom: '1px solid var(--line)' }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--neg)', flexShrink: 0, marginTop: 5 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{VIO_LABEL[type] ?? type} <span style={{ fontFamily: mono, color: 'var(--neg)', fontSize: 12 }}>×{list.length}</span></div>
+                <div style={{ fontFamily: mono, fontSize: 11.5, color: 'var(--muted)', marginTop: 3 }}>{list[0]?.detail}</div>
+              </div>
+              <span style={{ fontFamily: mono, fontSize: 11, color: 'var(--pos)', flexShrink: 0 }}>✓ fixed</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, customerName, taskId }: { initial?: BrainInput | null; onRestart?: () => void; onRun?: (run: Json) => void; customerId?: string; customerName?: string; taskId?: string } = {}) {
   const { data: run, err: runErr } = useJson('/factoryceo/run.json')
   const { data: baseline } = useJson('/factoryceo/baseline.json')
@@ -945,10 +1010,10 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
   const [autoBusy, setAutoBusy] = useState(false)
   const [autoErr, setAutoErr] = useState<string | null>(null)
   const [pickBusy, setPickBusy] = useState<string | null>(null)
-  const [approved, setApproved] = useState(false)
+  const [adv, setAdv] = useState(false)
 
   // Set the live run and persist it to the current floor (profile store).
-  function applyRun(j: Json | null) { setLive(j); setApproved(false); if (j) onRun?.(j) }
+  function applyRun(j: Json | null) { setLive(j); if (j) onRun?.(j) }
 
   // Real backend call on the captured input (messy inputs / video frames).
   useEffect(() => {
@@ -998,7 +1063,7 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
         <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em' }}>
           Plan, verify, repair, execute.
         </h2>
-        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 640 }}>The brain compiles your floor, proposes a plan, and a deterministic verifier with recursive TRM repair drives it to zero violations before the humanoid runs it.</p>
+        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 640 }}>Start from our library of shop floors below. The brain plans each one, a deterministic verifier with recursive TRM repair drives it to zero violations, and the humanoid runs the optimal actions.</p>
         {onRestart && <button className="btn ghost" style={{ marginTop: 16 }} onClick={onRestart}>↻ Describe a different site</button>}
       </div>
 
@@ -1040,63 +1105,52 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
       {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
 
       <FloorLibrary onResult={applyRun} />
-      <StockGallery onPick={pickStock} busyId={pickBusy} />
-      <FactoryInput onResult={applyRun} />
 
       {!ep ? (
         <div style={{ ...card, color: runErr ? 'var(--neg)' : 'var(--muted)' }}>
-          {runErr ? 'Load /factoryceo/run.json (run.py → public/factoryceo/) or compile a factory above.' : 'Loading…'}
+          {runErr ? 'Open a shop floor from the library above to see the brain plan it.' : 'Loading…'}
         </div>
       ) : (
         <>
-          {/* ── workflow + shop-floor diagram, calibrate toward a task ── */}
+          {/* compiled floor (concise) */}
           <div style={card}>
-            <Label n="01">{isLive ? `Compiled factory, ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled factory state'}</Label>
+            <Label n="01">{isLive ? `Compiled floor · ${live.intake?.industry} · ${live.intake?.n_jobs} jobs` : 'Compiled floor'}</Label>
             {isLive && live.intake?.vision_caption && <p style={{ margin: '0 0 8px', color: 'var(--accent)', fontFamily: mono, fontSize: 12, lineHeight: 1.5 }}>👁 {live.intake.vision_caption}</p>}
-            {isLive && live.intake?.summary && <p style={{ margin: '0 0 10px', color: 'var(--text)' }}>{live.intake.summary}</p>}
-            <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '4px 0' }}>machines</div>
             <div>{(fs.machines ?? []).map((m: Json) => <Chip key={m.id}>{m.id} · {m.capabilities?.join('/')}</Chip>)}</div>
-            <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '10px 0 4px' }}>operators (human · robot)</div>
-            <div>{(fs.operators ?? []).map((o: Json) => <Chip key={o.id} tone={o.type === 'robot' ? 'var(--accent)' : undefined}>{o.id} · {o.skills?.join('/')}</Chip>)}</div>
-            <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '10px 0 4px' }}>jobs (showing {(fs.jobs ?? []).length})</div>
-            <div>{(fs.jobs ?? []).map((j: Json) => <Chip key={j.id}>{j.id} · due d{j.due_day} · {j.operations?.length} ops</Chip>)}</div>
+            <div style={{ fontFamily: mono, fontSize: 10, color: 'var(--muted)', margin: '10px 0 4px' }}>jobs</div>
+            <div>{(fs.jobs ?? []).slice(0, 8).map((j: Json) => <Chip key={j.id}>{j.id} · due d{j.due_day}</Chip>)}</div>
           </div>
 
-          {(fs.machines ?? []).length > 0 && <FloorPlanLasso machines={fs.machines} onResult={applyRun} />}
-          {live?.region && <RegionResult region={live.region} />}
+          {/* the legible before/after: which hard constraints broke, and that they're fixed */}
+          <WhatWasFixed ep={ep} naiveHard={live?.naive_verdict?.hard_violations} n="02" />
 
-          {/* ── brain plans, you approve (then the rest unlocks) ── */}
-          <RepairStepper ep={ep} n="03" />
-          {!approved ? (
-            <div style={{ ...card, borderColor: 'var(--accent)', textAlign: 'center' }}>
-              <p style={{ margin: '0 0 14px', color: 'var(--text)', lineHeight: 1.6 }}>
-                The brain repaired the plan to <b style={{ color: 'var(--pos)' }}>zero hard violations</b>. Approve it to run the baseline comparison, distillation, and execution.
-              </p>
-              <button className="btn primary" onClick={() => setApproved(true)}>✓ Approve plan & continue</button>
-            </div>
-          ) : (
+          {/* optimal actions, executing on the floor */}
+          {tasks && <FloorScene3D tasks={tasks} n="03" />}
+
+          {/* everything else is power-user detail, hidden by default */}
+          <div style={{ textAlign: 'center', margin: '6px 0 18px' }}>
+            <button className="btn ghost" onClick={() => setAdv((a) => !a)}>
+              {adv ? '▾ Hide details' : '▸ Show details — baseline · train · pipeline · physics · eval'}
+            </button>
+          </div>
+          {adv && (
             <>
-              {/* step 2: synth data + LLM-alone failures (baseline) */}
-              {baseline && <Baseline b={baseline} n="04" />}
-              {/* step 3: teacher → TRM (+Gemma) */}
-              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="05" customerId={customerId} customerName={customerName} taskId={isLive ? taskId : undefined} state={fs} />}
-              <Pipeline n="05b" />
-              {/* before -> after: the verifier's value, made visible */}
+              {(fs.machines ?? []).length > 0 && <FloorPlanLasso machines={fs.machines} onResult={applyRun} />}
+              {live?.region && <RegionResult region={live.region} />}
+              <RepairStepper ep={ep} n="a1" />
+              {baseline && <Baseline b={baseline} n="a2" />}
+              {run?.scoreboard && <TrainDistill rows={run.scoreboard} n="a3" customerId={customerId} customerName={customerName} taskId={isLive ? taskId : undefined} state={fs} />}
+              <Pipeline n="a4" />
               {live?.naive_isaac_tasks && tasks && (
-                <BeforeAfter naive={live.naive_isaac_tasks} verified={tasks}
-                  naiveHard={live.naive_verdict?.hard_violations ?? 0} n="06" />
+                <BeforeAfter naive={live.naive_isaac_tasks} verified={tasks} naiveHard={live.naive_verdict?.hard_violations ?? 0} n="a5" />
               )}
-              {/* animated 3D execution of the verified plan */}
-              {tasks && <FloorScene3D tasks={tasks} n="07" />}
-              {/* MuJoCo physics render, before -> after */}
-              {tasks && <MujocoFloor naive={live?.naive_isaac_tasks} verified={tasks}
-                naiveHard={live?.naive_verdict?.hard_violations} n="07b" />}
-              {tasks && <Humanoid tasks={tasks} n="08" />}
-              {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="09" />}
-              {/* long-horizon benchmark: how we improve manufacturing evals */}
-              <EvalReport n="10" />
-              {/* actionable feedback → patch the humanoid */}
-              <TeacherFeedback live={live} n="11" />
+              {tasks && <MujocoFloor naive={live?.naive_isaac_tasks} verified={tasks} naiveHard={live?.naive_verdict?.hard_violations} n="a6" />}
+              {tasks && <Humanoid tasks={tasks} n="a7" />}
+              {run?.scoreboard && <Scoreboard rows={run.scoreboard} n="a8" />}
+              <EvalReport n="a9" />
+              <TeacherFeedback live={live} n="a10" />
+              <StockGallery onPick={pickStock} busyId={pickBusy} />
+              <FactoryInput onResult={applyRun} />
             </>
           )}
         </>

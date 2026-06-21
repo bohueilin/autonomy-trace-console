@@ -1,0 +1,64 @@
+{
+  "floors": [
+    {
+      "id": "automotive_clips_brackets",
+      "label": "Automotive clips & brackets",
+      "industry": "automotive_clips_brackets",
+      "machines": [
+        "M1",
+        "M2",
+        "M3",
+        "M4"
+      ],
+      "n_jobs": 16,
+      "metrics": {
+        "reward": 15099,
+        "hard_violations": 0,
+        "on_time": 1.0,
+        "utilization": 0.045
+      },
+      "verified": true,
+      "naive_violations": 25
+    },
+    {
+      "id": "consumer_electronics_enclosures",
+      "label": "Electronics enclosures",
+      "industry": "consumer_electronics_enclosures",
+      "machines": [
+        "M1",
+        "M2",
+        "M3"
+      ],
+      "n_jobs": 16,
+      "metrics": {
+        "reward": 21227,
+        "hard_violations": 0,
+        "on_time": 0.875,
+        "utilization": 0.045
+      },
+      "verified": true,
+      "naive_violations": 20
+    },
+    {
+      "id": "medical_devices_eval",
+      "label": "Medical devices",
+      "industry": "medical_devices_eval",
+      "machines": [
+        "M1",
+        "M2",
+        "M3"
+      ],
+      "n_jobs": 16,
+      "metrics": {
+        "reward": 36624,
+        "hard_violations": 0,
+        "on_time": 0.812,
+        "utilization": 0.083
+      },
+      "verified": true,
+      "naive_violations": 10
+    }
+  ],
+  "count": 3,
+  "note": "pre-built, verified floor archetypes (static)"
+}
