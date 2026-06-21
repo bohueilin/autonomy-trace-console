@@ -17,6 +17,8 @@ import {
   type PhysicalDomain,
   type RobotEmbodiment,
 } from '../environmentPlan'
+import { VoiceInput } from './VoiceInput'
+import type { VoiceFields } from '../useVoiceWorkflow'
 
 const ROLE_LABEL: Record<CaptureRole, string> = {
   workflow_video: 'Workflow video',
@@ -88,6 +90,18 @@ export function CaptureConsole({
     return { req, manifest }
   }
 
+  // Voice intake pre-fills the form from speech (structured server-side by MiniMax).
+  // Only non-empty, valid fields override what's there; the operator still reviews.
+  function applyVoice(f: VoiceFields) {
+    if (f.outcome) setOutcome(f.outcome)
+    if (f.description) setDescription(f.description)
+    if (f.safetyRules && f.safetyRules.length) setRules(f.safetyRules.join('\n'))
+    if (f.domain && (PHYSICAL_DOMAINS as string[]).includes(f.domain)) setDomain(f.domain as PhysicalDomain)
+    if (f.embodiment && (ROBOT_EMBODIMENTS as string[]).includes(f.embodiment)) {
+      setEmbodiment(f.embodiment as RobotEmbodiment)
+    }
+  }
+
   function addFiles(files: FileList | File[]) {
     const next = Array.from(files).map((file, index) =>
       fileMetaToCaptureItem(
@@ -128,6 +142,8 @@ export function CaptureConsole({
           Upload workflow video, photos, SOPs, floor plans, forbidden examples, or paste a Google
           Drive link. In this demo we capture metadata only: nothing is uploaded or parsed.
         </p>
+
+        <VoiceInput onFields={applyVoice} />
 
         <div className="capture-layout">
           <div

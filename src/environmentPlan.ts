@@ -20,7 +20,7 @@ import {
   warehouseTasks,
   type WarehouseTask,
   type WarehouseTerminal,
-} from './warehouse'
+} from './warehouse.ts'
 
 export type PhysicalDomain =
   | 'manufacturing'

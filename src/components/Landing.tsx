@@ -13,9 +13,9 @@ const FLOW = [
 ]
 
 const PROOF = [
-  { v: 'Deterministic', l: 'oracle — never an LLM judge' },
-  { v: '0% / 0%', l: 'FAR / FRR on the sample eval' },
-  { v: 'Evidence-backed', l: 'tamper-evident, reproducible' },
+  { v: 'Deterministic scoring', l: 'a fixed algorithm decides — not an AI’s opinion' },
+  { v: 'FAR / FRR', l: 'measured and tunable per site — never promised' },
+  { v: 'Evidence-backed', l: 'tamper-evident and reproducible' },
 ]
 
 const WHO = [

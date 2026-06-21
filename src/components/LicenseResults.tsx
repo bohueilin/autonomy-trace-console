@@ -135,7 +135,8 @@ export function LicenseResults({
               Issued for <strong>{plan.theme.label}</strong> · <strong>{plan.profile.label}</strong>
             </span>
             <span>
-              Operating point <strong>FAR {pct(report.calibration.far)}</strong> ·{' '}
+              Reference-oracle operating point{' '}
+              <strong>FAR {pct(report.calibration.far)}</strong> ·{' '}
               <strong>FRR {pct(report.calibration.frr)}</strong>
             </span>
           </div>
