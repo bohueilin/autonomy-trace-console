@@ -728,14 +728,39 @@ export function FactoryCeoPanel({ initial, onRestart, onRun, customerId, custome
   const fs = ep?.observation?.factory_state ?? {}
   const isLive = !!live
 
+  const m = ep?.verifier_after?.metrics ?? {}
   return (
     <div>
-      <div style={{ ...card, borderColor: 'var(--brand)', background: 'transparent' }}>
+      {/* gradient hero (Fireworks-style band) */}
+      <div style={{
+        borderRadius: 18, padding: '30px 32px', marginBottom: 20, color: 'var(--text)',
+        background: 'linear-gradient(135deg, rgba(239,74,35,0.12), rgba(58,91,239,0.12) 60%, rgba(24,137,90,0.10))',
+        border: '1px solid var(--line)',
+      }}>
         <Label n="·">Operations studio</Label>
-        <h2 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600 }}>Plan → verify → repair → execute</h2>
-        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6 }}>The brain compiles your floor, proposes a plan, and a deterministic verifier with recursive TRM repair drives it to zero violations before the humanoid runs it.</p>
-        {onRestart && <button className="btn ghost" style={{ marginTop: 14 }} onClick={onRestart}>↻ Describe a different site</button>}
+        <h2 style={{ margin: '0 0 8px', fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, letterSpacing: '-0.02em' }}>
+          Plan, verify, repair, execute.
+        </h2>
+        <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 640 }}>The brain compiles your floor, proposes a plan, and a deterministic verifier with recursive TRM repair drives it to zero violations before the humanoid runs it.</p>
+        {onRestart && <button className="btn ghost" style={{ marginTop: 16 }} onClick={onRestart}>↻ Describe a different site</button>}
       </div>
+
+      {/* live stat strip — a dashboard row, not another block */}
+      {ep && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+          {[
+            { v: ep.verifier_after?.n_hard ?? 0, l: 'HARD VIOLATIONS', c: (ep.verifier_after?.n_hard ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)', big: true },
+            { v: `${Math.round((m.on_time_rate ?? 0) * 100)}%`, l: 'ON-TIME', c: 'var(--text)' },
+            { v: Math.round(m.profit ?? 0).toLocaleString(), l: 'PROFIT', c: 'var(--accent)' },
+            { v: m.safety_incidents ?? 0, l: 'SAFETY INCIDENTS', c: (m.safety_incidents ?? 0) === 0 ? 'var(--pos)' : 'var(--neg)' },
+          ].map((s, i) => (
+            <div key={i} style={{ background: 'var(--panel)', border: '1px solid var(--line)', borderTop: `3px solid ${s.c}`, borderRadius: 12, padding: '16px 18px' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, color: s.c, lineHeight: 1 }}>{s.v}</div>
+              <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.08em', color: 'var(--muted)', marginTop: 8 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {autoBusy && <div style={{ ...card, color: 'var(--accent)', fontFamily: mono, fontSize: 13 }}>▶ Brain compiling your captured input…</div>}
       {autoErr && <div style={{ ...card, color: 'var(--warn)', fontFamily: mono, fontSize: 12.5 }}>{autoErr}</div>}
