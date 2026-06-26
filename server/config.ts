@@ -36,6 +36,8 @@ export interface SnapliiConfig {
   perBuyCapUsd: number
   /** Server-enforced ceiling for total approved spend this process (USD). */
   dailyCapUsd: number
+  /** When false (default), an approved purchase is SIMULATED — no real money moves. */
+  live: boolean
 }
 
 export interface AppConfig {
@@ -96,6 +98,7 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     baseUrl: (get('SNAPLII_BASE_URL') ?? 'https://aipayment.snaplii.com').replace(/\/+$/, ''),
     perBuyCapUsd: Number(get('SNAPLII_PER_BUY_CAP_USD') ?? '60'),
     dailyCapUsd: Number(get('SNAPLII_DAILY_CAP_USD') ?? '120'),
+    live: get('SNAPLII_LIVE') === '1',
   }
 
   if (!nebius.apiKey) warnings.push('NEBIUS_API_KEY not set — the Nebius reference agent will be unavailable.')

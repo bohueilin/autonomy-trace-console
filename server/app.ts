@@ -27,6 +27,7 @@ import { ENVIRONMENT_NAME } from './evalVersions.ts'
 import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
 import { classifyIntent } from './passportIntentHandler.ts'
+import { connectWallet, quoteOrder, purchaseOrder } from './snapliiHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
@@ -212,6 +213,21 @@ export function createApp(config: AppConfig): Hono {
       ? 200
       : r.code === 'bad_request' ? 400 : r.code === 'no_key' ? 503 : r.code === 'timeout' ? 504 : 502
     return c.json(r, status)
+  })
+
+  // Snaplii wallet — real, scoped payments (key server-side only).
+  app.post('/api/passport/wallet/connect', async (c) => {
+    const r = await connectWallet(config.snaplii, config.snaplii.live)
+    return c.json(r, r.ok ? 200 : 503)
+  })
+  app.post('/api/passport/wallet/quote', async (c) => {
+    const r = await quoteOrder(await jsonBody(c), config.snaplii, config.episodeSecret)
+    return c.json(r, r.ok ? 200 : r.code === 'bad_request' || r.code === 'over_cap' ? 400 : 502)
+  })
+  app.post('/api/passport/wallet/purchase', async (c) => {
+    // A purchase is allowed ONLY with a valid one-shot, amount-bound approval token.
+    const r = await purchaseOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.snaplii.live)
+    return c.json(r, r.ok ? 200 : r.code === 'upstream' || r.code === 'no_key' ? 502 : 400)
   })
 
   return app

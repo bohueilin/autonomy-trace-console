@@ -3,6 +3,7 @@ import { usePassport } from './usePassport'
 import type { Speed } from './usePassport'
 import { Home } from './components/Home'
 import { RunHeader } from './components/RunHeader'
+import { WalletStrip } from './components/WalletStrip'
 import { PassportCard } from './components/PassportCard'
 import { IntentPanel } from './components/IntentPanel'
 import { AgentCollab } from './components/AgentCollab'
@@ -99,6 +100,8 @@ export function App() {
             </Section>
           </div>
         )}
+
+        <WalletStrip snap={snap} />
 
         <PlanTimeline snap={snap} />
         <ToolActivityFeed snap={snap} />
