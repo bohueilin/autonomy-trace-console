@@ -416,6 +416,18 @@ const remindersCommit: ToolAdapter = {
   },
 }
 
+// The engine's commit is simulated + deterministic; the REAL Discord post is fired
+// client-side (DiscordShare → /api/passport/discord/send) only after this approval.
+const discordPost: ToolAdapter = {
+  name: 'discord.post',
+  requiredCapability: 'social.post.commit',
+  riskLevel: 'medium',
+  sideEffecting: true,
+  async execute(input) {
+    return simulated('Discord message', { channel: str(input.channel, 'Game Night') })
+  },
+}
+
 const rideSubmit: ToolAdapter = {
   name: 'ride.submit',
   requiredCapability: 'ride.booking.submit',
@@ -472,6 +484,7 @@ export const CONNECTORS: Record<string, ToolAdapter> = Object.fromEntries(
     messagesSend,
     deliverySubmit,
     remindersCommit,
+    discordPost,
     rideSubmit,
     reservationSubmit,
   ].map((a) => [a.name, a]),

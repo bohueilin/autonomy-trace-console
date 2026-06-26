@@ -40,6 +40,43 @@ export interface SnapliiConfig {
   live: boolean
 }
 
+/**
+ * Approval-to-phone. ntfy.sh delivers a REAL push to the user's phone with no account
+ * (just install the ntfy app and subscribe to a topic); Twilio SMS is an optional add-on.
+ * Both are best-effort: with neither configured the UI shows a clear "simulation" state.
+ */
+export interface NotifyConfig {
+  ntfyBaseUrl: string
+  ntfyTopic?: string
+  twilioAccountSid?: string
+  twilioAuthToken?: string
+  twilioFrom?: string
+  /** The phone to notify (the user's own number). Masked everywhere it surfaces. */
+  approvalPhone?: string
+  /** Publicly reachable base URL (a tunnel) so the phone's "Approve" tap can reach the server. */
+  publicBaseUrl?: string
+}
+
+/** Discord — real group message via an incoming webhook (no bot token needed). */
+export interface DiscordConfig {
+  webhookUrl?: string
+  channelLabel: string
+}
+
+/**
+ * Concrete order / place context shown to the user. DoorDash has no public consumer API,
+ * so the food order itself is prepared/simulated — these are the real values we present and,
+ * for the address, share to Discord. Override any of them via .env.local.
+ */
+export interface DemoConfig {
+  deliveryAddress: string
+  orderVendor: string
+  orderItems: string[]
+  orderTotalUsd: number
+  orderEta: string
+  gamePlan: string
+}
+
 export interface AppConfig {
   port: number
   isProd: boolean
@@ -47,6 +84,9 @@ export interface AppConfig {
   insforge: InsforgeConfig
   gmi: GmiConfig
   snaplii: SnapliiConfig
+  notify: NotifyConfig
+  discord: DiscordConfig
+  demo: DemoConfig
   /** HMAC secret for signing stateless episode tokens + purchase-approval tokens. */
   episodeSecret: string
   /** True when episodeSecret is the insecure dev default — real money is refused in this case. */
@@ -112,6 +152,44 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     warnings.push('SNAPLII spend cap is invalid (<=0) — all purchases will be denied. Fix SNAPLII_*_CAP_USD.')
   }
 
+  const publicBaseUrl = (get('PUBLIC_BASE_URL') ?? '').replace(/\/+$/, '') || undefined
+  const notify: NotifyConfig = {
+    ntfyBaseUrl: (get('NTFY_BASE_URL') ?? 'https://ntfy.sh').replace(/\/+$/, ''),
+    ntfyTopic: get('NTFY_TOPIC') || undefined,
+    twilioAccountSid: get('TWILIO_ACCOUNT_SID') || undefined,
+    twilioAuthToken: get('TWILIO_AUTH_TOKEN') || undefined,
+    twilioFrom: get('TWILIO_FROM') || undefined,
+    approvalPhone: get('APPROVAL_PHONE') || undefined,
+    publicBaseUrl,
+  }
+  const discord: DiscordConfig = {
+    webhookUrl: get('DISCORD_WEBHOOK_URL') || undefined,
+    channelLabel: get('DISCORD_CHANNEL_LABEL') || 'Game Night',
+  }
+  // A positive USD amount, else the fallback (never NaN/<=0).
+  const usd = (raw: string | undefined, fallback: number): number => {
+    const n = Number(raw ?? fallback)
+    return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : fallback
+  }
+  const items = (get('DEMO_ORDER_ITEMS') ?? '2 Carne Asada Burritos · Chips & Guac · 2 Mexican Cokes')
+    .split(/[·,]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const demo: DemoConfig = {
+    deliveryAddress: get('DELIVERY_ADDRESS') || 'Home',
+    orderVendor: get('DEMO_ORDER_VENDOR') || 'La Taqueria · DoorDash',
+    orderItems: items.length ? items : ['Your usual order'],
+    orderTotalUsd: usd(get('DEMO_ORDER_TOTAL_USD'), 38.5),
+    orderEta: get('DEMO_ORDER_ETA') || '7:00 PM',
+    gamePlan: get('DEMO_GAME_PLAN') || 'Thursday 6:30 PM',
+  }
+  if (!notify.ntfyTopic && !(notify.twilioAccountSid && notify.twilioAuthToken && notify.twilioFrom && notify.approvalPhone)) {
+    warnings.push('No phone-approval channel set — approvals run in simulation (set NTFY_TOPIC for free real push, or TWILIO_* + APPROVAL_PHONE for SMS).')
+  } else if (!notify.publicBaseUrl) {
+    warnings.push('PUBLIC_BASE_URL not set — the phone push will arrive, but its "Approve" tap cannot reach this server. Approve in-app, or set a tunnel URL.')
+  }
+  if (!discord.webhookUrl) warnings.push('DISCORD_WEBHOOK_URL not set — the Discord share is simulated (shows the exact message it would post).')
+
   if (!nebius.apiKey) warnings.push('NEBIUS_API_KEY not set — the Nebius reference agent will be unavailable.')
   if (!insforge.baseUrl || !insforge.apiKey) {
     warnings.push('INSFORGE_* not set — per-run license history falls back to in-memory (single instance).')
@@ -138,5 +216,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, gmi, snaplii, episodeSecret, episodeSecretIsDev, warnings }
+  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, demo, episodeSecret, episodeSecretIsDev, warnings }
 }

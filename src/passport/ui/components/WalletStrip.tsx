@@ -10,7 +10,7 @@ import { money } from '../format'
  * connect → live quote → and once YOU approve the packet, the approval token is minted and
  * the purchase settles, server-side, exactly once. The browser never holds the key or a code.
  */
-export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
+export function WalletStrip({ snap, onPaid }: { snap: PassportSnapshot; onPaid?: (r: WalletReceipt) => void }) {
   const paidPkt = snap.approvals.find((a) => a.estimated_cost)
   const [status, setStatus] = useState<WalletStatus | null>(null)
   const [connecting, setConnecting] = useState(false)
@@ -52,14 +52,16 @@ export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
       }
       const r = await walletPurchase(token)
       if (cancel) return
-      if (r.ok) setReceipt(r)
-      else setError({ msg: r.error || 'Payment failed.', retry: r.code !== 'uncertain' })
+      if (r.ok) {
+        setReceipt(r)
+        onPaid?.(r)
+      } else setError({ msg: r.error || 'Payment failed.', retry: r.code !== 'uncertain' })
       setPaying(false)
     })()
     return () => {
       cancel = true
     }
-  }, [approved, quote, receipt, error])
+  }, [approved, quote, receipt, error, onPaid])
 
   if (!paidPkt) return null
 

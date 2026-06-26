@@ -50,6 +50,7 @@ const SPECS: CapabilitySpec[] = [
   { id: 'ride.booking.submit', label: 'Book ride', description: 'Actually book a ride and authorize payment.', risk: 'critical', sideEffecting: true },
   { id: 'reservation.submit', label: 'Confirm reservation', description: 'Actually confirm the restaurant reservation.', risk: 'medium', sideEffecting: true },
   { id: 'reminders.write.commit', label: 'Set reminders', description: 'Actually create the reminders.', risk: 'low', sideEffecting: true },
+  { id: 'social.post.commit', label: 'Post to Discord', description: 'Actually post a message to a real Discord group.', risk: 'high', sideEffecting: true },
   { id: 'device.control.live', label: 'Control device (live)', description: 'Take live control of a TV / device.', risk: 'high', sideEffecting: true },
   { id: 'streaming.purchase', label: 'Purchase streaming', description: 'Buy / rent streaming content.', risk: 'high', sideEffecting: true },
   { id: 'location.share.live', label: 'Share live location', description: 'Share the user’s live location continuously.', risk: 'high', sideEffecting: true },

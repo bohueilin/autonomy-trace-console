@@ -42,6 +42,8 @@ const WORKERS: Record<string, Agent> = {
   food: { id: 'concierge', name: 'Concierge Agent', role: 'Plans the food', mono: 'CN', hue: 30 },
   delivery: { id: 'concierge', name: 'Concierge Agent', role: 'Preps the order', mono: 'CN', hue: 30 },
   reminders: { id: 'scheduler', name: 'Scheduler Agent', role: 'Sets reminders', mono: 'SC', hue: 254 },
+  social: { id: 'squad', name: 'Squad Agent', role: 'Rallies your friends', mono: 'SQ', hue: 268 },
+  discord: { id: 'squad', name: 'Squad Agent', role: 'Rallies your friends', mono: 'SQ', hue: 268 },
 }
 
 const FALLBACK: Agent = { id: 'worker', name: 'Task Agent', role: 'Executes a step', mono: 'TA', hue: 220 }

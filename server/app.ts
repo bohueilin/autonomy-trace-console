@@ -28,6 +28,8 @@ import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
 import { classifyIntent } from './passportIntentHandler.ts'
 import { connectWallet, quoteOrder, authorizeOrder, purchaseOrder } from './snapliiHandler.ts'
+import { approvalStatus, phoneApprove, requestApproval } from './notifyHandler.ts'
+import { sendDiscord } from './discordHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
@@ -89,6 +91,22 @@ function extraKeys(body: Record<string, unknown>, allowed: string[]): string[] {
 
 const stepStatus = (r: { ok: boolean; code?: string }): ContentfulStatusCode =>
   r.ok ? 200 : r.code === 'bad_request' ? 400 : 502
+
+// Lightweight in-process throttle for the outbound-channel routes (defense vs a local script
+// hammering ntfy / Twilio / Discord and burning their quotas). Per-key fixed window — generous
+// enough for live demos + replays, tight enough to stop a spam loop.
+const channelHits = new Map<string, { n: number; resetAt: number }>()
+function channelThrottled(key: string, maxPerMin: number): boolean {
+  const now = Date.now()
+  const e = channelHits.get(key)
+  if (!e || now >= e.resetAt) {
+    channelHits.set(key, { n: 1, resetAt: now + 60_000 })
+    return false
+  }
+  if (e.n >= maxPerMin) return true
+  e.n++
+  return false
+}
 
 export function createApp(config: AppConfig): Hono {
   const runCfg = { nebius: config.nebius, insforge: config.insforge }
@@ -247,6 +265,44 @@ export function createApp(config: AppConfig): Hono {
     // Settles ONLY with a valid one-shot, amount/mode-bound approval token from /authorize.
     const r = await purchaseOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.snaplii.live)
     return c.json(r, r.ok ? 200 : r.code === 'upstream' || r.code === 'no_key' || r.code === 'uncertain' ? 502 : 400)
+  })
+
+  // Approval-to-phone (real push/SMS). request + status are same-origin (the web client);
+  // phone-approve is the ONE intentionally-public route (the phone taps it) and is protected
+  // by an unguessable, one-shot id — it carries no money authority of its own.
+  app.post('/api/passport/notify/approval', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (channelThrottled('notify', 40)) return c.json({ ok: false, error: 'rate_limited' }, 429)
+    const r = await requestApproval(await jsonBody(c), config.notify)
+    return c.json(r, 200)
+  })
+  app.get('/api/passport/notify/status', (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    return c.json(approvalStatus(c.req.query('id') ?? ''))
+  })
+  // Public (id-protected). POST is the ntfy action target; GET renders a friendly page when
+  // the link is opened in a browser. Both flip the same one-shot pending record.
+  app.post('/api/passport/notify/phone-approve', (c) => {
+    const r = phoneApprove(c.req.query('id') ?? '')
+    return c.json({ ok: r.ok, status: r.status }, r.ok ? 200 : 404)
+  })
+  app.get('/api/passport/notify/phone-approve', (c) => {
+    const r = phoneApprove(c.req.query('id') ?? '')
+    return c.html(r.html, r.ok ? 200 : 404)
+  })
+
+  // Discord group message — server composes the content; webhook (or simulated preview).
+  app.post('/api/passport/discord/send', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (channelThrottled('discord', 20)) return c.json({ ok: false, error: 'rate_limited' }, 429)
+    const r = await sendDiscord(await jsonBody(c), config.discord, config.demo)
+    return c.json(r, r.ok ? 200 : 502)
+  })
+
+  // Order / place context (delivery address, items, ETA) for the run view. Same-origin only.
+  app.get('/api/passport/order-context', (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    return c.json({ ok: true, context: config.demo })
   })
 
   return app

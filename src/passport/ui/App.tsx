@@ -1,9 +1,14 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePassport } from './usePassport'
 import type { Speed } from './usePassport'
 import { Home } from './components/Home'
 import { RunHeader } from './components/RunHeader'
+import { PhoneApproval } from './components/PhoneApproval'
+import { OrderDetails } from './components/OrderDetails'
 import { WalletStrip } from './components/WalletStrip'
+import { DiscordShare } from './components/DiscordShare'
+import { ResultsSummary } from './components/ResultsSummary'
+import type { ExecState } from './components/ResultsSummary'
 import { PassportCard } from './components/PassportCard'
 import { IntentPanel } from './components/IntentPanel'
 import { AgentCollab } from './components/AgentCollab'
@@ -15,6 +20,9 @@ import { AuditTraceViewer } from './components/AuditTraceViewer'
 import { PreventedPanel } from './components/PreventedPanel'
 import { Section } from './bits'
 import type { SessionStatus } from '../engine/session'
+import type { ScenarioSpec } from '../scenarios/types'
+import { fetchOrderContext } from '../orderContext'
+import type { OrderContext } from '../orderContext'
 
 const STAGES: { key: SessionStatus | 'planning'; label: string }[] = [
   { key: 'planning', label: 'Intent + grant' },
@@ -29,11 +37,33 @@ export function App() {
   const approvalsRef = useRef<HTMLDivElement>(null)
   const reviewApprovals = () => approvalsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
+  // Real-world execution outcomes (the Snaplii receipt + the Discord send), surfaced in the
+  // results summary. Reset on each fresh run so a replay starts clean.
+  const [exec, setExec] = useState<ExecState>({})
+  const [orderCtx, setOrderCtx] = useState<OrderContext | null>(null)
+  useEffect(() => {
+    let cancel = false
+    void fetchOrderContext().then((c) => {
+      if (!cancel) setOrderCtx(c)
+    })
+    return () => {
+      cancel = true
+    }
+  }, [])
+  const startRun = (s: ScenarioSpec) => {
+    setExec({})
+    pp.start(s)
+  }
+  const replayRun = () => {
+    setExec({})
+    pp.replay()
+  }
+
   if (!snap) {
     return (
       <div className="pp-app">
         <TopBar />
-        <Home onRun={pp.start} />
+        <Home onRun={startRun} />
         <Footer />
       </div>
     )
@@ -70,12 +100,14 @@ export function App() {
               {sp === 'live' ? '▶ Live' : sp === 'fast' ? '⏩ Fast' : '⤓ Instant'}
             </button>
           ))}
-          <button className="pp-speed-btn pp-replay-btn" onClick={pp.replay} title="Replay this scenario">↻ Replay</button>
+          <button className="pp-speed-btn pp-replay-btn" onClick={replayRun} title="Replay this scenario">↻ Replay</button>
         </div>
       </div>
 
       <div className="pp-run">
         <RunHeader snap={snap} onRevoke={pp.revoke} onReview={reviewApprovals} />
+
+        <ResultsSummary snap={snap} exec={exec} ctx={orderCtx} />
 
         <AgentCollab snap={snap} />
 
@@ -101,7 +133,13 @@ export function App() {
           </div>
         )}
 
-        <WalletStrip snap={snap} />
+        <PhoneApproval snap={snap} onApprove={pp.approve} />
+
+        <OrderDetails snap={snap} ctx={orderCtx} />
+
+        <WalletStrip snap={snap} onPaid={(r) => setExec((e) => ({ ...e, wallet: r }))} />
+
+        <DiscordShare snap={snap} ctx={orderCtx} onSent={(r) => setExec((e) => ({ ...e, discord: r }))} />
 
         <PlanTimeline snap={snap} />
         <ToolActivityFeed snap={snap} />
