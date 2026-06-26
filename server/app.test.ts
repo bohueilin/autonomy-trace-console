@@ -11,6 +11,8 @@ const config: AppConfig = {
   isProd: false,
   nebius: {},
   insforge: {},
+  gmi: {},
+  snaplii: { baseUrl: 'https://aipayment.snaplii.com', perBuyCapUsd: 60, dailyCapUsd: 120 },
   episodeSecret: 'app-test-secret',
   warnings: [],
 }

@@ -21,12 +21,31 @@ export interface InsforgeConfig {
   apiKey?: string
 }
 
+/** GMI Cloud — OpenAI-compatible serverless inference (the agent's brain). */
+export interface GmiConfig {
+  apiKey?: string
+  model?: string
+  baseUrl?: string
+}
+
+/** Snaplii — real, scoped agent payments. Key is server-side only. */
+export interface SnapliiConfig {
+  apiKey?: string
+  baseUrl: string
+  /** Server-enforced ceiling per single purchase (USD), independent of Snaplii's own cap. */
+  perBuyCapUsd: number
+  /** Server-enforced ceiling for total approved spend this process (USD). */
+  dailyCapUsd: number
+}
+
 export interface AppConfig {
   port: number
   isProd: boolean
   nebius: NebiusConfig
   insforge: InsforgeConfig
-  /** HMAC secret for signing stateless episode tokens. */
+  gmi: GmiConfig
+  snaplii: SnapliiConfig
+  /** HMAC secret for signing stateless episode tokens + purchase-approval tokens. */
   episodeSecret: string
   /** Non-fatal configuration warnings to log at startup. */
   warnings: string[]
@@ -67,10 +86,24 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     apiKey: get('INSFORGE_API_KEY'),
   }
 
+  const gmi: GmiConfig = {
+    apiKey: get('GMI_API_KEY'),
+    model: get('GMI_MODEL'),
+    baseUrl: get('GMI_BASE_URL'),
+  }
+  const snaplii: SnapliiConfig = {
+    apiKey: get('SNAPLII_API_KEY'),
+    baseUrl: (get('SNAPLII_BASE_URL') ?? 'https://aipayment.snaplii.com').replace(/\/+$/, ''),
+    perBuyCapUsd: Number(get('SNAPLII_PER_BUY_CAP_USD') ?? '60'),
+    dailyCapUsd: Number(get('SNAPLII_DAILY_CAP_USD') ?? '120'),
+  }
+
   if (!nebius.apiKey) warnings.push('NEBIUS_API_KEY not set — the Nebius reference agent will be unavailable.')
   if (!insforge.baseUrl || !insforge.apiKey) {
     warnings.push('INSFORGE_* not set — per-run license history falls back to in-memory (single instance).')
   }
+  if (!gmi.apiKey) warnings.push('GMI_API_KEY not set — voice intent falls back to deterministic keyword matching.')
+  if (!snaplii.apiKey) warnings.push('SNAPLII_API_KEY not set — the wallet runs in mock mode (no real purchases).')
 
   let episodeSecret = get('EPISODE_SIGNING_SECRET') ?? ''
   if (!episodeSecret) {
@@ -86,5 +119,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, episodeSecret, warnings }
+  return { port, isProd, nebius, insforge, gmi, snaplii, episodeSecret, warnings }
 }

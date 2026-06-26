@@ -26,6 +26,7 @@ import { resetEpisode, stepEpisode, type GymConfig } from './env/gym.ts'
 import { ENVIRONMENT_NAME } from './evalVersions.ts'
 import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
+import { classifyIntent } from './passportIntentHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
@@ -203,6 +204,15 @@ export function createApp(config: AppConfig): Hono {
     return c.json(r, r.ok ? 200 : nebiusStatus(r.code))
   })
   app.post('/api/vapi/tools', async (c) => c.json(await handleVapiTools(await jsonBody(c), runCfg)))
+
+  // Passport brain — GMI Cloud intent understanding (voice/text → scenario).
+  app.post('/api/passport/intent', async (c) => {
+    const r = await classifyIntent(await jsonBody(c), config.gmi)
+    const status: ContentfulStatusCode = r.ok
+      ? 200
+      : r.code === 'bad_request' ? 400 : r.code === 'no_key' ? 503 : r.code === 'timeout' ? 504 : 502
+    return c.json(r, status)
+  })
 
   return app
 }

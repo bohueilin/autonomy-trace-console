@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import type { ScenarioSpec } from '../../scenarios/types'
 import { SCENARIOS, SECONDARY_USE_CASES, getScenario } from '../../scenarios'
 import { IntentParser } from '../../engine/intentParser'
+import { classifyIntent, type BrainRoute } from '../../brainClient'
 import { useVoiceInput } from '../useVoiceInput'
 
 const PILLARS = [
@@ -20,15 +21,24 @@ const SPONSORS = [
 
 export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
   const [text, setText] = useState('')
+  const [thinking, setThinking] = useState(false)
+  const [heard, setHeard] = useState<BrainRoute | null>(null)
   const matched = text.trim() ? IntentParser.match(text, SCENARIOS) : null
 
-  // Speak → match → run. (Web Speech today; GMI-backed classification once keys land.)
-  const route = useCallback((t: string) => {
-    const m = IntentParser.match(t, SCENARIOS)
-    if (m) onRun(m)
+  // Speak/type → GMI brain classifies → "what I heard" → run the scenario.
+  const route = useCallback(async (t: string) => {
+    if (!t.trim()) return
+    setHeard(null)
+    setThinking(true)
+    const r = await classifyIntent(t)
+    setThinking(false)
+    if (!r) return
+    if (r.source === 'keyword' || !r.summary) { onRun(r.scenario); return }
+    setHeard(r)
+    window.setTimeout(() => onRun(r.scenario), 2600)
   }, [onRun])
-  const voice = useVoiceInput((t) => { setText(t); route(t) })
-  // While listening, show the live interim transcript; otherwise the typed/settled text.
+
+  const voice = useVoiceInput((t) => { setText(t); void route(t) })
   const shown = voice.listening ? voice.transcript : text
 
   return (
@@ -57,7 +67,7 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
             onClick={() => (voice.listening ? voice.stop() : voice.start())}
             aria-pressed={voice.listening}
             aria-label={voice.listening ? 'Stop listening' : 'Start voice input'}
-            disabled={!voice.supported}
+            disabled={!voice.supported || thinking}
             title={voice.supported ? 'Hold a thought and speak' : 'Voice not supported here — type instead'}
           >
             {voice.listening ? <span className="pp-mic-wave"><i /><i /><i /><i /></span> : '🎙'}
@@ -69,7 +79,8 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
               placeholder={voice.listening ? 'Listening… speak now' : 'e.g. Plan me a FIFA catch-up night and order my usual DoorDash…'}
               value={shown}
               onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && matched) onRun(matched) }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void route(shown) }}
+              disabled={thinking}
             />
             <div className="pp-voice-sub">
               {voice.error
@@ -77,17 +88,42 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
                 : voice.listening
                   ? <span className="pp-voice-live"><span className="pp-hero-dot" /> Listening…</span>
                   : matched
-                    ? <>Heard you — matched <b>{matched.title}</b>. Press <b>Run</b> or Enter.</>
+                    ? <>Heard you — looks like <b>{matched.title}</b>. Press <b>Run</b> or Enter.</>
                     : <>Try “airport pickup”, “FIFA night + DoorDash”, or “fill my night”.</>}
             </div>
           </div>
-          <button className="pp-btn pp-btn-primary pp-run-btn" disabled={!matched} onClick={() => matched && onRun(matched)}>
-            {matched ? `Run “${matched.title}”` : 'Run'}
+          <button className="pp-btn pp-btn-primary pp-run-btn" disabled={!shown.trim() || thinking} onClick={() => void route(shown)}>
+            {thinking ? 'Thinking…' : 'Run'}
           </button>
         </div>
         <div className="pp-voice-cursor">
           🖱 Prefer to dictate? <b>VoiceCursor</b> types straight into this box on Mac, Windows, iOS &amp; Android — speak anywhere.
         </div>
+
+        {thinking && (
+          <div className="pp-brain pp-brain-thinking">
+            <span className="pp-brain-orb" aria-hidden="true" />
+            <div className="pp-brain-tx">
+              <b>Origin is understanding your intent…</b>
+              <span className="pp-brain-sub">Inference by GMI Cloud<span className="pp-think-dots"><i /><i /><i /></span></span>
+            </div>
+          </div>
+        )}
+        {heard && !thinking && (
+          <div className="pp-brain pp-brain-heard">
+            <div className="pp-brain-head">
+              <span className="pp-brain-orb" aria-hidden="true" />
+              <b>Here’s what I heard</b>
+              <span className={`pp-brain-src pp-brain-src-${heard.source}`}>{heard.source === 'gmi' ? '✨ GMI Cloud' : 'matched'}</span>
+            </div>
+            {heard.summary && <p className="pp-brain-summary">“{heard.summary}”</p>}
+            {heard.personalization && <p className="pp-brain-personal">I’ll honor: <b>{heard.personalization}</b></p>}
+            <div className="pp-brain-go">
+              <span>→ Starting <b>{heard.scenario.title}</b></span>
+              <button className="pp-btn pp-btn-primary" onClick={() => onRun(heard.scenario)}>Run now →</button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="pp-scenarios">
