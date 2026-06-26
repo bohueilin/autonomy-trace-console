@@ -26,11 +26,19 @@ function clamp(v: unknown, n: number): string {
     .slice(0, n)
 }
 
-/** Only post to a genuine Discord webhook host (defense in depth — the URL is server-config). */
+/**
+ * Only post to a genuine Discord *webhook* endpoint (defense in depth — the URL is server-config).
+ * Requires the /api/webhooks/ path too, so a pasted channel link (discord.com/channels/...) is
+ * rejected and we fall back to the simulated preview instead of POSTing to the wrong endpoint.
+ */
 function isDiscordWebhook(url: string): boolean {
   try {
     const h = new URL(url)
-    return h.protocol === 'https:' && /(^|\.)(discord\.com|discordapp\.com)$/.test(h.hostname)
+    return (
+      h.protocol === 'https:' &&
+      /(^|\.)(discord\.com|discordapp\.com)$/.test(h.hostname) &&
+      /^\/api\/webhooks\/\d+\/[\w-]+/.test(h.pathname)
+    )
   } catch {
     return false
   }
