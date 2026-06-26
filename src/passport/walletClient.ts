@@ -1,6 +1,9 @@
 // Client seam to the Snaplii wallet. All real-money logic lives on the server
-// (key + caps + one-shot token + masking). The browser only ever asks our own
+// (key + caps + reserve + one-shot token + masking). The browser only asks our own
 // /api/passport/wallet/* routes; it never sees the Snaplii key or raw codes.
+//
+// Flow: connect → quote (price + a NON-spendable claim) → authorize (your approval
+// mints the one-shot token) → purchase (settles). One attempt; never auto-retries.
 
 export interface WalletStatus {
   connected: boolean
@@ -14,7 +17,7 @@ export interface WalletQuote {
   currency: string
   cashback: number
   brand: string
-  approval_token: string
+  quote_claim: string
 }
 export interface WalletReceipt {
   ok: boolean
@@ -23,6 +26,8 @@ export interface WalletReceipt {
   brand: string
   masked_code: string
   message: string
+  error?: string
+  code?: string
 }
 
 export async function walletConnect(): Promise<WalletStatus | null> {
@@ -43,22 +48,36 @@ export async function walletQuote(amount: number, intent: string): Promise<Walle
       body: JSON.stringify({ amount, intent }),
     })
     const d = (await r.json()) as WalletQuote & { ok?: boolean }
-    return d.ok && d.approval_token ? d : null
+    return d.ok && d.quote_claim ? d : null
   } catch {
     return null
   }
 }
 
-export async function walletPurchase(approval_token: string): Promise<WalletReceipt | null> {
+/** The approval step: exchange a quote for a one-shot purchase token (only after the user approves). */
+export async function walletAuthorize(quote_claim: string): Promise<string | null> {
+  try {
+    const r = await fetch('/api/passport/wallet/authorize', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ quote_claim }),
+    })
+    const d = (await r.json()) as { ok?: boolean; approval_token?: string }
+    return d.ok && d.approval_token ? d.approval_token : null
+  } catch {
+    return null
+  }
+}
+
+export async function walletPurchase(approval_token: string): Promise<WalletReceipt> {
   try {
     const r = await fetch('/api/passport/wallet/purchase', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ approval_token }),
     })
-    const d = (await r.json()) as WalletReceipt & { ok?: boolean }
-    return d.ok ? d : null
+    return (await r.json()) as WalletReceipt
   } catch {
-    return null
+    return { ok: false, simulated: false, amount: 0, brand: 'DoorDash', masked_code: '', message: '', error: 'Network error reaching the wallet.', code: 'network' }
   }
 }

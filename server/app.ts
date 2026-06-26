@@ -27,7 +27,7 @@ import { ENVIRONMENT_NAME } from './evalVersions.ts'
 import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
 import { classifyIntent } from './passportIntentHandler.ts'
-import { connectWallet, quoteOrder, purchaseOrder } from './snapliiHandler.ts'
+import { connectWallet, quoteOrder, authorizeOrder, purchaseOrder } from './snapliiHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
@@ -215,19 +215,38 @@ export function createApp(config: AppConfig): Hono {
     return c.json(r, status)
   })
 
-  // Snaplii wallet — real, scoped payments (key server-side only).
+  // Snaplii wallet — real, scoped payments (key server-side only). Local-only:
+  // reject any cross-origin browser caller (defense vs CSRF on the money routes).
+  const walletOriginOk = (origin: string | undefined): boolean => {
+    if (!origin) return true // same-origin / non-browser (the Vite proxy is same-origin)
+    try {
+      const h = new URL(origin).hostname
+      return h === 'localhost' || h === '127.0.0.1'
+    } catch {
+      return false
+    }
+  }
   app.post('/api/passport/wallet/connect', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
     const r = await connectWallet(config.snaplii, config.snaplii.live)
     return c.json(r, r.ok ? 200 : 503)
   })
   app.post('/api/passport/wallet/quote', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
     const r = await quoteOrder(await jsonBody(c), config.snaplii, config.episodeSecret)
     return c.json(r, r.ok ? 200 : r.code === 'bad_request' || r.code === 'over_cap' ? 400 : 502)
   })
+  // The human-approval step: exchanges a quote for a one-shot, reserved, mode-bound token.
+  app.post('/api/passport/wallet/authorize', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    const r = authorizeOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.episodeSecretIsDev, config.snaplii.live)
+    return c.json(r, r.ok ? 200 : r.code === 'insecure_secret' ? 503 : 400)
+  })
   app.post('/api/passport/wallet/purchase', async (c) => {
-    // A purchase is allowed ONLY with a valid one-shot, amount-bound approval token.
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    // Settles ONLY with a valid one-shot, amount/mode-bound approval token from /authorize.
     const r = await purchaseOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.snaplii.live)
-    return c.json(r, r.ok ? 200 : r.code === 'upstream' || r.code === 'no_key' ? 502 : 400)
+    return c.json(r, r.ok ? 200 : r.code === 'upstream' || r.code === 'no_key' || r.code === 'uncertain' ? 502 : 400)
   })
 
   return app

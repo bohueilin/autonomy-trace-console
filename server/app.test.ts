@@ -14,6 +14,7 @@ const config: AppConfig = {
   gmi: {},
   snaplii: { baseUrl: 'https://aipayment.snaplii.com', perBuyCapUsd: 60, dailyCapUsd: 120, live: false },
   episodeSecret: 'app-test-secret',
+  episodeSecretIsDev: false,
   warnings: [],
 }
 

@@ -49,6 +49,8 @@ export interface AppConfig {
   snaplii: SnapliiConfig
   /** HMAC secret for signing stateless episode tokens + purchase-approval tokens. */
   episodeSecret: string
+  /** True when episodeSecret is the insecure dev default — real money is refused in this case. */
+  episodeSecretIsDev: boolean
   /** Non-fatal configuration warnings to log at startup. */
   warnings: string[]
 }
@@ -93,12 +95,21 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     model: get('GMI_MODEL'),
     baseUrl: get('GMI_BASE_URL'),
   }
+  // Caps are a real-money safety ceiling — a malformed value must FAIL CLOSED (0 = deny),
+  // never silently become NaN (which would disable the cap) or absurdly large.
+  const cap = (raw: string | undefined, fallback: number): number => {
+    const n = Number(raw ?? fallback)
+    return Number.isFinite(n) && n > 0 && n <= 100000 ? n : 0
+  }
   const snaplii: SnapliiConfig = {
     apiKey: get('SNAPLII_API_KEY'),
     baseUrl: (get('SNAPLII_BASE_URL') ?? 'https://aipayment.snaplii.com').replace(/\/+$/, ''),
-    perBuyCapUsd: Number(get('SNAPLII_PER_BUY_CAP_USD') ?? '60'),
-    dailyCapUsd: Number(get('SNAPLII_DAILY_CAP_USD') ?? '120'),
+    perBuyCapUsd: cap(get('SNAPLII_PER_BUY_CAP_USD'), 60),
+    dailyCapUsd: cap(get('SNAPLII_DAILY_CAP_USD'), 120),
     live: get('SNAPLII_LIVE') === '1',
+  }
+  if (snaplii.live && (snaplii.perBuyCapUsd === 0 || snaplii.dailyCapUsd === 0)) {
+    warnings.push('SNAPLII spend cap is invalid (<=0) — all purchases will be denied. Fix SNAPLII_*_CAP_USD.')
   }
 
   if (!nebius.apiKey) warnings.push('NEBIUS_API_KEY not set — the Nebius reference agent will be unavailable.')
@@ -109,12 +120,17 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
   if (!snaplii.apiKey) warnings.push('SNAPLII_API_KEY not set — the wallet runs in mock mode (no real purchases).')
 
   let episodeSecret = get('EPISODE_SIGNING_SECRET') ?? ''
+  let episodeSecretIsDev = false
   if (!episodeSecret) {
     if (isProd) {
       throw new Error('EPISODE_SIGNING_SECRET is required in production (signs stateless episode tokens).')
     }
     episodeSecret = DEV_EPISODE_SECRET
+    episodeSecretIsDev = true
     warnings.push('EPISODE_SIGNING_SECRET not set — using an insecure dev secret. Do NOT use in production.')
+  }
+  if (snaplii.live && episodeSecretIsDev) {
+    warnings.push('SNAPLII_LIVE=1 with the insecure dev signing secret — real purchases will be REFUSED. Set EPISODE_SIGNING_SECRET.')
   }
 
   const port = Number(get('PORT') ?? '8787')
@@ -122,5 +138,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, gmi, snaplii, episodeSecret, warnings }
+  return { port, isProd, nebius, insforge, gmi, snaplii, episodeSecret, episodeSecretIsDev, warnings }
 }

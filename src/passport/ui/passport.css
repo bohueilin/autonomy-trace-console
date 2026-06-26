@@ -635,6 +635,7 @@
 .pp-wallet-receipt .pp-wallet-msg { font-size: 12px; color: var(--text-soft); }
 .pp-wallet-sim { background: var(--panel-2); border-color: var(--line-2); }
 .pp-wallet-sim b { color: var(--text-soft); }
+.pp-wallet-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--bad-ink); background: var(--bad-bg); border: 1px solid rgba(224,72,63,0.28); border-radius: 10px; padding: 10px 13px; }
 
 /* focus visibility */
 .pp-app button:focus-visible, .pp-app input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

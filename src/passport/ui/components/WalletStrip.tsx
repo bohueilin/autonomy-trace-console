@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PassportSnapshot } from '../../engine/session'
-import { walletConnect, walletQuote, walletPurchase } from '../../walletClient'
+import { walletConnect, walletQuote, walletAuthorize, walletPurchase } from '../../walletClient'
 import type { WalletStatus, WalletQuote, WalletReceipt } from '../../walletClient'
 import { Section } from '../bits'
 import { money } from '../format'
 
 /**
  * Real Snaplii wallet for any scenario with a payable action (a packet carrying a cost).
- * Connect → live quote → and once YOU approve the packet, the real (or simulated) purchase
- * fires server-side. The browser never holds the key or a raw redemption code.
+ * connect → live quote → and once YOU approve the packet, the approval token is minted and
+ * the purchase settles, server-side, exactly once. The browser never holds the key or a code.
  */
 export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
   const paidPkt = snap.approvals.find((a) => a.estimated_cost)
@@ -17,6 +17,8 @@ export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
   const [quote, setQuote] = useState<WalletQuote | null>(null)
   const [receipt, setReceipt] = useState<WalletReceipt | null>(null)
   const [paying, setPaying] = useState(false)
+  const [error, setError] = useState<{ msg: string; retry: boolean } | null>(null)
+  const firedRef = useRef(false) // pay exactly once — never auto-retry on failure
 
   const cost = paidPkt?.estimated_cost ?? null
   const approved = paidPkt ? paidPkt.status === 'approved' || paidPkt.status === 'consumed' : false
@@ -34,22 +36,30 @@ export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
     }
   }, [status?.connected, cost, quote, snap.scenario.id])
 
-  // Pay automatically once YOU approve the packet — your approval is the consent.
+  // Pay exactly once after YOU approve: authorize (mint one-shot token) → purchase (settle).
   useEffect(() => {
-    if (!approved || !quote || receipt || paying) return
+    if (!approved || !quote || receipt || error || firedRef.current) return
+    firedRef.current = true
     let cancel = false
     void (async () => {
       setPaying(true)
-      const r = await walletPurchase(quote.approval_token)
-      if (!cancel) {
-        setReceipt(r)
+      const token = await walletAuthorize(quote.quote_claim)
+      if (cancel) return
+      if (!token) {
+        setError({ msg: 'Could not authorize the payment (quote may have expired).', retry: true })
         setPaying(false)
+        return
       }
+      const r = await walletPurchase(token)
+      if (cancel) return
+      if (r.ok) setReceipt(r)
+      else setError({ msg: r.error || 'Payment failed.', retry: r.code !== 'uncertain' })
+      setPaying(false)
     })()
     return () => {
       cancel = true
     }
-  }, [approved, quote, receipt, paying])
+  }, [approved, quote, receipt, error])
 
   if (!paidPkt) return null
 
@@ -57,6 +67,12 @@ export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
     setConnecting(true)
     setStatus(await walletConnect())
     setConnecting(false)
+  }
+  const retry = () => {
+    // Fresh quote → fresh approval → fresh nonce (no double-charge). Only offered when safe.
+    setError(null)
+    setQuote(null)
+    firedRef.current = false
   }
 
   return (
@@ -91,7 +107,13 @@ export function WalletStrip({ snap }: { snap: PassportSnapshot }) {
             </div>
           )}
           {!approved && quote && !receipt && <div className="pp-wallet-await">Waiting for your approval above to release payment — nothing is charged until you approve.</div>}
-          {paying && <div className="pp-wallet-await">Paying with Snaplii…</div>}
+          {paying && <div className="pp-wallet-await">Authorizing &amp; paying with Snaplii…</div>}
+          {error && (
+            <div className="pp-wallet-error">
+              <span>⚠ {error.msg}</span>
+              {error.retry && <button className="pp-btn pp-btn-ghost" onClick={retry}>Try again</button>}
+            </div>
+          )}
           {receipt && (
             <div className={`pp-wallet-receipt ${receipt.simulated ? 'pp-wallet-sim' : ''}`}>
               <b>{receipt.simulated ? '✓ Simulated — no real charge' : '✓ Paid with Snaplii'}</b>
