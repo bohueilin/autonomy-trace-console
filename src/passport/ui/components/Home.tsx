@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ScenarioSpec } from '../../scenarios/types'
 import { SCENARIOS, SECONDARY_USE_CASES, getScenario } from '../../scenarios'
 import { IntentParser } from '../../engine/intentParser'
@@ -40,6 +40,9 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
 
   const voice = useVoiceInput((t) => { setText(t); void route(t) })
   const shown = voice.listening ? voice.transcript : text
+
+  const exRef = useRef<HTMLDivElement>(null)
+  const scrollEx = (dir: number) => exRef.current?.scrollBy({ left: dir * 344, behavior: 'smooth' })
 
   return (
     <div className="pp-home">
@@ -126,15 +129,26 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
         )}
       </section>
 
-      <section className="pp-scenarios">
-        <div className="pp-funnel-label pp-scenarios-label">Or start from an example</div>
-        <div className="pp-scenario-grid">
+      <section className="pp-examples">
+        <div className="pp-examples-head">
+          <div className="pp-funnel-label pp-scenarios-label">Or start from an example</div>
+          <div className="pp-examples-nav">
+            <button className="pp-arrow" onClick={() => scrollEx(-1)} aria-label="Previous examples">‹</button>
+            <button className="pp-arrow" onClick={() => scrollEx(1)} aria-label="Next examples">›</button>
+          </div>
+        </div>
+        <div className="pp-examples-track" ref={exRef}>
           {SCENARIOS.map((s, i) => (
-            <button key={s.id} className="pp-scenario-card" onClick={() => onRun(s)}>
+            <button key={s.id} className="pp-example-card" onClick={() => onRun(s)}>
               <span className="pp-scenario-num">{String(i + 1).padStart(2, '0')}</span>
               <span className="pp-scenario-title">{s.title}</span>
               <span className="pp-scenario-tag">{s.tagline}</span>
-              <span className="pp-scenario-prompt">“{s.prompt.slice(0, 110)}…”</span>
+              {s.tools && (
+                <div className="pp-example-tools">
+                  {s.tools.slice(0, 4).map((t) => <span key={t.name} className="pp-example-tool">{t.name}</span>)}
+                  {s.tools.length > 4 && <span className="pp-example-tool pp-example-tool-more">+{s.tools.length - 4}</span>}
+                </div>
+              )}
               <span className="pp-scenario-cta">Run scenario →</span>
             </button>
           ))}

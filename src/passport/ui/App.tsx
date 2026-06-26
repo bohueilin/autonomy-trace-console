@@ -1,6 +1,8 @@
+import { useRef } from 'react'
 import { usePassport } from './usePassport'
 import type { Speed } from './usePassport'
 import { Home } from './components/Home'
+import { RunHeader } from './components/RunHeader'
 import { PassportCard } from './components/PassportCard'
 import { IntentPanel } from './components/IntentPanel'
 import { AgentCollab } from './components/AgentCollab'
@@ -23,6 +25,8 @@ const STAGES: { key: SessionStatus | 'planning'; label: string }[] = [
 export function App() {
   const pp = usePassport()
   const snap = pp.snapshot
+  const approvalsRef = useRef<HTMLDivElement>(null)
+  const reviewApprovals = () => approvalsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
   if (!snap) {
     return (
@@ -69,20 +73,16 @@ export function App() {
         </div>
       </div>
 
-      <div className="pp-workspace">
-        <aside className="pp-rail">
-          <PassportCard snap={snap} onRevoke={pp.revoke} />
-        </aside>
+      <div className="pp-run">
+        <RunHeader snap={snap} onRevoke={pp.revoke} onReview={reviewApprovals} />
 
-        <main className="pp-main">
-          <IntentPanel snap={snap} />
+        <AgentCollab snap={snap} />
 
-          <AgentCollab snap={snap} />
-
-          {snap.approvals.length > 0 && (
+        {snap.approvals.length > 0 && (
+          <div ref={approvalsRef}>
             <Section
-              kicker="7 · Human approval gates"
-              title="Sensitive actions are prepared, never silently executed"
+              kicker="Your approval"
+              title="Sensitive actions are prepared — then wait for you"
               aside={<span className="pp-count">{snap.approvals.filter((a) => a.status === 'approved' || a.status === 'consumed').length}/{snap.approvals.length} approved</span>}
             >
               <div className="pp-approvals">
@@ -97,20 +97,30 @@ export function App() {
                 ))}
               </div>
             </Section>
-          )}
-
-          <PlanTimeline snap={snap} />
-          <ToolActivityFeed snap={snap} />
-
-          {snap.itinerary && <ItineraryPanel itinerary={snap.itinerary} />}
-
-          <PreventedPanel prevented={snap.prevented} />
-          <AuditTraceViewer snap={snap} />
-
-          <div className="pp-replay">
-            <button className="pp-btn pp-btn-ghost" onClick={pp.reset}>← Back to all scenarios</button>
           </div>
-        </main>
+        )}
+
+        <PlanTimeline snap={snap} />
+        <ToolActivityFeed snap={snap} />
+
+        {snap.itinerary && <ItineraryPanel itinerary={snap.itinerary} />}
+
+        <details className="pp-report">
+          <summary className="pp-report-summary">
+            <span>Full report</span>
+            <span className="pp-report-hint">grant · intent · what Passport prevented · tamper-evident audit</span>
+          </summary>
+          <div className="pp-report-body">
+            <PassportCard snap={snap} onRevoke={pp.revoke} />
+            <IntentPanel snap={snap} />
+            <PreventedPanel prevented={snap.prevented} />
+            <AuditTraceViewer snap={snap} />
+          </div>
+        </details>
+
+        <div className="pp-replay">
+          <button className="pp-btn pp-btn-ghost" onClick={pp.reset}>← Back to all scenarios</button>
+        </div>
       </div>
       <Footer />
     </div>

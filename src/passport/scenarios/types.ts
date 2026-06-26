@@ -65,11 +65,22 @@ export interface FinalizeContext {
   approvals: ApprovalPacket[]
 }
 
+/** A branded, human-readable tool the agent was granted (for the run-view header). */
+export interface ScenarioTool {
+  name: string
+  /** Plain-English what-for, e.g. "check your free nights". */
+  use: string
+  /** True if using this tool needs your explicit approval (e.g. a payment). */
+  approval?: boolean
+}
+
 export interface ScenarioSpec {
   id: string
   title: string
   tagline: string
   prompt: string
+  /** Friendly, branded tool list shown at the top of the run view ("Tools I can use"). */
+  tools?: ScenarioTool[]
   /** Normalized understanding of the request. */
   normalized_intent: string
   user_goal: string

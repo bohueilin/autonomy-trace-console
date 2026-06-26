@@ -5,6 +5,15 @@ export const airportPickup: ScenarioSpec = {
   id: 'airport-pickup',
   title: 'Airport Pickup',
   tagline: 'Coordinate a real-world, multi-party logistics chain — without overreach.',
+  tools: [
+    { name: 'Google Calendar', use: 'you stay until 5 PM' },
+    { name: 'Flight tracker', use: 'track the SFO arrival' },
+    { name: 'Uber · Lyft', use: 'book the ride', approval: true },
+    { name: 'Snaplii wallet', use: 'pay for the ride', approval: true },
+    { name: 'Contacts', use: 'your pickup person' },
+    { name: 'Messages', use: 'share safety details', approval: true },
+    { name: 'OpenTable', use: 'optional dinner after' },
+  ],
   prompt:
     'I am at a hackathon that ends at 5 PM, but I need to pick someone up from the airport at 3 PM. I do not want to leave the event early. Arrange for an Uber from the airport to the hackathon location, share safety details with both of us, track the flight status, and help us plan dinner afterward if needed.',
   normalized_intent: 'Route an arriving guest from SFO to the hackathon by ride while you stay; share safety details; track flight; plan optional dinner.',

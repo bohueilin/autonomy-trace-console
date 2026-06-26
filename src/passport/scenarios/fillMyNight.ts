@@ -5,6 +5,14 @@ export const fillMyNight: ScenarioSpec = {
   id: 'fill-my-night',
   title: 'Fill My Night',
   tagline: 'Turn a free evening into a high-value build session — safely.',
+  tools: [
+    { name: 'Google Calendar', use: 'confirm 5–9 PM is free' },
+    { name: 'Luma · Eventbrite', use: 'find a buildable hackathon' },
+    { name: 'Maps', use: 'keep it near downtown SF' },
+    { name: '1Password', use: 'scoped login to register', approval: true },
+    { name: 'Contacts', use: 'hackmates in SF tonight' },
+    { name: 'Messages', use: 'invite your hackmates', approval: true },
+  ],
   prompt:
     'I am free tomorrow night from 5–9 PM. Find me a hackathon event in downtown San Francisco that I can attend and build at. Prefer events or organizers I have attended before. Help me register, add it to my calendar, prepare materials if any, and share it with my hackmates who are in SF tomorrow night.',
   normalized_intent: 'Find + prepare a buildable SF hackathon tomorrow 5–9 PM, register, add to calendar, share with nearby hackmates.',

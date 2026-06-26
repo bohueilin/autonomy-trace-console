@@ -5,6 +5,16 @@ export const enrichMyLife: ScenarioSpec = {
   id: 'enrich-my-life',
   title: 'Enrich My Life',
   tagline: 'Protect a personal experience — spoiler-safe, frictionless, gated.',
+  tools: [
+    { name: 'Google Calendar', use: 'find a free evening this week' },
+    { name: 'Sports schedule', use: 'kickoff time — spoiler-safe' },
+    { name: 'YouTube TV', use: 'set up the replay, no score shown' },
+    { name: 'DoorDash history', use: 'repeat your usual order' },
+    { name: 'UberEats history', use: 'a backup food option' },
+    { name: 'Snaplii wallet', use: 'pay for the order', approval: true },
+    { name: 'Discord · Game Night', use: 'invite your friends', approval: true },
+    { name: 'Reminders', use: 'so you never miss it' },
+  ],
   prompt:
     'I really want to catch up on this FIFA game but I cannot watch it live. Find me a free night this week to watch it properly. Suggest a good location or at-home setup, plan food, and make it feel like a real experience without me needing to think.',
   normalized_intent: 'Create a spoiler-safe FIFA catch-up night this week: pick a free evening, plan viewing + food + reminders.',
