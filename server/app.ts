@@ -28,7 +28,7 @@ import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
 import { classifyIntent } from './passportIntentHandler.ts'
 import { connectWallet, quoteOrder, authorizeOrder, purchaseOrder } from './snapliiHandler.ts'
-import { approvalStatus, phoneApprove, requestApproval } from './notifyHandler.ts'
+import { approvalStatus, phoneApprove, phoneApproveConfirm, requestApproval } from './notifyHandler.ts'
 import { sendDiscord } from './discordHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
@@ -280,13 +280,13 @@ export function createApp(config: AppConfig): Hono {
     if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
     return c.json(approvalStatus(c.req.query('id') ?? ''))
   })
-  // Public (id-protected). POST is the ntfy action target; GET renders a friendly page when
-  // the link is opened in a browser. Both flip the same one-shot pending record.
-  app.post('/api/passport/notify/phone-approve', (c) => {
-    const r = phoneApprove(c.req.query('id') ?? '')
-    return c.json({ ok: r.ok, status: r.status }, r.ok ? 200 : 404)
-  })
+  // Public (id-protected). GET is SIDE-EFFECT-FREE — it renders a confirm page whose button
+  // POSTs back to approve. (A GET must be idempotent; prefetch/link-preview bots hit action URLs.)
   app.get('/api/passport/notify/phone-approve', (c) => {
+    const r = phoneApproveConfirm(c.req.query('id') ?? '')
+    return c.html(r.html, r.ok ? 200 : 404)
+  })
+  app.post('/api/passport/notify/phone-approve', (c) => {
     const r = phoneApprove(c.req.query('id') ?? '')
     return c.html(r.html, r.ok ? 200 : 404)
   })

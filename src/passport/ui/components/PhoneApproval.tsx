@@ -59,9 +59,9 @@ export function PhoneApproval({ snap, onApprove }: { snap: PassportSnapshot; onA
         return
       }
       if (s === 'expired') return // stop polling; in-app approval still works
-      timer = setTimeout(tick, 1600)
+      timer = setTimeout(tick, 1200)
     }
-    timer = setTimeout(tick, 1600)
+    timer = setTimeout(tick, 1200)
     return () => {
       cancel = true
       clearTimeout(timer)

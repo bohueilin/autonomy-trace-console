@@ -19,9 +19,25 @@ export function WalletStrip({ snap, onPaid }: { snap: PassportSnapshot; onPaid?:
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState<{ msg: string; retry: boolean } | null>(null)
   const firedRef = useRef(false) // pay exactly once — never auto-retry on failure
+  const triedConnectRef = useRef(false) // auto-connect at most once
 
   const cost = paidPkt?.estimated_cost ?? null
   const approved = paidPkt ? paidPkt.status === 'approved' || paidPkt.status === 'consumed' : false
+
+  // Auto-connect as soon as there's a payable action, so the quote is primed and an approval
+  // settles immediately — no separate "Connect wallet" click needed. The manual button stays
+  // as a fallback if this attempt fails.
+  useEffect(() => {
+    // deps are [paidPkt] only: setConnecting(true) must NOT retrigger this effect (that would
+    // cancel the in-flight connect and stick on "Connecting…"). triedConnectRef fires it once.
+    if (!paidPkt || triedConnectRef.current) return
+    triedConnectRef.current = true
+    setConnecting(true)
+    void walletConnect().then((s) => {
+      setStatus(s)
+      setConnecting(false)
+    })
+  }, [paidPkt])
 
   // Quote the payable action once the wallet is connected.
   useEffect(() => {
