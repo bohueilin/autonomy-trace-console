@@ -17,14 +17,18 @@
 // ----------------------------------------------------------------------------
 
 import crypto from 'node:crypto'
-import type { SnapliiConfig } from './config.ts'
+import type { InsforgeConfig, SnapliiConfig } from './config.ts'
+import { consumeNonceDurable, releaseNonceDurable } from './nonceStore.ts'
 
 const DEFAULT_TIMEOUT = 15000
 const TOKEN_TTL_MS = 10 * 60 * 1000
 
-// One-shot + reservation ledgers. NOTE: in-process only — correct for a single instance.
-// For multi-instance/restart durability these must move to a shared transactional store
-// (e.g. InsForge), with an atomic conditional update for the cap and a unique nonce insert.
+// One-shot + reservation ledgers. The one-shot NONCE is now DURABLE: purchaseOrder also records
+// each consumed nonce in an InsForge unique-index ledger (server/nonceStore.ts, migration
+// 20260627000000), so replay protection survives a restart and holds across instances — with this
+// in-process Set as the zero-latency fast path, degrading to it if InsForge is unreachable. The
+// reservation cap below stays in-process: a soft secondary ceiling only (Snaplii enforces its own
+// cap; the real guard is the stateless per-buy cap + the durable one-shot nonce).
 const consumedNonces = new Set<string>()
 let reservedUsd = 0 // spend reserved at authorize-time (the cap is enforced here, atomically)
 
@@ -249,7 +253,7 @@ export interface WalletPurchaseResult {
   error?: string
   code?: 'no_token' | 'bad_token' | 'replayed' | 'mode_mismatch' | 'no_key' | 'upstream' | 'uncertain'
 }
-export async function purchaseOrder(body: unknown, cfg: SnapliiConfig, secret: string, live: boolean): Promise<WalletPurchaseResult> {
+export async function purchaseOrder(body: unknown, cfg: SnapliiConfig, secret: string, live: boolean, insforge: InsforgeConfig): Promise<WalletPurchaseResult> {
   const b = (body ?? {}) as Record<string, unknown>
   const fail = (code: WalletPurchaseResult['code'], error: string): WalletPurchaseResult => ({
     ok: false, simulated: false, amount: 0, currency: 'USD', brand: 'DoorDash', masked_code: '', message: '', code, error,
@@ -262,13 +266,26 @@ export async function purchaseOrder(body: unknown, cfg: SnapliiConfig, secret: s
   if (claim.live !== live) return fail('mode_mismatch', 'This approval was granted under a different mode; re-approve.')
   if (claim.currency !== 'USD') return fail('bad_token', 'Unsupported currency.')
 
-  // One-shot: consume synchronously BEFORE any side effect (no replay window).
+  // One-shot, BEFORE any side effect. Fast path: in-process Set (zero-latency same-instance guard).
   if (consumedNonces.has(claim.nonce)) return fail('replayed', 'This approval was already used (one-shot).')
   consumedNonces.add(claim.nonce)
 
   const release = () => {
     consumedNonces.delete(claim.nonce)
     reservedUsd = Math.max(0, reservedUsd - claim.amount)
+    void releaseNonceDurable(claim.nonce, insforge) // best-effort durable release on a definite no-charge
+  }
+
+  // Durable one-shot ledger: a UNIQUE index (migration 20260627000000) makes replay protection
+  // survive a restart and hold across instances.
+  const durable = await consumeNonceDurable(claim.nonce, Math.round(claim.amount * 100), live, insforge)
+  if (durable.status === 'replayed') return fail('replayed', 'This approval was already used (one-shot).')
+  // LIVE money FAILS CLOSED: if the durable consume was not confirmed (InsForge unreachable / table
+  // not provisioned), refuse to charge rather than risk a cross-instance double-charge. SIM has no
+  // money at stake, so it proceeds on the in-process guard alone (and works before the migration).
+  if (live && durable.status !== 'consumed') {
+    release() // nothing charged yet — let the user re-approve once durability is restored
+    return fail('uncertain', 'Could not record this one-shot purchase in the durable ledger — refusing to charge real money. Verify InsForge / apply the migration, then re-approve.')
   }
 
   if (!live) {
@@ -300,7 +317,13 @@ export async function purchaseOrder(body: unknown, cfg: SnapliiConfig, secret: s
       }),
     })
     if (!resp.ok) {
-      // A definite HTTP rejection means no charge — safe to release + allow a fresh approval.
+      if (resp.status >= 500) {
+        // AMBIGUOUS 5xx: Snaplii may have charged before failing. Fail closed — do NOT release the
+        // nonce/budget; require out-of-band reconciliation before any retry.
+        console.error(`[snaplii] purchase ${resp.status} (uncertain)`)
+        return fail('uncertain', 'The purchase result is unconfirmed. Check your Snaplii wallet before retrying — it may have completed.')
+      }
+      // A definite 4xx rejection means no charge — safe to release + allow a fresh approval.
       release()
       console.error(`[snaplii] purchase ${resp.status}`)
       return fail('upstream', 'Snaplii declined the purchase.')

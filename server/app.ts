@@ -264,7 +264,7 @@ export function createApp(config: AppConfig): Hono {
   app.post('/api/passport/wallet/purchase', async (c) => {
     if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
     // Settles ONLY with a valid one-shot, amount/mode-bound approval token from /authorize.
-    const r = await purchaseOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.snaplii.live)
+    const r = await purchaseOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.snaplii.live, config.insforge)
     return c.json(r, r.ok ? 200 : r.code === 'upstream' || r.code === 'no_key' || r.code === 'uncertain' ? 502 : 400)
   })
 

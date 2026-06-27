@@ -19,6 +19,8 @@ export interface NebiusConfig {
 export interface InsforgeConfig {
   baseUrl?: string
   apiKey?: string
+  /** Per-request timeout (ms) for InsForge fetches. Defaults to 8000 in the stores. */
+  timeoutMs?: number
 }
 
 /** GMI Cloud — OpenAI-compatible serverless inference (the agent's brain). */
