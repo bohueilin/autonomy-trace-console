@@ -72,8 +72,10 @@ export interface ScenarioTool {
   use: string
   /** True if using this tool needs your explicit approval (e.g. a payment). */
   approval?: boolean
-  /** The commit capability this tool maps to — lets the chip flip to "approved" once you OK it. */
+  /** The commit capability this tool maps to — lets the chip flip to "done" once you OK it. */
   cap?: Capability
+  /** What the chip reads once `cap` is approved/consumed (e.g. "✓ paid"). Defaults to "✓ approved". */
+  doneLabel?: string
 }
 
 export interface ScenarioSpec {

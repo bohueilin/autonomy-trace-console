@@ -80,7 +80,7 @@ export function RunHeader({
                     <span>{t.use}</span>
                   </span>
                   {needsOk && <em className="pp-tool-badge">needs your ok</em>}
-                  {isDone && <em className="pp-tool-badge pp-tool-badge-done">✓ approved</em>}
+                  {isDone && <em className="pp-tool-badge pp-tool-badge-done">{t.doneLabel ?? '✓ approved'}</em>}
                 </span>
               )
             })}
