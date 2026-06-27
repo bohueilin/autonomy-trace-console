@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePassport } from './usePassport'
 import type { Speed } from './usePassport'
 import { Home } from './components/Home'
@@ -23,6 +23,8 @@ import type { SessionStatus } from '../engine/session'
 import type { ScenarioSpec } from '../scenarios/types'
 import { fetchOrderContext } from '../orderContext'
 import type { OrderContext } from '../orderContext'
+import type { WalletReceipt } from '../walletClient'
+import type { DiscordSendResult } from '../discordClient'
 
 const STAGES: { key: SessionStatus | 'planning'; label: string }[] = [
   { key: 'planning', label: 'Intent + grant' },
@@ -41,6 +43,9 @@ export function App() {
   // results summary. Reset on each fresh run so a replay starts clean.
   const [exec, setExec] = useState<ExecState>({})
   const [orderCtx, setOrderCtx] = useState<OrderContext | null>(null)
+  // Bumped on every fresh run/replay; used as a remount key so the stateful side-effect
+  // components (wallet, discord, phone, results) start clean and re-fire on a replay.
+  const [runKey, setRunKey] = useState(0)
   useEffect(() => {
     let cancel = false
     void fetchOrderContext().then((c) => {
@@ -52,12 +57,16 @@ export function App() {
   }, [])
   const startRun = (s: ScenarioSpec) => {
     setExec({})
+    setRunKey((k) => k + 1)
     pp.start(s)
   }
   const replayRun = () => {
     setExec({})
+    setRunKey((k) => k + 1)
     pp.replay()
   }
+  const onPaid = useCallback((r: WalletReceipt) => setExec((e) => ({ ...e, wallet: r })), [])
+  const onDiscordSent = useCallback((r: DiscordSendResult) => setExec((e) => ({ ...e, discord: r })), [])
 
   if (!snap) {
     return (
@@ -107,7 +116,7 @@ export function App() {
       <div className="pp-run">
         <RunHeader snap={snap} onRevoke={pp.revoke} onReview={reviewApprovals} />
 
-        <ResultsSummary snap={snap} exec={exec} ctx={orderCtx} />
+        <ResultsSummary key={`results-${runKey}`} snap={snap} exec={exec} ctx={orderCtx} />
 
         <AgentCollab snap={snap} />
 
@@ -133,13 +142,13 @@ export function App() {
           </div>
         )}
 
-        <PhoneApproval snap={snap} onApprove={pp.approve} />
+        <PhoneApproval key={`phone-${runKey}`} snap={snap} onApprove={pp.approve} />
 
         <OrderDetails snap={snap} ctx={orderCtx} />
 
-        <WalletStrip snap={snap} onPaid={(r) => setExec((e) => ({ ...e, wallet: r }))} />
+        <WalletStrip key={`wallet-${runKey}`} snap={snap} onPaid={onPaid} />
 
-        <DiscordShare snap={snap} ctx={orderCtx} onSent={(r) => setExec((e) => ({ ...e, discord: r }))} />
+        <DiscordShare key={`discord-${runKey}`} snap={snap} ctx={orderCtx} onSent={onDiscordSent} />
 
         <PlanTimeline snap={snap} />
         <ToolActivityFeed snap={snap} />
