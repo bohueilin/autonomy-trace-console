@@ -94,11 +94,21 @@ export function RunHeader({
       </div>
 
       <div className="pp-runstats" aria-label="Run summary">
-        <div className="pp-stat"><b>{tools.length}</b><span>Tools</span></div>
-        <div className="pp-stat"><b>{total}</b><span>Plan steps</span></div>
-        <div className="pp-stat pp-stat-good"><b>{granted}</b><span>Granted</span></div>
-        <div className="pp-stat pp-stat-appr"><b>{gated}</b><span>Need your OK</span></div>
-        <div className="pp-stat pp-stat-deny"><b>{forbidden}</b><span>Forbidden</span></div>
+        <div className="pp-stat" title="Branded tools Passport scoped to the agent for this task">
+          <b>{tools.length}</b><span>Tools</span>
+        </div>
+        <div className="pp-stat" title="Steps in the agent's plan, from reading your intent to the final itinerary">
+          <b>{total}</b><span>Plan steps</span>
+        </div>
+        <div className="pp-stat pp-stat-good" title="Read & draft capabilities the agent was granted outright (no side effects)">
+          <b>{granted}</b><span>Granted</span>
+        </div>
+        <div className="pp-stat pp-stat-appr" title="Real-world actions the agent can NEVER do on its own — each unlocks once, only with your approval">
+          <b>{gated}</b><span>Need your OK</span>
+        </div>
+        <div className="pp-stat pp-stat-deny" title="Never granted, even with your approval: moving money directly and holding raw, unscoped credentials">
+          <b>{forbidden}</b><span>Forbidden</span>
+        </div>
       </div>
 
       {tools.length > 0 && (

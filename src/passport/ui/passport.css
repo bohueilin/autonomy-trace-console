@@ -571,8 +571,9 @@
 
 .pp-runhead { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px 26px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 20px; }
 .pp-runhead-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
-.pp-runhead-req { min-width: 0; }
-.pp-runhead-prompt { margin: 8px 0 0; font-family: var(--display); font-weight: 600; font-size: clamp(20px, 2.6vw, 27px); line-height: 1.25; letter-spacing: -0.01em; color: var(--text); }
+.pp-runhead-req { min-width: 0; padding-left: 18px; border-left: 4px solid; border-image: linear-gradient(180deg, #7aa2ff, #2bd49b) 1; }
+.pp-runhead-req .pp-mini-label { color: #3b62d6; font-size: 13px; }
+.pp-runhead-prompt { margin: 9px 0 0; font-family: var(--display); font-weight: 700; font-size: clamp(26px, 3.3vw, 33px); line-height: 1.22; letter-spacing: -0.015em; color: #1f3aa6; }
 .pp-runhead-meta { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .pp-runhead-status { font-size: 12px; font-weight: 700; padding: 6px 13px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
 .pp-runhead-status-running { background: rgba(47,109,246,0.12); color: var(--accent-ink); }
@@ -709,7 +710,7 @@
 .pp-results { background: linear-gradient(180deg, var(--good-bg), var(--panel)); border: 1px solid rgba(18,165,103,0.28); border-radius: 18px; padding: 22px 24px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; gap: 16px; animation: pp-phone-in .3s ease both; }
 .pp-results-head { display: flex; align-items: center; gap: 14px; }
 .pp-results-mark { width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0; display: grid; place-items: center; font-size: 19px; font-weight: 800; color: #fff; background: linear-gradient(150deg, #18c47a, #0a7d52); box-shadow: 0 8px 20px -8px rgba(10,125,82,0.6); }
-.pp-results-kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--good-ink); }
+.pp-results-kicker { font-size: 17px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--good-ink); }
 .pp-results-title { font-size: clamp(20px, 2.4vw, 26px); font-weight: 700; margin-top: 2px; }
 .pp-results-rows { display: flex; flex-direction: column; gap: 10px; }
 .pp-results-row { display: flex; align-items: flex-start; gap: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; }
