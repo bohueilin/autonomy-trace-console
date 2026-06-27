@@ -64,6 +64,17 @@ export interface DiscordConfig {
 }
 
 /**
+ * Email — sends the "Agentic Journey Summary" to the user's OWN address (server-configured;
+ * the browser never picks the recipient, so this can't be an open relay). Resend is the provider.
+ */
+export interface EmailConfig {
+  resendApiKey?: string
+  from: string
+  /** The single allowed recipient — the user's own email. Unset → simulation (preview only). */
+  to?: string
+}
+
+/**
  * Concrete order / place context shown to the user. DoorDash has no public consumer API,
  * so the food order itself is prepared/simulated — these are the real values we present and,
  * for the address, share to Discord. Override any of them via .env.local.
@@ -86,6 +97,7 @@ export interface AppConfig {
   snaplii: SnapliiConfig
   notify: NotifyConfig
   discord: DiscordConfig
+  email: EmailConfig
   demo: DemoConfig
   /** HMAC secret for signing stateless episode tokens + purchase-approval tokens. */
   episodeSecret: string
@@ -166,6 +178,14 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     webhookUrl: get('DISCORD_WEBHOOK_URL') || undefined,
     channelLabel: get('DISCORD_CHANNEL_LABEL') || 'Game Night',
   }
+  const email: EmailConfig = {
+    resendApiKey: get('RESEND_API_KEY') || undefined,
+    from: get('EMAIL_FROM') || 'Passport <onboarding@resend.dev>',
+    to: get('SUMMARY_EMAIL') || undefined,
+  }
+  if (!email.resendApiKey || !email.to) {
+    warnings.push('Email summary is simulated — set RESEND_API_KEY + SUMMARY_EMAIL (your own address) to actually send.')
+  }
   // A positive USD amount, else the fallback (never NaN/<=0).
   const usd = (raw: string | undefined, fallback: number): number => {
     const n = Number(raw ?? fallback)
@@ -179,7 +199,7 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     deliveryAddress: get('DELIVERY_ADDRESS') || 'Home',
     orderVendor: get('DEMO_ORDER_VENDOR') || 'La Taqueria · DoorDash',
     orderItems: items.length ? items : ['Your usual order'],
-    orderTotalUsd: usd(get('DEMO_ORDER_TOTAL_USD'), 38.5),
+    orderTotalUsd: usd(get('DEMO_ORDER_TOTAL_USD'), 15),
     orderEta: get('DEMO_ORDER_ETA') || '7:00 PM',
     gamePlan: get('DEMO_GAME_PLAN') || 'Thursday 6:30 PM',
   }
@@ -216,5 +236,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, demo, episodeSecret, episodeSecretIsDev, warnings }
+  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, email, demo, episodeSecret, episodeSecretIsDev, warnings }
 }

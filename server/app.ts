@@ -30,6 +30,7 @@ import { classifyIntent } from './passportIntentHandler.ts'
 import { connectWallet, quoteOrder, authorizeOrder, purchaseOrder } from './snapliiHandler.ts'
 import { approvalStatus, phoneApprove, phoneApproveConfirm, requestApproval } from './notifyHandler.ts'
 import { sendDiscord } from './discordHandler.ts'
+import { sendJourneyEmail } from './emailHandler.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
@@ -296,6 +297,14 @@ export function createApp(config: AppConfig): Hono {
     if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
     if (channelThrottled('discord', 20)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = await sendDiscord(await jsonBody(c), config.discord, config.demo)
+    return c.json(r, r.ok ? 200 : 502)
+  })
+
+  // Email the "Agentic Journey Summary" to the user's own (server-configured) address.
+  app.post('/api/passport/email/summary', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (channelThrottled('email', 12)) return c.json({ ok: false, error: 'rate_limited' }, 429)
+    const r = await sendJourneyEmail(await jsonBody(c), config.email)
     return c.json(r, r.ok ? 200 : 502)
   })
 

@@ -15,6 +15,7 @@ const config: AppConfig = {
   snaplii: { baseUrl: 'https://aipayment.snaplii.com', perBuyCapUsd: 60, dailyCapUsd: 120, live: false },
   notify: { ntfyBaseUrl: 'https://ntfy.sh' },
   discord: { channelLabel: 'Game Night' },
+  email: { from: 'Passport <onboarding@resend.dev>' },
   demo: {
     deliveryAddress: 'Home',
     orderVendor: 'La Taqueria · DoorDash',

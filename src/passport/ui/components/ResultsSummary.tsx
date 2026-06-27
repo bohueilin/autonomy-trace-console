@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import type { PassportSnapshot } from '../../engine/session'
 import type { Capability } from '../../types'
 import type { OrderContext } from '../../orderContext'
 import type { WalletReceipt } from '../../walletClient'
 import type { DiscordSendResult } from '../../discordClient'
+import { sendJourneySummary } from '../../emailClient'
+import type { EmailResult } from '../../emailClient'
 
 export interface ExecState {
   wallet?: WalletReceipt
@@ -22,9 +25,12 @@ function approved(snap: PassportSnapshot, cap: Capability): boolean {
 /**
  * The execution-results moment: once the run completes, Passport reports back exactly what it
  * did — only the actions you approved, each with its concrete outcome. Closes the loop:
- * request → understand → act (with a granted Passport) → results.
+ * request → understand → act (with a granted Passport) → results. You can email yourself the recap.
  */
 export function ResultsSummary({ snap, exec, ctx }: { snap: PassportSnapshot; exec: ExecState; ctx: OrderContext | null }) {
+  const [emailing, setEmailing] = useState(false)
+  const [emailRes, setEmailRes] = useState<EmailResult | null>(null)
+
   if (snap.status !== 'completed') return null
 
   const rows: ResultRow[] = []
@@ -59,6 +65,18 @@ export function ResultsSummary({ snap, exec, ctx }: { snap: PassportSnapshot; ex
 
   const nothing = rows.length === 0
 
+  const emailMe = () => {
+    setEmailing(true)
+    void sendJourneySummary({
+      scenario: snap.scenario.title,
+      request: snap.intent.raw_user_request,
+      results: rows.map((r) => ({ head: r.head, detail: r.detail })),
+    }).then((r) => {
+      setEmailRes(r)
+      setEmailing(false)
+    })
+  }
+
   return (
     <section className="pp-results">
       <div className="pp-results-head">
@@ -88,6 +106,24 @@ export function ResultsSummary({ snap, exec, ctx }: { snap: PassportSnapshot; ex
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!nothing && (
+        <div className="pp-results-actions">
+          {!emailRes ? (
+            <button className="pp-btn pp-btn-ghost" onClick={emailMe} disabled={emailing}>
+              {emailing ? 'Sending…' : '✉ Email me this summary'}
+            </button>
+          ) : emailRes.sent ? (
+            <span className="pp-results-email pp-results-email-ok">✓ Sent to {emailRes.to}</span>
+          ) : emailRes.error ? (
+            <span className="pp-results-email pp-results-email-err">⚠ {emailRes.error}</span>
+          ) : (
+            <span className="pp-results-email pp-results-email-sim">
+              Summary ready — set <code>RESEND_API_KEY</code> + <code>SUMMARY_EMAIL</code> to send to {emailRes.to}
+            </span>
+          )}
         </div>
       )}
 

@@ -70,7 +70,7 @@ export const enrichMyLife: ScenarioSpec = {
         action_type: 'Place delivery order',
         description: 'Order your usual from La Taqueria via DoorDash and pay with your saved Snaplii Cash — delivered to your home for kickoff.',
         external_party: 'DoorDash · La Taqueria',
-        estimated_cost: { amount: 38.5, currency: 'USD' },
+        estimated_cost: { amount: 15, currency: 'USD' },
         data_shared: ['Delivery address', 'Order items', 'Your saved Snaplii Cash'],
         irreversible: true,
         approve_button_label: 'Approve & order',

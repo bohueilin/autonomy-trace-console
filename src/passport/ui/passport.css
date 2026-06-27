@@ -582,7 +582,15 @@
 .pp-runhead-revoke { font: 600 12px var(--sans); color: var(--bad-ink); background: none; border: 1px solid rgba(224,72,63,0.3); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
 .pp-runhead-revoke:hover { background: var(--bad-bg); }
 
-.pp-runhead-tools .pp-mini-label { color: var(--muted); }
+.pp-runhead-tools .pp-mini-label { color: var(--muted); font-size: 13px; }
+
+.pp-runstats { display: flex; flex-wrap: wrap; gap: 10px; }
+.pp-stat { flex: 1 1 80px; min-width: 80px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; display: flex; flex-direction: column; gap: 2px; }
+.pp-stat b { font-family: var(--display); font-size: clamp(20px, 2.4vw, 26px); font-weight: 700; color: var(--text); line-height: 1; }
+.pp-stat span { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.pp-stat-good b { color: var(--good-ink); }
+.pp-stat-deny b { color: var(--bad-ink); }
+.pp-stat-appr b { color: var(--accent-ink); }
 .pp-tool-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
 .pp-tool { display: inline-flex; align-items: center; gap: 9px; padding: 6px 11px 6px 7px; border-radius: 11px; background: var(--panel-2); border: 1px solid var(--line); }
 .pp-tool-ico { width: 27px; height: 27px; border-radius: 8px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-sm); display: grid; place-items: center; font-size: 15px; line-height: 1; flex-shrink: 0; }
@@ -711,6 +719,12 @@
 .pp-results-tx span { font-size: 13px; color: var(--text-soft); }
 .pp-results-empty { margin: 0; font-size: 14px; color: var(--text-soft); }
 .pp-results-foot { margin: 0; font-size: 12.5px; color: var(--good-ink); }
+.pp-results-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pp-results-email { font-size: 13px; line-height: 1.4; }
+.pp-results-email code { font-family: var(--mono); font-size: 0.85em; background: var(--panel-2); padding: 1px 5px; border-radius: 5px; }
+.pp-results-email-ok { color: var(--good-ink); font-weight: 600; }
+.pp-results-email-err { color: var(--bad-ink); }
+.pp-results-email-sim { color: var(--text-soft); }
 
 /* focus visibility */
 .pp-app button:focus-visible, .pp-app input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
