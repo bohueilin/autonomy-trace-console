@@ -69,9 +69,11 @@ export function RunHeader({
   const awaiting = snap.status === 'awaiting_approval'
   const pending = snap.approvals.find((a) => a.approval_id === snap.pendingApprovalId)
   const live = snap.status === 'running' || snap.status === 'awaiting_approval'
+  // Capability breakdown (these three are one axis and sum to the capabilities Passport weighed):
+  // granted = read/draft the agent got · gated = unlocked only by your approval · forbidden = never.
   const granted = snap.grant.allowed_capabilities.length
-  const denied = snap.grant.denied_capabilities.length
-  const approvalGates = snap.plan.steps.filter((s) => s.kind === 'approval').length
+  const gated = snap.grant.requires_approval_for.length
+  const forbidden = Math.max(0, snap.grant.denied_capabilities.length - gated)
 
   const capDone = (cap?: string) =>
     !!cap && snap.approvals.some((a) => a.capability === cap && (a.status === 'approved' || a.status === 'consumed'))
@@ -92,11 +94,11 @@ export function RunHeader({
       </div>
 
       <div className="pp-runstats" aria-label="Run summary">
-        <div className="pp-stat"><b>{tools.length}</b><span>Tools used</span></div>
-        <div className="pp-stat"><b>{total}</b><span>Steps</span></div>
+        <div className="pp-stat"><b>{tools.length}</b><span>Tools</span></div>
+        <div className="pp-stat"><b>{total}</b><span>Plan steps</span></div>
         <div className="pp-stat pp-stat-good"><b>{granted}</b><span>Granted</span></div>
-        <div className="pp-stat pp-stat-deny"><b>{denied}</b><span>Denied</span></div>
-        <div className="pp-stat pp-stat-appr"><b>{approvalGates}</b><span>Your approvals</span></div>
+        <div className="pp-stat pp-stat-appr"><b>{gated}</b><span>Need your OK</span></div>
+        <div className="pp-stat pp-stat-deny"><b>{forbidden}</b><span>Forbidden</span></div>
       </div>
 
       {tools.length > 0 && (

@@ -6,7 +6,7 @@ export const enrichMyLife: ScenarioSpec = {
   title: 'Enrich My Life',
   tagline: 'Protect a personal experience — spoiler-safe, frictionless, gated.',
   tools: [
-    { name: 'Google Calendar', use: 'find a free evening this week', cap: 'calendar.write.commit', doneLabel: '✓ blocked' },
+    { name: 'Google Calendar', use: 'find a free evening this week', cap: 'calendar.write.commit', doneLabel: '✓ added' },
     { name: 'Sports schedule', use: 'kickoff time — spoiler-safe' },
     { name: 'YouTube TV', use: 'set up the replay, no score shown' },
     { name: 'DoorDash', use: 'order your usual', cap: 'delivery.order.submit', doneLabel: '✓ order placed' },

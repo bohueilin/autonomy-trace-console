@@ -57,7 +57,11 @@ export function ResultsSummary({ snap, exec, ctx }: { snap: PassportSnapshot; ex
     rows.push({ icon: '🎮', head: 'Game Night invited', detail })
   }
   if (approved(snap, 'calendar.write.commit')) {
-    rows.push({ icon: '🗓', head: 'Calendar blocked', detail: `FIFA catch-up night · ${ctx?.gamePlan ?? 'this week'}.` })
+    rows.push({
+      icon: '🗓',
+      head: 'Calendar event added',
+      detail: 'FIFA catch-up night · Thursday 6:30–9:00 PM (simulated — connect Google Calendar to write it for real).',
+    })
   }
   if (approved(snap, 'reminders.write.commit')) {
     rows.push({ icon: '⏰', head: 'Reminders set', detail: 'Start on time, and stay spoiler-free until then.' })
