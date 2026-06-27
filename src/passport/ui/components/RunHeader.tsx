@@ -9,10 +9,25 @@ const STATUS_LABEL: Record<string, string> = {
   revoked: 'Stopped',
 }
 
+/** A recognizable app-icon glyph per integrated product (offline, zero-asset). */
+function toolGlyph(name: string): string {
+  const n = name.toLowerCase()
+  if (n.includes('calendar')) return '📅'
+  if (n.includes('sport')) return '⚽'
+  if (n.includes('youtube')) return '📺'
+  if (n.includes('doordash')) return '🥡'
+  if (n.includes('uber')) return '🍔'
+  if (n.includes('snaplii') || n.includes('wallet')) return '💳'
+  if (n.includes('discord')) return '🎮'
+  if (n.includes('reminder')) return '⏰'
+  if (n.includes('youtube') || n.includes('stream') || n.includes('tv')) return '📺'
+  return '🧩'
+}
+
 /**
- * The human-first run header (Luma-clean): your request, the tools Passport granted,
- * overall progress, and a phone-style approval callout. The technical grant/intent/audit
- * detail lives lower, in the "Full report" disclosure.
+ * The human-first run header (Luma-clean): your request, the tools Passport granted (with their
+ * product app-icons, each flipping to "approved" once you OK it), overall progress, and the phone
+ * approval callout. The technical grant/intent/audit detail lives lower, in the "Full report" disclosure.
  */
 export function RunHeader({
   snap,
@@ -31,6 +46,9 @@ export function RunHeader({
   const awaiting = snap.status === 'awaiting_approval'
   const pending = snap.approvals.find((a) => a.approval_id === snap.pendingApprovalId)
   const live = snap.status === 'running' || snap.status === 'awaiting_approval'
+
+  const capDone = (cap?: string) =>
+    !!cap && snap.approvals.some((a) => a.capability === cap && (a.status === 'approved' || a.status === 'consumed'))
 
   return (
     <section className="pp-runhead">
@@ -51,13 +69,21 @@ export function RunHeader({
         <div className="pp-runhead-tools">
           <span className="pp-mini-label">Tools Passport gave the agent — only these, only for this task</span>
           <div className="pp-tool-row">
-            {tools.map((t) => (
-              <span key={t.name} className={`pp-tool ${t.approval ? 'pp-tool-approval' : ''}`}>
-                <b>{t.name}</b>
-                <span>{t.use}</span>
-                {t.approval && <em className="pp-tool-badge">needs your ok</em>}
-              </span>
-            ))}
+            {tools.map((t) => {
+              const isDone = capDone(t.cap)
+              const needsOk = Boolean(t.approval) && !isDone
+              return (
+                <span key={t.name} className={`pp-tool ${needsOk ? 'pp-tool-approval' : ''} ${isDone ? 'pp-tool-done' : ''}`}>
+                  <span className="pp-tool-ico" aria-hidden="true">{toolGlyph(t.name)}</span>
+                  <span className="pp-tool-tx">
+                    <b>{t.name}</b>
+                    <span>{t.use}</span>
+                  </span>
+                  {needsOk && <em className="pp-tool-badge">needs your ok</em>}
+                  {isDone && <em className="pp-tool-badge pp-tool-badge-done">✓ approved</em>}
+                </span>
+              )
+            })}
           </div>
         </div>
       )}

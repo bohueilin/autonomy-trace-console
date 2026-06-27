@@ -14,8 +14,10 @@ import { money } from '../format'
  * with no setState-in-effect resets.
  */
 export function PhoneApproval({ snap, onApprove }: { snap: PassportSnapshot; onApprove: (approvalId: string) => void }) {
+  // Every pending approval gets a phone push — so the run never stalls waiting on a notification
+  // that was never sent (e.g. the calendar / reminders gates).
   const pending = snap.approvals.find((a) => a.approval_id === snap.pendingApprovalId && a.status === 'pending')
-  const sensitive = pending ? pending.irreversible || Boolean(pending.estimated_cost) : false
+  const sensitive = !!pending
   const activeId = sensitive && pending ? pending.approval_id : null
 
   const [handleState, setHandleState] = useState<{ id: string; handle: PhoneApprovalHandle | null } | null>(null)

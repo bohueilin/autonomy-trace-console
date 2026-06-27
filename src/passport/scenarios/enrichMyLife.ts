@@ -11,8 +11,8 @@ export const enrichMyLife: ScenarioSpec = {
     { name: 'YouTube TV', use: 'set up the replay, no score shown' },
     { name: 'DoorDash history', use: 'repeat your usual order' },
     { name: 'UberEats history', use: 'a backup food option' },
-    { name: 'Snaplii wallet', use: 'pay for the order', approval: true },
-    { name: 'Discord · Game Night', use: 'invite your friends', approval: true },
+    { name: 'Snaplii wallet', use: 'pay for the order', approval: true, cap: 'delivery.order.submit' },
+    { name: 'Discord · Game Night', use: 'invite your friends', approval: true, cap: 'social.post.commit' },
     { name: 'Reminders', use: 'so you never miss it' },
   ],
   prompt:
