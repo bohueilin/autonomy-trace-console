@@ -89,22 +89,41 @@ export async function sendJourneyEmail(body: unknown, cfg: EmailConfig): Promise
   const previewText = `Agentic Journey Summary — ${scenario}. Request: ${request}. ${rows.map((r) => `${r.head} — ${r.detail}`).join(' · ')}`
 
   // Recipient is ALWAYS the server-configured address — never client-chosen.
-  if (!cfg.resendApiKey || !cfg.to) {
-    return { ok: true, sent: false, to: cfg.to ? maskEmail(cfg.to) : '(set SUMMARY_EMAIL)', preview: previewText }
+  if (!cfg.to) {
+    return { ok: true, sent: false, to: '(set SUMMARY_EMAIL)', preview: previewText }
   }
-  try {
-    const resp = await timedFetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${cfg.resendApiKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: cfg.from, to: [cfg.to], subject: `Your Passport journey — ${scenario}`, html }),
-    })
-    if (!resp.ok) {
-      console.error(`[email] resend ${resp.status}`)
-      return { ok: false, sent: false, to: maskEmail(cfg.to), preview: previewText, error: 'The email provider rejected the send.' }
+  const subject = `Your Passport journey — ${scenario}`
+
+  // Provider 1 — InsForge managed transactional email (reuses InsForge creds; no extra key).
+  if (cfg.insforgeBaseUrl && cfg.insforgeApiKey) {
+    try {
+      const resp = await timedFetch(`${cfg.insforgeBaseUrl.replace(/\/+$/, '')}/api/email/send-raw`, {
+        method: 'POST',
+        headers: { authorization: `Bearer ${cfg.insforgeApiKey}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ to: cfg.to, subject, html, from: cfg.from }),
+      })
+      if (resp.ok) return { ok: true, sent: true, to: maskEmail(cfg.to), preview: previewText }
+      console.error(`[email] insforge ${resp.status}`)
+    } catch (err) {
+      console.error('[email] insforge failed:', (err as Error)?.name ?? 'error')
     }
-    return { ok: true, sent: true, to: maskEmail(cfg.to), preview: previewText }
-  } catch (err) {
-    console.error('[email] failed:', (err as Error)?.name ?? 'error')
-    return { ok: false, sent: false, to: maskEmail(cfg.to), preview: previewText, error: 'Could not reach the email provider.' }
   }
+
+  // Provider 2 — Resend.
+  if (cfg.resendApiKey) {
+    try {
+      const resp = await timedFetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${cfg.resendApiKey}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ from: cfg.from, to: [cfg.to], subject, html }),
+      })
+      if (resp.ok) return { ok: true, sent: true, to: maskEmail(cfg.to), preview: previewText }
+      console.error(`[email] resend ${resp.status}`)
+    } catch (err) {
+      console.error('[email] resend failed:', (err as Error)?.name ?? 'error')
+    }
+  }
+
+  // No provider succeeded → graceful simulation (the composed preview is still returned).
+  return { ok: true, sent: false, to: maskEmail(cfg.to), preview: previewText }
 }

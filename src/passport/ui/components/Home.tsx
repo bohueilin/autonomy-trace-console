@@ -48,14 +48,40 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
     <div className="pp-home">
       <section className="pp-hero">
         <div className="pp-hero-pill">
-          <span className="pp-hero-dot" /> Local demo · real wallet, scoped · secrets never exposed
+          <span className="pp-hero-dot" /> Live demo · real wallet, scoped · secrets never exposed
         </div>
         <h1 className="pp-hero-title">Capability is not permission.</h1>
         <p className="pp-hero-lede">
-          Passport is the control plane for <b>delegated autonomy</b>. You declare intent — by voice. The agent
-          proposes a plan. Passport issues a <b>scoped, revocable</b> grant. Tools run only within bounds, every
-          purchase needs your approval, and every action leaves a trace.
+          Passport is the control plane for <b>delegated autonomy</b> — the agent proposes a plan, Passport issues a{' '}
+          <b>scoped, revocable</b> grant, and every real-world action waits for your approval. Watch one run the loop:
         </p>
+
+        <figure className="pp-hero-stage">
+          <div className="pp-hero-glow" aria-hidden="true" />
+          <div className="pp-hero-screen">
+            <div className="pp-hero-chrome" aria-hidden="true">
+              <span className="pp-hero-light" />
+              <span className="pp-hero-light" />
+              <span className="pp-hero-light" />
+              <em>passport · agent journey</em>
+            </div>
+            <video
+              className="pp-hero-video"
+              src="/agent-journey.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+              aria-label="Agent journey: an agent reorders your usual DoorDash, gated by Passport approval"
+            />
+          </div>
+          <figcaption className="pp-hero-cap">
+            <span className="pp-hero-dot" /> An agent reorders your usual DoorDash — and stops to ask <b>before it pays</b>.
+          </figcaption>
+        </figure>
+
         <p className="pp-hero-founder">
           We’re building Passport because the next platform shift isn’t smarter agents — it’s <b>agents you can
           trust to act</b>. Identity-bound, policy-governed, user-authorized, auditable, revocable.

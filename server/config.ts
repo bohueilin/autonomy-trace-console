@@ -65,9 +65,12 @@ export interface DiscordConfig {
 
 /**
  * Email — sends the "Agentic Journey Summary" to the user's OWN address (server-configured;
- * the browser never picks the recipient, so this can't be an open relay). Resend is the provider.
+ * the browser never picks the recipient, so this can't be an open relay). Provider preference:
+ * InsForge managed email (reuses InsForge creds, no extra key) → Resend → simulation.
  */
 export interface EmailConfig {
+  insforgeBaseUrl?: string
+  insforgeApiKey?: string
   resendApiKey?: string
   from: string
   /** The single allowed recipient — the user's own email. Unset → simulation (preview only). */
@@ -179,12 +182,15 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     channelLabel: get('DISCORD_CHANNEL_LABEL') || 'Game Night',
   }
   const email: EmailConfig = {
+    insforgeBaseUrl: insforge.baseUrl,
+    insforgeApiKey: insforge.apiKey,
     resendApiKey: get('RESEND_API_KEY') || undefined,
-    from: get('EMAIL_FROM') || 'Passport <onboarding@resend.dev>',
+    from: get('EMAIL_FROM') || 'Passport',
     to: get('SUMMARY_EMAIL') || undefined,
   }
-  if (!email.resendApiKey || !email.to) {
-    warnings.push('Email summary is simulated — set RESEND_API_KEY + SUMMARY_EMAIL (your own address) to actually send.')
+  const emailProvider = email.insforgeApiKey && email.insforgeBaseUrl ? 'InsForge' : email.resendApiKey ? 'Resend' : null
+  if (!emailProvider || !email.to) {
+    warnings.push('Email summary is simulated — set SUMMARY_EMAIL (your own address) + an email provider (InsForge creds or RESEND_API_KEY) to actually send.')
   }
   // A positive USD amount, else the fallback (never NaN/<=0).
   const usd = (raw: string | undefined, fallback: number): number => {
