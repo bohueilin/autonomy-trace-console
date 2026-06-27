@@ -1,6 +1,7 @@
 import type { PassportSnapshot } from '../../engine/session'
 import { getScenario } from '../../scenarios'
 import { money } from '../format'
+import { BRAND_LOGOS } from '../brandLogos'
 
 const STATUS_LABEL: Record<string, string> = {
   running: 'Working…',
@@ -9,19 +10,41 @@ const STATUS_LABEL: Record<string, string> = {
   revoked: 'Stopped',
 }
 
-/** A recognizable app-icon glyph per integrated product (offline, zero-asset). */
+/** Map a tool name to a real brand logo (simple-icons) where one exists. */
+function brandSlug(name: string): string | null {
+  const n = name.toLowerCase()
+  if (n.includes('calendar')) return 'googlecalendar'
+  if (n.includes('youtube')) return 'youtube'
+  if (n.includes('doordash')) return 'doordash'
+  if (n.includes('uber')) return 'ubereats'
+  if (n.includes('discord')) return 'discord'
+  return null
+}
+
+/** Fallback emoji for products without a bundled logo (Snaplii, Sports, Reminders). */
 function toolGlyph(name: string): string {
   const n = name.toLowerCase()
-  if (n.includes('calendar')) return '📅'
   if (n.includes('sport')) return '⚽'
-  if (n.includes('youtube')) return '📺'
-  if (n.includes('doordash')) return '🥡'
-  if (n.includes('uber')) return '🍔'
   if (n.includes('snaplii') || n.includes('wallet')) return '💳'
-  if (n.includes('discord')) return '🎮'
   if (n.includes('reminder')) return '⏰'
-  if (n.includes('youtube') || n.includes('stream') || n.includes('tv')) return '📺'
   return '🧩'
+}
+
+/** The product's real logo (inline SVG, offline) on a white app-tile, else a fallback glyph. */
+function BrandIcon({ name }: { name: string }) {
+  const slug = brandSlug(name)
+  const logo = slug ? BRAND_LOGOS[slug] : null
+  return (
+    <span className="pp-tool-ico" aria-hidden="true">
+      {logo ? (
+        <svg viewBox="0 0 24 24" width="16" height="16" role="img">
+          <path d={logo.d} fill={logo.color} />
+        </svg>
+      ) : (
+        toolGlyph(name)
+      )}
+    </span>
+  )
 }
 
 /**
@@ -74,7 +97,7 @@ export function RunHeader({
               const needsOk = Boolean(t.approval) && !isDone
               return (
                 <span key={t.name} className={`pp-tool ${needsOk ? 'pp-tool-approval' : ''} ${isDone ? 'pp-tool-done' : ''}`}>
-                  <span className="pp-tool-ico" aria-hidden="true">{toolGlyph(t.name)}</span>
+                  <BrandIcon name={t.name} />
                   <span className="pp-tool-tx">
                     <b>{t.name}</b>
                     <span>{t.use}</span>

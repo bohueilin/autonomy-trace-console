@@ -586,6 +586,7 @@
 .pp-tool-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
 .pp-tool { display: inline-flex; align-items: center; gap: 9px; padding: 6px 11px 6px 7px; border-radius: 11px; background: var(--panel-2); border: 1px solid var(--line); }
 .pp-tool-ico { width: 27px; height: 27px; border-radius: 8px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow-sm); display: grid; place-items: center; font-size: 15px; line-height: 1; flex-shrink: 0; }
+.pp-tool-ico svg { display: block; }
 .pp-tool-tx { display: flex; flex-direction: column; min-width: 0; }
 .pp-tool-tx b { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.25; }
 .pp-tool-tx > span { font-size: 11.5px; color: var(--muted); line-height: 1.2; }
