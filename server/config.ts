@@ -93,6 +93,18 @@ export interface DemoConfig {
   gamePlan: string
 }
 
+/**
+ * 1Password — the access layer. The server holds a SERVICE ACCOUNT token (`ops_…`) and resolves
+ * `op://vault/item/field` references at runtime via @1password/sdk, ONLY at the tool boundary. The
+ * token never leaves the server; agents/clients only ever get opaque, task-scoped lease handles.
+ */
+export interface OnePasswordConfig {
+  serviceAccountToken?: string
+  vault?: string
+  integrationName: string
+  integrationVersion: string
+}
+
 export interface AppConfig {
   port: number
   isProd: boolean
@@ -103,6 +115,7 @@ export interface AppConfig {
   notify: NotifyConfig
   discord: DiscordConfig
   email: EmailConfig
+  onepassword: OnePasswordConfig
   demo: DemoConfig
   /** HMAC secret for signing stateless episode tokens + purchase-approval tokens. */
   episodeSecret: string
@@ -190,6 +203,15 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     from: get('EMAIL_FROM') || 'Passport',
     to: get('SUMMARY_EMAIL') || undefined,
   }
+  const onepassword: OnePasswordConfig = {
+    serviceAccountToken: get('OP_SERVICE_ACCOUNT_TOKEN') || undefined,
+    vault: get('OP_VAULT') || undefined,
+    integrationName: 'Passport',
+    integrationVersion: 'v1.0.0',
+  }
+  if (!onepassword.serviceAccountToken) {
+    warnings.push('1Password is not configured — the secret broker falls back to the in-memory mock. Set OP_SERVICE_ACCOUNT_TOKEN (+ OP_VAULT) to broker real credentials.')
+  }
   const emailProvider = email.insforgeApiKey && email.insforgeBaseUrl ? 'InsForge' : email.resendApiKey ? 'Resend' : null
   if (!emailProvider || !email.to) {
     warnings.push('Email summary is simulated — set SUMMARY_EMAIL (your own address) + an email provider (InsForge creds or RESEND_API_KEY) to actually send.')
@@ -244,5 +266,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, email, demo, episodeSecret, episodeSecretIsDev, warnings }
+  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, email, onepassword, demo, episodeSecret, episodeSecretIsDev, warnings }
 }

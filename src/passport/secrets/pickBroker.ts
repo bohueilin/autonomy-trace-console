@@ -1,13 +1,12 @@
-// Broker selection — the documented fallback path made real: prefer a configured 1Password
-// Connect broker, fall back to the mock when it is unavailable (which it always is locally).
+// Broker selection — prefer the real 1Password broker when the server reports a configured
+// service account, otherwise fall back to the in-memory mock (which is always available locally).
 
 import type { SecretBroker } from '../types'
 import { MockSecretBroker } from './mockSecretBroker'
 import { OnePasswordSecretBroker } from './onePasswordSecretBroker'
-import type { OnePasswordConfig } from './onePasswordSecretBroker'
 
-export async function pickBroker(now: () => number = Date.now, opConfig: OnePasswordConfig = {}): Promise<SecretBroker> {
-  const op = new OnePasswordSecretBroker(opConfig)
+export async function pickBroker(now: () => number = Date.now): Promise<SecretBroker> {
+  const op = new OnePasswordSecretBroker()
   if (await op.isAvailable()) return op
   return new MockSecretBroker(now)
 }

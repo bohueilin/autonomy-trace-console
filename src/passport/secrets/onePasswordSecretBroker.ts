@@ -1,38 +1,49 @@
-// OnePasswordSecretBroker — a fail-closed scaffold for a real 1Password Connect path.
+// OnePasswordSecretBroker — the REAL broker, a thin client proxy to the server access layer.
 //
-// Locally there is no Connect host/token configured, so isAvailable() returns false and
-// Passport falls back to the MockSecretBroker. requestScopedSecret() throws unless a real
-// server-side resolver is wired in — it never returns a value and never logs a secret.
+// The 1Password service-account token + every secret value live ONLY on the server. This
+// client-side broker (the engine runs in the browser) calls the server's credential routes and
+// receives ONLY an opaque, task-scoped handle + redacted metadata — never a value. The secret is
+// resolved server-side at the tool boundary (see server/onePasswordBroker.ts).
 //
-// The same shape (scoped handle + redacted metadata, value resolved only server-side inside
-// a sandbox) is how the Origin credential broker integrates 1Password Connect in production.
+//   isAvailable()         → GET /api/passport/credential/status  (is a service account configured?)
+//   requestScopedSecret() → POST /api/passport/credential/lease  (mint a handle; no secret returned)
 
 import type { ScopedSecretRequest, ScopedSecretResult, SecretBroker } from '../types'
 
-export interface OnePasswordConfig {
-  connectHost?: string
-  connectToken?: string
-}
-
 export class OnePasswordSecretBroker implements SecretBroker {
   readonly id = 'onepassword'
-  private config: OnePasswordConfig
-
-  constructor(config: OnePasswordConfig = {}) {
-    this.config = config
-  }
 
   async isAvailable(): Promise<boolean> {
-    // Available only when a Connect host + token are configured server-side. In the local
-    // browser demo these are intentionally absent → unavailable → mock broker is used.
-    return Boolean(this.config.connectHost && this.config.connectToken)
+    try {
+      const r = await fetch('/api/passport/credential/status')
+      if (!r.ok) return false
+      const j = (await r.json()) as { available?: boolean }
+      return Boolean(j?.available)
+    } catch {
+      return false
+    }
   }
 
   async requestScopedSecret(request: ScopedSecretRequest): Promise<ScopedSecretResult> {
-    // Fail closed: no client-side resolution exists. A real implementation resolves the
-    // item server-side via Connect REST and returns redacted metadata + an opaque handle —
-    // never a field value. Until that path is wired, deny.
-    void request
-    throw new Error('1Password Connect is not configured locally (fail closed)')
+    const r = await fetch('/api/passport/credential/lease', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(request),
+    })
+    const j = (await r.json()) as {
+      ok?: boolean
+      lease?: { handle: string; item_title: string; field_labels: string[]; scope: string; expires_at: number }
+      error?: string
+    }
+    if (!r.ok || !j?.ok || !j.lease) {
+      // Fail closed: a denied lease yields no handle and no secret.
+      throw new Error(j?.error ?? '1Password lease was denied (fail closed).')
+    }
+    return {
+      handle: j.lease.handle,
+      metadata: { title: j.lease.item_title, category: 'credential', field_labels: j.lease.field_labels },
+      scope: j.lease.scope,
+      expires_at: j.lease.expires_at,
+    }
   }
 }

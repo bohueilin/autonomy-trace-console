@@ -31,6 +31,7 @@ import { connectWallet, quoteOrder, authorizeOrder, purchaseOrder } from './snap
 import { approvalStatus, phoneApprove, phoneApproveConfirm, requestApproval } from './notifyHandler.ts'
 import { sendDiscord } from './discordHandler.ts'
 import { sendJourneyEmail } from './emailHandler.ts'
+import { isAvailable as opAvailable, leaseScopedSecret, listLeases, revokeLease } from './onePasswordBroker.ts'
 import { runReferenceEpisode } from './referenceAgent.ts'
 import { getEvidenceStatus, getRecentRuns, handleRunEpisode } from './runEpisodeHandler.ts'
 import { handleVapiTools } from './vapiHandler.ts'
@@ -306,6 +307,30 @@ export function createApp(config: AppConfig): Hono {
     if (channelThrottled('email', 12)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = await sendJourneyEmail(await jsonBody(c), config.email)
     return c.json(r, r.ok ? 200 : 502)
+  })
+
+  // ---- 1Password access broker (the credential layer) -------------------------------------
+  // The agent NEVER holds a credential; it gets opaque, task-scoped lease handles. The service
+  // account token + secret values stay server-side. All same-origin only.
+  app.get('/api/passport/credential/status', (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    return c.json({ ok: true, available: opAvailable(config.onepassword), vault: config.onepassword.vault ?? null })
+  })
+  app.post('/api/passport/credential/lease', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (channelThrottled('credential', 60)) return c.json({ ok: false, error: 'rate_limited' }, 429)
+    const r = leaseScopedSecret(await jsonBody(c), config.onepassword)
+    return c.json(r, r.ok ? 200 : 400)
+  })
+  app.get('/api/passport/credential/leases', (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    return c.json({ ok: true, leases: listLeases(c.req.query('intent_id') || undefined) })
+  })
+  app.post('/api/passport/credential/revoke', async (c) => {
+    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    const b = (await jsonBody(c)) as { handle?: unknown }
+    const r = revokeLease(typeof b.handle === 'string' ? b.handle : '')
+    return c.json(r, r.ok ? 200 : 404)
   })
 
   // Order / place context (delivery address, items, ETA) for the run view. Same-origin only.

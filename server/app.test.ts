@@ -16,6 +16,7 @@ const config: AppConfig = {
   notify: { ntfyBaseUrl: 'https://ntfy.sh' },
   discord: { channelLabel: 'Game Night' },
   email: { from: 'Passport <onboarding@resend.dev>' },
+  onepassword: { integrationName: 'Passport', integrationVersion: 'v1.0.0' },
   demo: {
     deliveryAddress: 'Home',
     orderVendor: 'La Taqueria · DoorDash',
