@@ -3,8 +3,8 @@ import { approvedCap, line } from './helpers'
 
 export const enrichMyLife: ScenarioSpec = {
   id: 'enrich-my-life',
-  title: 'Enrich My Life',
-  tagline: 'Protect a personal experience — spoiler-safe, frictionless, gated.',
+  title: 'Enrich My Night',
+  tagline: 'Plan a game night — order dinner, invite your friends, spoiler-safe and gated.',
   tools: [
     { name: 'Google Calendar', use: 'find a free evening this week', cap: 'calendar.write.commit', doneLabel: '✓ added' },
     { name: 'Sports schedule', use: 'kickoff time — spoiler-safe' },
@@ -16,8 +16,9 @@ export const enrichMyLife: ScenarioSpec = {
     { name: 'Reminders', use: 'so you never miss it', cap: 'reminders.write.commit', doneLabel: '✓ set' },
   ],
   prompt:
-    'I really want to catch up on this FIFA game but I cannot watch it live. Find me a free night this week to watch it properly. Suggest a good location or at-home setup, plan food, and make it feel like a real experience without me needing to think.',
-  normalized_intent: 'Create a spoiler-safe FIFA catch-up night this week: pick a free evening, plan viewing + food + reminders.',
+    'Plan a game night for me this week — find a free evening, set up the FIFA match replay spoiler-safe, order dinner on DoorDash, and invite my friends on Discord. Make it feel like a real experience without me needing to think.',
+  normalized_intent:
+    'Plan a game night: pick a free evening, set up a spoiler-safe FIFA replay, order dinner (DoorDash food), invite friends to your Discord group, and set reminders.',
   user_goal: 'Preserve and enrich a personal experience without effort — and without ever seeing the result early.',
   success_criteria: [
     'A free evening this week is chosen',

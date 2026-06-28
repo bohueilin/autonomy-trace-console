@@ -105,7 +105,7 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
             <input
               id="pp-req"
               className="pp-request-input"
-              placeholder={voice.listening ? 'Listening… speak now' : 'e.g. Plan me a FIFA catch-up night and order my usual DoorDash…'}
+              placeholder={voice.listening ? 'Listening… speak now' : 'e.g. Plan a game night, order dinner and invite my friends…'}
               value={shown}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void route(shown) }}
@@ -118,7 +118,7 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
                   ? <span className="pp-voice-live"><span className="pp-hero-dot" /> Listening…</span>
                   : matched
                     ? <>Heard you — looks like <b>{matched.title}</b>. Press <b>Run</b> or Enter.</>
-                    : <>Try “airport pickup”, “FIFA night + DoorDash”, or “fill my night”.</>}
+                    : <>Try “plan a game night, order dinner, invite my friends”, “airport pickup”, or “fill my night”.</>}
             </div>
           </div>
           <button className="pp-btn pp-btn-primary pp-run-btn" disabled={!shown.trim() || thinking} onClick={() => void route(shown)}>

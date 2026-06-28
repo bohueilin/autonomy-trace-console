@@ -128,6 +128,31 @@ export function PhoneApproval({ snap, onApprove }: { snap: PassportSnapshot; onA
               </p>
             </>
           )}
+
+          {/* Wire-up helper: if the push isn't arriving, the phone just isn't subscribed yet.
+              Scan to open the topic in the free ntfy app (QR is a render of the PUBLIC topic URL). */}
+          {handle?.subscribeUrl && handle.topic && !tapped && (
+            <div className="pp-ph-sub">
+              <img
+                className="pp-ph-qr"
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=132x132&margin=1&data=${encodeURIComponent(handle.subscribeUrl)}`}
+                alt={`QR code to subscribe to ntfy topic ${handle.topic}`}
+                width={68}
+                height={68}
+                loading="lazy"
+                onError={(e) => {
+                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                }}
+              />
+              <div className="pp-ph-sub-tx">
+                <b>Not seeing it on your phone?</b>
+                <span>
+                  Install the free <b>ntfy</b> app → subscribe to topic <code>{handle.topic}</code> → allow notifications. Scan
+                  the code, or open <a href={handle.subscribeUrl} target="_blank" rel="noreferrer">{handle.subscribeUrl.replace(/^https?:\/\//, '')}</a> on your phone.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </Section>

@@ -10,6 +10,9 @@ export interface PhoneApprovalHandle {
   target: string
   pushed: boolean
   approvableFromPhone: boolean
+  /** ntfy topic + a URL to subscribe a phone to it (for the "set up your phone" helper). */
+  topic: string | null
+  subscribeUrl: string | null
 }
 
 export async function requestPhoneApproval(input: { title: string; summary: string; amount?: number | null }): Promise<PhoneApprovalHandle | null> {
@@ -26,6 +29,8 @@ export async function requestPhoneApproval(input: { title: string; summary: stri
       target?: string
       pushed?: boolean
       approvable_from_phone?: boolean
+      topic?: string | null
+      subscribe_url?: string | null
     }
     if (!d.ok || !d.id) return null
     return {
@@ -34,6 +39,8 @@ export async function requestPhoneApproval(input: { title: string; summary: stri
       target: d.target ?? 'your phone',
       pushed: Boolean(d.pushed),
       approvableFromPhone: Boolean(d.approvable_from_phone),
+      topic: d.topic ?? null,
+      subscribeUrl: d.subscribe_url ?? null,
     }
   } catch {
     return null

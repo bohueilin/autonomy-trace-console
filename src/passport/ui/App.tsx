@@ -55,6 +55,11 @@ export function App() {
       cancel = true
     }
   }, [])
+  // On every fresh run/replay, snap to the top so the audience lands on the summary the moment the
+  // demo triggers — "Your request" + the scoped Tools — instead of wherever the home page was scrolled.
+  useEffect(() => {
+    if (runKey > 0) window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [runKey])
   const startRun = (s: ScenarioSpec) => {
     setExec({})
     setRunKey((k) => k + 1)

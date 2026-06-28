@@ -141,6 +141,10 @@ export interface NotifyRequestResult {
   target: string
   pushed: boolean
   approvable_from_phone: boolean
+  /** The ntfy topic to subscribe to (so the UI can help the user wire up their phone). */
+  topic: string | null
+  /** A URL the phone can open to subscribe/see this topic (ntfy.sh/<topic>). */
+  subscribe_url: string | null
 }
 export async function requestApproval(body: unknown, cfg: NotifyConfig): Promise<NotifyRequestResult> {
   const b = (body ?? {}) as Record<string, unknown>
@@ -163,6 +167,8 @@ export async function requestApproval(body: unknown, cfg: NotifyConfig): Promise
     got.includes('push') && got.includes('sms') ? 'push+sms' : got.includes('push') ? 'push' : got.includes('sms') ? 'sms' : 'simulation'
 
   pending.set(id, { status: 'pending', title, createdAt: now, expiresAt: now + TTL_MS, channel })
+  const topic = cfg.ntfyTopic || null
+  const subscribe_url = topic ? `${cfg.ntfyBaseUrl}/${encodeURIComponent(topic)}` : null
   return {
     ok: true,
     id,
@@ -170,6 +176,8 @@ export async function requestApproval(body: unknown, cfg: NotifyConfig): Promise
     target: maskPhone(cfg.approvalPhone),
     pushed: channel !== 'simulation',
     approvable_from_phone: channel !== 'simulation' && Boolean(approveUrl),
+    topic,
+    subscribe_url,
   }
 }
 

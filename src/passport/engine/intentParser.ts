@@ -28,10 +28,17 @@ export const IntentParser = {
     const t = text.toLowerCase()
     const score = (s: ScenarioSpec): number => {
       const hay = `${s.title} ${s.prompt} ${s.normalized_intent}`.toLowerCase()
+      // Title words PLUS scenario-discriminating keywords. Each keyword only scores when it appears
+      // in BOTH the request and that scenario's haystack — so shared words (e.g. "night") don't
+      // misroute "plan a game night, order dinner, invite friends" away from enrich-my-life.
       return s.title
         .toLowerCase()
         .split(/\s+/)
-        .concat(['airport', 'uber', 'flight', 'fifa', 'game', 'hackathon', 'event', 'register'])
+        .concat([
+          'airport', 'uber', 'flight', 'ride', 'pickup', 'driver', // airport-pickup
+          'hackathon', 'event', 'register', 'build', 'meetup', // fill-my-night
+          'fifa', 'game', 'dinner', 'order', 'food', 'doordash', 'discord', 'invite', 'friends', 'sports', 'watch', // enrich-my-night
+        ])
         .filter((w) => w.length > 3 && t.includes(w) && hay.includes(w)).length
     }
     let best: ScenarioSpec | null = null
