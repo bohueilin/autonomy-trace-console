@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // '.claude/worktrees' holds nested git worktrees (copies of this repo); linting them trips the
+  // TS parser with "multiple candidate TSConfigRootDirs". Never lint build output or nested checkouts.
+  globalIgnores(['dist', '.claude']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

@@ -9,6 +9,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "demo": "node scripts/start-demo.mjs",
+    "deploy:public": "node scripts/start-public.mjs",
     "server": "node server/main.ts",
     "verify:evidence": "node scripts/verifyServerEvidence.mjs",
     "test": "vitest run",

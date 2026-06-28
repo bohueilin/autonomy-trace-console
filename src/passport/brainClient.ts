@@ -5,6 +5,7 @@
 import { SCENARIOS } from './scenarios'
 import { IntentParser } from './engine/intentParser'
 import type { ScenarioSpec } from './scenarios/types'
+import { api } from './apiBase.ts'
 
 export interface BrainRoute {
   scenario: ScenarioSpec
@@ -24,7 +25,7 @@ export async function classifyIntent(transcript: string): Promise<BrainRoute | n
   const t = transcript.trim()
   if (!t) return null
   try {
-    const res = await fetch('/api/passport/intent', {
+    const res = await fetch(api('/api/passport/intent'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ transcript: t }),

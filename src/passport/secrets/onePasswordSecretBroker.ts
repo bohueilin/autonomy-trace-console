@@ -9,13 +9,14 @@
 //   requestScopedSecret() → POST /api/passport/credential/lease  (mint a handle; no secret returned)
 
 import type { ScopedSecretRequest, ScopedSecretResult, SecretBroker } from '../types'
+import { api } from '../apiBase.ts'
 
 export class OnePasswordSecretBroker implements SecretBroker {
   readonly id = 'onepassword'
 
   async isAvailable(): Promise<boolean> {
     try {
-      const r = await fetch('/api/passport/credential/status')
+      const r = await fetch(api('/api/passport/credential/status'))
       if (!r.ok) return false
       const j = (await r.json()) as { available?: boolean }
       return Boolean(j?.available)
@@ -25,7 +26,7 @@ export class OnePasswordSecretBroker implements SecretBroker {
   }
 
   async requestScopedSecret(request: ScopedSecretRequest): Promise<ScopedSecretResult> {
-    const r = await fetch('/api/passport/credential/lease', {
+    const r = await fetch(api('/api/passport/credential/lease'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(request),

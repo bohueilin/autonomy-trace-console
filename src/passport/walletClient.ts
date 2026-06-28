@@ -5,6 +5,8 @@
 // Flow: connect → quote (price + a NON-spendable claim) → authorize (your approval
 // mints the one-shot token) → purchase (settles). One attempt; never auto-retries.
 
+import { api } from './apiBase.ts'
+
 export interface WalletStatus {
   connected: boolean
   scope: string
@@ -32,7 +34,7 @@ export interface WalletReceipt {
 
 export async function walletConnect(): Promise<WalletStatus | null> {
   try {
-    const r = await fetch('/api/passport/wallet/connect', { method: 'POST' })
+    const r = await fetch(api('/api/passport/wallet/connect'), { method: 'POST' })
     const d = (await r.json()) as WalletStatus & { ok?: boolean }
     return d.ok ? d : null
   } catch {
@@ -42,7 +44,7 @@ export async function walletConnect(): Promise<WalletStatus | null> {
 
 export async function walletQuote(amount: number, intent: string): Promise<WalletQuote | null> {
   try {
-    const r = await fetch('/api/passport/wallet/quote', {
+    const r = await fetch(api('/api/passport/wallet/quote'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ amount, intent }),
@@ -57,7 +59,7 @@ export async function walletQuote(amount: number, intent: string): Promise<Walle
 /** The approval step: exchange a quote for a one-shot purchase token (only after the user approves). */
 export async function walletAuthorize(quote_claim: string): Promise<string | null> {
   try {
-    const r = await fetch('/api/passport/wallet/authorize', {
+    const r = await fetch(api('/api/passport/wallet/authorize'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ quote_claim }),
@@ -71,7 +73,7 @@ export async function walletAuthorize(quote_claim: string): Promise<string | nul
 
 export async function walletPurchase(approval_token: string): Promise<WalletReceipt> {
   try {
-    const r = await fetch('/api/passport/wallet/purchase', {
+    const r = await fetch(api('/api/passport/wallet/purchase'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ approval_token }),

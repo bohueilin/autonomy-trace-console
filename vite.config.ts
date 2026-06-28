@@ -14,6 +14,13 @@ export default defineConfig(() => {
 
   return {
     plugins: [react()],
+    // Multi-entry: the existing console (index.html) + the Passport demo (passport.html,
+    // a self-contained client-side app at /passport.html — no backend needed).
+    build: {
+      rollupOptions: {
+        input: { main: 'index.html', passport: 'passport.html' },
+      },
+    },
     server: {
       // Honor a PORT env var (used by preview/CI tooling); fall back to default.
       ...(process.env.PORT ? { port: Number(process.env.PORT) } : {}),

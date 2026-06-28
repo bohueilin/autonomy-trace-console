@@ -27,6 +27,7 @@ const config: AppConfig = {
   },
   episodeSecret: 'app-test-secret',
   episodeSecretIsDev: false,
+  webOrigins: [],
   warnings: [],
 }
 
@@ -48,6 +49,36 @@ async function postRaw(path: string, raw: string): Promise<Response> {
     body: raw,
   })
 }
+
+describe('createApp /api/passport origin guard (CSRF / public-tunnel abuse)', () => {
+  // config.webOrigins is [] here, so only localhost is allowed.
+  it('REFUSES a state-changing POST with NO Origin (a non-browser caller against the tunnel)', async () => {
+    const r = await app.request('/api/passport/wallet/connect', { method: 'POST' })
+    expect(r.status).toBe(403)
+  })
+
+  it('refuses a POST from a stranger Origin', async () => {
+    const r = await app.request('/api/passport/wallet/connect', { method: 'POST', headers: { origin: 'https://evil.example.com' } })
+    expect(r.status).toBe(403)
+  })
+
+  it('allows a POST from a localhost Origin (a real same-origin browser sends Origin on POST)', async () => {
+    const r = await app.request('/api/passport/wallet/connect', { method: 'POST', headers: { origin: 'http://localhost:5275' } })
+    expect(r.status).not.toBe(403)
+  })
+
+  it('allows a safe GET with no Origin (browsers omit Origin on same-origin GET)', async () => {
+    const r = await app.request('/api/passport/order-context', { method: 'GET' })
+    expect(r.status).toBe(200)
+  })
+
+  it('guards the metered intent route too (cross-origin abuse / quota burn)', async () => {
+    const noOrigin = await app.request('/api/passport/intent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
+    expect(noOrigin.status).toBe(403)
+    const stranger = await app.request('/api/passport/intent', { method: 'POST', headers: { origin: 'https://evil.example.com', 'content-type': 'application/json' }, body: '{}' })
+    expect(stranger.status).toBe(403)
+  })
+})
 
 describe('createApp /v1 trust boundary', () => {
   it('PUBLIC reset rejects reserved reference-agent ids', async () => {

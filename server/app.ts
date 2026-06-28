@@ -19,6 +19,7 @@
 // ----------------------------------------------------------------------------
 
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { cors } from 'hono/cors'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import type { AppConfig } from './config.ts'
@@ -28,7 +29,7 @@ import type { NebiusErrorCode } from './nebiusHandler.ts'
 import { handleNebiusAction } from './nebiusHandler.ts'
 import { classifyIntent } from './passportIntentHandler.ts'
 import { connectWallet, quoteOrder, authorizeOrder, purchaseOrder } from './snapliiHandler.ts'
-import { approvalStatus, phoneApprove, phoneApproveConfirm, requestApproval } from './notifyHandler.ts'
+import { approvalStatus, phoneApprove, phoneApproveViaGet, requestApproval } from './notifyHandler.ts'
 import { sendDiscord } from './discordHandler.ts'
 import { sendJourneyEmail } from './emailHandler.ts'
 import { isAvailable as opAvailable, leaseScopedSecret, listLeases, revokeLease } from './onePasswordBroker.ts'
@@ -116,6 +117,30 @@ export function createApp(config: AppConfig): Hono {
 
   const app = new Hono()
   app.use('*', cors())
+
+  // CSRF / abuse defense for the guarded /api/passport/* routes (money, notify, discord, email,
+  // credential, intent). A browser caller is allowed only from localhost or an explicitly-configured
+  // web origin (EXTRA_WEB_ORIGINS) — e.g. a deployed Pages site reaching this server through a tunnel.
+  // An allowlist entry beginning with '.' is a hostname-suffix match (covers Pages preview aliases).
+  // A request with NO Origin header is allowed ONLY for safe GET/HEAD reads — browsers omit Origin on
+  // same-origin GETs, but ALWAYS send it on same-origin POST — so a state-changing POST with no Origin
+  // is a non-browser caller (curl/script hitting the public tunnel) and is REFUSED. This is what keeps
+  // the money/credential endpoints from being driven directly against the exposed tunnel URL.
+  const allowOrigins = config.webOrigins
+  const walletOriginOk = (c: Context): boolean => {
+    const origin = c.req.header('origin')
+    if (!origin) {
+      const m = c.req.method
+      return m === 'GET' || m === 'HEAD' // safe reads only; any no-Origin write is a non-browser caller
+    }
+    try {
+      const h = new URL(origin).hostname.toLowerCase()
+      if (h === 'localhost' || h === '127.0.0.1') return true
+      return allowOrigins.some((o) => (o.startsWith('.') ? h === o.slice(1) || h.endsWith(o) : h === o))
+    } catch {
+      return false
+    }
+  }
 
   app.get('/health', (c) =>
     c.json({ ok: true, environment: ENVIRONMENT_NAME, time: new Date().toISOString() }),
@@ -227,7 +252,11 @@ export function createApp(config: AppConfig): Hono {
   app.post('/api/vapi/tools', async (c) => c.json(await handleVapiTools(await jsonBody(c), runCfg)))
 
   // Passport brain — GMI Cloud intent understanding (voice/text → scenario).
+  // Origin-guarded + throttled like the other metered routes: classifyIntent forwards to a paid GMI
+  // model, so a cross-origin caller must not be able to burn quota or inject transcripts.
   app.post('/api/passport/intent', async (c) => {
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (channelThrottled('intent', 30)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = await classifyIntent(await jsonBody(c), config.gmi)
     const status: ContentfulStatusCode = r.ok
       ? 200
@@ -235,35 +264,26 @@ export function createApp(config: AppConfig): Hono {
     return c.json(r, status)
   })
 
-  // Snaplii wallet — real, scoped payments (key server-side only). Local-only:
-  // reject any cross-origin browser caller (defense vs CSRF on the money routes).
-  const walletOriginOk = (origin: string | undefined): boolean => {
-    if (!origin) return true // same-origin / non-browser (the Vite proxy is same-origin)
-    try {
-      const h = new URL(origin).hostname
-      return h === 'localhost' || h === '127.0.0.1'
-    } catch {
-      return false
-    }
-  }
+  // Snaplii wallet — real, scoped payments (key server-side only). Every route below is origin-guarded
+  // by walletOriginOk (defined up top); a no-Origin POST is refused as a non-browser caller.
   app.post('/api/passport/wallet/connect', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     const r = await connectWallet(config.snaplii, config.snaplii.live)
     return c.json(r, r.ok ? 200 : 503)
   })
   app.post('/api/passport/wallet/quote', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     const r = await quoteOrder(await jsonBody(c), config.snaplii, config.episodeSecret)
     return c.json(r, r.ok ? 200 : r.code === 'bad_request' || r.code === 'over_cap' ? 400 : 502)
   })
   // The human-approval step: exchanges a quote for a one-shot, reserved, mode-bound token.
   app.post('/api/passport/wallet/authorize', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     const r = authorizeOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.episodeSecretIsDev, config.snaplii.live)
     return c.json(r, r.ok ? 200 : r.code === 'insecure_secret' ? 503 : 400)
   })
   app.post('/api/passport/wallet/purchase', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     // Settles ONLY with a valid one-shot, amount/mode-bound approval token from /authorize.
     const r = await purchaseOrder(await jsonBody(c), config.snaplii, config.episodeSecret, config.snaplii.live, config.insforge)
     return c.json(r, r.ok ? 200 : r.code === 'upstream' || r.code === 'no_key' || r.code === 'uncertain' ? 502 : 400)
@@ -273,19 +293,20 @@ export function createApp(config: AppConfig): Hono {
   // phone-approve is the ONE intentionally-public route (the phone taps it) and is protected
   // by an unguessable, one-shot id — it carries no money authority of its own.
   app.post('/api/passport/notify/approval', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     if (channelThrottled('notify', 40)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = await requestApproval(await jsonBody(c), config.notify)
     return c.json(r, 200)
   })
   app.get('/api/passport/notify/status', (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     return c.json(approvalStatus(c.req.query('id') ?? ''))
   })
-  // Public (id-protected). GET is SIDE-EFFECT-FREE — it renders a confirm page whose button
-  // POSTs back to approve. (A GET must be idempotent; prefetch/link-preview bots hit action URLs.)
+  // Public (id-protected). A real browser tap approves on GET (single-action, smooth phone path);
+  // bot/prefetch/link-preview fetches get a side-effect-free confirm page whose POST button is the
+  // only way they could approve. The id is unguessable, one-shot, and short-TTL.
   app.get('/api/passport/notify/phone-approve', (c) => {
-    const r = phoneApproveConfirm(c.req.query('id') ?? '')
+    const r = phoneApproveViaGet(c.req.query('id') ?? '', c.req.header('user-agent') ?? '')
     return c.html(r.html, r.ok ? 200 : 404)
   })
   app.post('/api/passport/notify/phone-approve', (c) => {
@@ -295,7 +316,7 @@ export function createApp(config: AppConfig): Hono {
 
   // Discord group message — server composes the content; webhook (or simulated preview).
   app.post('/api/passport/discord/send', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     if (channelThrottled('discord', 20)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = await sendDiscord(await jsonBody(c), config.discord, config.demo)
     return c.json(r, r.ok ? 200 : 502)
@@ -303,7 +324,7 @@ export function createApp(config: AppConfig): Hono {
 
   // Email the "Agentic Journey Summary" to the user's own (server-configured) address.
   app.post('/api/passport/email/summary', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     if (channelThrottled('email', 12)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = await sendJourneyEmail(await jsonBody(c), config.email)
     return c.json(r, r.ok ? 200 : 502)
@@ -313,21 +334,21 @@ export function createApp(config: AppConfig): Hono {
   // The agent NEVER holds a credential; it gets opaque, task-scoped lease handles. The service
   // account token + secret values stay server-side. All same-origin only.
   app.get('/api/passport/credential/status', (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     return c.json({ ok: true, available: opAvailable(config.onepassword), vault: config.onepassword.vault ?? null })
   })
   app.post('/api/passport/credential/lease', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     if (channelThrottled('credential', 60)) return c.json({ ok: false, error: 'rate_limited' }, 429)
     const r = leaseScopedSecret(await jsonBody(c), config.onepassword)
     return c.json(r, r.ok ? 200 : 400)
   })
   app.get('/api/passport/credential/leases', (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     return c.json({ ok: true, leases: listLeases(c.req.query('intent_id') || undefined) })
   })
   app.post('/api/passport/credential/revoke', async (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     const b = (await jsonBody(c)) as { handle?: unknown }
     const r = revokeLease(typeof b.handle === 'string' ? b.handle : '')
     return c.json(r, r.ok ? 200 : 404)
@@ -335,7 +356,7 @@ export function createApp(config: AppConfig): Hono {
 
   // Order / place context (delivery address, items, ETA) for the run view. Same-origin only.
   app.get('/api/passport/order-context', (c) => {
-    if (!walletOriginOk(c.req.header('origin'))) return c.json({ ok: false, error: 'forbidden' }, 403)
+    if (!walletOriginOk(c)) return c.json({ ok: false, error: 'forbidden' }, 403)
     return c.json({ ok: true, context: config.demo })
   })
 

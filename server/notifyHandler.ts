@@ -44,6 +44,18 @@ function maskPhone(p?: string): string {
   return d.length >= 4 ? `•••-•••-${d.slice(-4)}` : 'your phone'
 }
 
+// A real human tapping the push opens a normal mobile/desktop browser (UA contains "Mozilla"
+// and none of the bot/prefetch tokens). Link-preview crawlers, ntfy's own fetch, and CLI tools
+// are screened OUT so they can never auto-approve by merely fetching the link.
+function looksLikeRealBrowser(ua: string): boolean {
+  const s = (ua || '').toLowerCase()
+  if (!s) return false
+  const bots = ['bot', 'crawl', 'spider', 'preview', 'facebookexternalhit', 'whatsapp', 'telegram',
+    'slack', 'discord', 'twitter', 'curl', 'wget', 'python-requests', 'go-http', 'okhttp', 'ntfy', 'headless', 'libwww']
+  if (bots.some((b) => s.includes(b))) return false
+  return s.includes('mozilla')
+}
+
 function clamp(v: unknown, n: number): string {
   // Strip CR/LF AND Unicode line separators (U+2028/U+2029) so titles can never break ntfy
   // headers or smuggle line breaks into the SMS body.
@@ -54,21 +66,39 @@ function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 }
 
+// HTTP header values must be ASCII. A real user intent often carries non-ASCII — em-dashes,
+// smart quotes, ellipsis, accented letters, emoji — and any of those in the ntfy `Title` header
+// makes fetch throw a TypeError, so the push SILENTLY falls back to simulation. Transliterate the
+// common punctuation and strip whatever remains, so a real title can never drop the notification.
+// (Only the header is folded; the full UTF-8 detail still rides in the notification body/summary.)
+export function asciiHeader(s: string): string {
+  return String(s ?? '')
+    .replace(/[‐-―]/g, '-') // hyphens / en– / em— dashes
+    .replace(/[‘’‚‛]/g, "'") // single curly quotes
+    .replace(/[“”„‟]/g, '"') // double curly quotes
+    .replace(/…/g, '...') // ellipsis
+    .replace(/[^\x20-\x7E]/g, '') // drop any remaining non-ASCII (accents, emoji)
+    .trim()
+}
+
 // ---- channels --------------------------------------------------------------
 
 async function pushNtfy(cfg: NotifyConfig, m: { title: string; summary: string; amount: number | null; approveUrl: string }): Promise<boolean> {
   if (!cfg.ntfyTopic) return false
   try {
-    // ntfy headers must be ASCII — keep titles/labels plain; the body carries the detail.
+    // ntfy headers must be ASCII — fold the (user-derived) title to ASCII so a non-ASCII char can
+    // never throw and silently drop the push; the full detail still rides in the body below.
     const headers: Record<string, string> = {
-      Title: m.amount ? `${m.title} - $${m.amount.toFixed(2)}` : m.title,
+      Title: asciiHeader(m.amount ? `${m.title} - $${m.amount.toFixed(2)}` : m.title) || 'Approval needed',
       Priority: 'high',
       Tags: m.amount ? 'lock,dollar' : 'lock',
     }
     // A `view` action opens the approve URL in the phone's browser → the GET route marks the
     // approval and shows a branded "Approved ✓" page. More reliable than an in-app http POST,
-    // and the web's status poll picks it up within ~1s.
-    if (m.approveUrl) headers.Actions = `view, Approve, ${m.approveUrl}`
+    // and the web's status poll picks it up within ~1s. The URL is ASCII-folded for the SAME reason
+    // as Title: a non-ASCII/CRLF char in PUBLIC_BASE_URL would otherwise throw and silently drop the push.
+    const safeUrl = asciiHeader(m.approveUrl)
+    if (safeUrl) headers.Actions = `view, Approve, ${safeUrl}`
     const resp = await timedFetch(`${cfg.ntfyBaseUrl}/${encodeURIComponent(cfg.ntfyTopic)}`, {
       method: 'POST',
       headers,
@@ -166,15 +196,21 @@ export function phoneApprove(id: string): PhoneApproveResult {
 }
 
 /**
- * GET handler for the phone link. Renders a confirm page WITHOUT any side effect — approval only
- * happens on the POST from this page's button. (A GET must be idempotent: ntfy/link-preview/anti-
- * malware bots routinely pre-fetch action URLs, which would otherwise auto-approve.)
+ * GET handler for the phone link — SINGLE-ACTION for a real tap. A genuine browser tap approves
+ * immediately and shows the branded "Approved" page (one tap, the smooth demo path). Anything that
+ * looks like a bot/prefetch/link-preview fetch gets the side-effect-free confirm page instead, whose
+ * explicit POST button is the only way IT can approve — so crawlers can never auto-approve. The id
+ * is unguessable, one-shot, and short-TTL, so a real tap approving on GET is safe.
  */
-export function phoneApproveConfirm(id: string): { ok: boolean; html: string } {
+export function phoneApproveViaGet(id: string, ua: string): { ok: boolean; status?: PendingStatus; html: string } {
   sweep(Date.now())
   const rec = id ? pending.get(id) : undefined
   if (!rec) return { ok: false, html: page('Link expired', 'This approval link is no longer valid. Approve in the Passport app instead.') }
-  if (rec.status === 'approved') return { ok: true, html: page('Approved ✓', `“${rec.title}” is already approved. Head back to Passport.`) }
+  if (rec.status === 'approved') return { ok: true, status: 'approved', html: page('Approved ✓', `“${rec.title}” is already approved. Head back to Passport — it’s continuing now.`) }
+  if (looksLikeRealBrowser(ua)) {
+    if (rec.status === 'pending') rec.status = 'approved'
+    return { ok: true, status: 'approved', html: page('Approved ✓', `“${rec.title}” is approved — your agent is completing the purchase now. You can close this tab.`) }
+  }
   return { ok: true, html: confirmPage(rec.title) }
 }
 

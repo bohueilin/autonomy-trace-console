@@ -2,6 +2,8 @@
 // routes to send a real push/SMS and then polls whether the phone tapped Approve. All
 // channel secrets (ntfy topic, Twilio creds) stay server-side.
 
+import { api } from './apiBase.ts'
+
 export interface PhoneApprovalHandle {
   id: string
   channel: 'push' | 'sms' | 'push+sms' | 'simulation'
@@ -12,7 +14,7 @@ export interface PhoneApprovalHandle {
 
 export async function requestPhoneApproval(input: { title: string; summary: string; amount?: number | null }): Promise<PhoneApprovalHandle | null> {
   try {
-    const r = await fetch('/api/passport/notify/approval', {
+    const r = await fetch(api('/api/passport/notify/approval'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),
@@ -42,7 +44,7 @@ export type PhoneStatus = 'pending' | 'approved' | 'denied' | 'expired'
 
 export async function pollPhoneStatus(id: string): Promise<PhoneStatus> {
   try {
-    const r = await fetch(`/api/passport/notify/status?id=${encodeURIComponent(id)}`)
+    const r = await fetch(api(`/api/passport/notify/status?id=${encodeURIComponent(id)}`))
     const d = (await r.json()) as { status?: PhoneStatus }
     return d.status ?? 'expired'
   } catch {

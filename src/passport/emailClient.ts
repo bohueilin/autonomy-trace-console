@@ -1,6 +1,8 @@
 // Client seam for the journey-summary email. The browser passes the request + results;
 // the server composes the email and sends it to the user's own (server-configured) address.
 
+import { api } from './apiBase.ts'
+
 export interface EmailResult {
   ok: boolean
   sent: boolean
@@ -15,7 +17,7 @@ export async function sendJourneySummary(input: {
   results: { head: string; detail: string }[]
 }): Promise<EmailResult> {
   try {
-    const r = await fetch('/api/passport/email/summary', {
+    const r = await fetch(api('/api/passport/email/summary'), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(input),

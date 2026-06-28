@@ -2,6 +2,8 @@
 // These are real values served from the server config, used to render the order details and
 // to compose the Discord share. Never written into the client bundle.
 
+import { api } from './apiBase.ts'
+
 export interface OrderContext {
   deliveryAddress: string
   orderVendor: string
@@ -13,7 +15,7 @@ export interface OrderContext {
 
 export async function fetchOrderContext(): Promise<OrderContext | null> {
   try {
-    const r = await fetch('/api/passport/order-context')
+    const r = await fetch(api('/api/passport/order-context'))
     const d = (await r.json()) as { ok?: boolean; context?: OrderContext }
     return d.ok && d.context ? d.context : null
   } catch {

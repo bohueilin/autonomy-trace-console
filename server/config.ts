@@ -121,6 +121,13 @@ export interface AppConfig {
   episodeSecret: string
   /** True when episodeSecret is the insecure dev default — real money is refused in this case. */
   episodeSecretIsDev: boolean
+  /**
+   * Extra browser origins (besides localhost) allowed to call the CSRF-guarded /api/passport/*
+   * routes — used when a deployed frontend (e.g. a Cloudflare Pages site) calls this server through
+   * a tunnel. An entry beginning with '.' is a hostname-suffix match, so one line covers every
+   * Pages preview alias (e.g. '.origin-physical-ai.pages.dev').
+   */
+  webOrigins: string[]
   /** Non-fatal configuration warnings to log at startup. */
   warnings: string[]
 }
@@ -182,7 +189,27 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     warnings.push('SNAPLII spend cap is invalid (<=0) — all purchases will be denied. Fix SNAPLII_*_CAP_USD.')
   }
 
-  const publicBaseUrl = (get('PUBLIC_BASE_URL') ?? '').replace(/\/+$/, '') || undefined
+  // PUBLIC_BASE_URL becomes the phone "Approve" link + the ntfy Actions header. Validate it as a
+  // plain ASCII http(s) URL so a mistyped/Unicode value fails LOUDLY here instead of silently
+  // throwing on the ntfy header and dropping every push (the asciiHeader fold is the last-line backstop).
+  const isAsciiHttpUrl = (s: string): boolean => {
+    if (!/^[\x20-\x7E]+$/.test(s)) return false
+    try {
+      const u = new URL(s)
+      return u.protocol === 'https:' || u.protocol === 'http:'
+    } catch {
+      return false
+    }
+  }
+  const rawPublicBase = (get('PUBLIC_BASE_URL') ?? '').replace(/\/+$/, '')
+  let publicBaseUrl: string | undefined
+  if (rawPublicBase) {
+    if (isAsciiHttpUrl(rawPublicBase)) {
+      publicBaseUrl = rawPublicBase
+    } else {
+      warnings.push(`PUBLIC_BASE_URL is not a valid ASCII http(s) URL ("${rawPublicBase}") — ignoring it; the phone "Approve" link will be unavailable until it is fixed.`)
+    }
+  }
   const notify: NotifyConfig = {
     ntfyBaseUrl: (get('NTFY_BASE_URL') ?? 'https://ntfy.sh').replace(/\/+$/, ''),
     ntfyTopic: get('NTFY_TOPIC') || undefined,
@@ -212,6 +239,12 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
   if (!onepassword.serviceAccountToken) {
     warnings.push('1Password is not configured — the secret broker falls back to the in-memory mock. Set OP_SERVICE_ACCOUNT_TOKEN (+ OP_VAULT) to broker real credentials.')
   }
+  // Origins (besides localhost) allowed to call the guarded /api/passport/* routes. Set this to the
+  // deployed site's host when a Pages frontend reaches this server through a tunnel.
+  const webOrigins = (get('EXTRA_WEB_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
   const emailProvider = email.insforgeApiKey && email.insforgeBaseUrl ? 'InsForge' : email.resendApiKey ? 'Resend' : null
   if (!emailProvider || !email.to) {
     warnings.push('Email summary is simulated — set SUMMARY_EMAIL (your own address) + an email provider (InsForge creds or RESEND_API_KEY) to actually send.')
@@ -266,5 +299,5 @@ export function loadConfig(cwd: string = process.cwd()): AppConfig {
     throw new Error(`Invalid PORT: ${get('PORT')}`)
   }
 
-  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, email, onepassword, demo, episodeSecret, episodeSecretIsDev, warnings }
+  return { port, isProd, nebius, insforge, gmi, snaplii, notify, discord, email, onepassword, demo, episodeSecret, episodeSecretIsDev, webOrigins, warnings }
 }
