@@ -16,6 +16,8 @@ interface ResultRow {
   icon: string
   head: string
   detail: string
+  /** The single most important fact for this row (the date/time), shown big + colored. */
+  when?: string
 }
 
 function approved(snap: PassportSnapshot, cap: Capability): boolean {
@@ -71,14 +73,16 @@ export function ResultsSummary({ snap, exec, ctx }: { snap: PassportSnapshot; ex
       rows.push({
         icon: '🗓',
         head: 'Calendar event added',
-        detail: 'FIFA catch-up night · Thursday next week, 6:30–9:00 PM PST — blocked on your calendar.',
+        when: 'Thursday next week, 6:30–9:00 PM PST',
+        detail: 'FIFA catch-up night — time blocked on your calendar.',
       })
     }
     if (approved(snap, 'reminders.write.commit')) {
       rows.push({
         icon: '⏰',
         head: 'Reminders set',
-        detail: 'Nudge 1 hour before — 5:30 PM PST — plus mute sports notifications until kickoff so nothing spoils it.',
+        when: 'Nudge at 5:30 PM PST — 1 hour before',
+        detail: 'Plus sports notifications muted until kickoff so nothing spoils it.',
       })
     }
   }
@@ -134,6 +138,7 @@ export function ResultsSummary({ snap, exec, ctx }: { snap: PassportSnapshot; ex
               </span>
               <div className="pp-results-tx">
                 <b>{r.head}</b>
+                {r.when && <span className="pp-results-when">{r.when}</span>}
                 <span>{r.detail}</span>
               </div>
             </div>

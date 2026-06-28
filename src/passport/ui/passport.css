@@ -736,6 +736,22 @@
 .pp-results-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pp-results-tx b { font-size: 14.5px; color: var(--text); }
 .pp-results-tx span { font-size: 13px; color: var(--text-soft); }
+/* The date/time is the most important fact in the summary — big, bold, high-contrast accent chip
+   (≥2px larger than the body, with its own selector specificity so it isn't muted by the rule above). */
+.pp-results-tx .pp-results-when {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--accent-ink);
+  background: rgba(47, 109, 246, 0.10);
+  border: 1px solid rgba(47, 109, 246, 0.24);
+  padding: 3px 11px;
+  border-radius: 9px;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  margin: 2px 0 4px;
+}
 .pp-results-empty { margin: 0; font-size: 14px; color: var(--text-soft); }
 .pp-results-foot { margin: 0; font-size: 12.5px; color: var(--good-ink); }
 .pp-results-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
