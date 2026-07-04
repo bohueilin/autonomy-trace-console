@@ -323,7 +323,15 @@
 .pp-hero-light:nth-child(2) { background: #febc2e; }
 .pp-hero-light:nth-child(3) { background: #28c840; }
 .pp-hero-chrome em { margin-left: 9px; font-style: normal; font-size: 12px; font-weight: 600; color: #6b7280; letter-spacing: 0.01em; }
-.pp-hero-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0b0d12; }
+.pp-hero-video-wrap { position: relative; line-height: 0; }
+.pp-hero-video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #0b0d12; cursor: pointer; }
+.pp-hero-play { position: absolute; inset: 0; margin: auto; width: 66px; height: 66px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; cursor: pointer;
+  background: rgba(11,13,18,0.55); color: #fff; font-size: 22px; line-height: 1; padding-left: 3px;
+  box-shadow: 0 8px 26px -6px rgba(0,0,0,0.5); backdrop-filter: blur(3px);
+  transition: transform 0.15s ease, background 0.15s ease; }
+.pp-hero-play:hover { transform: scale(1.06); background: rgba(11,13,18,0.74); }
+.pp-hero-play:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .pp-hero-cap { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 9px; margin: 18px auto 0; font-size: 14.5px; color: var(--text-soft); }
 .pp-hero-cap b { color: var(--text); }
 .pp-hero-thesis { margin: 22px auto 0; max-width: 640px; font-size: 14.5px; color: var(--text-soft); background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 12px 12px 0; padding: 14px 18px; text-align: left; }

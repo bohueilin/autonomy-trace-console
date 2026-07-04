@@ -44,6 +44,23 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
   const exRef = useRef<HTMLDivElement>(null)
   const scrollEx = (dir: number) => exRef.current?.scrollBy({ left: dir * 344, behavior: 'smooth' })
 
+  // Hero video: autoplay muted where the browser allows it, but always let a
+  // click play/pause it. Some browsers (Safari Low Power Mode, strict autoplay,
+  // data-saver) block muted autoplay, and native controls only respond to the
+  // exact play button — so a click anywhere on the frame must start playback.
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoPaused, setVideoPaused] = useState(true)
+  const attachVideo = useCallback((v: HTMLVideoElement | null) => {
+    videoRef.current = v
+    if (v) v.play().then(() => setVideoPaused(false)).catch(() => setVideoPaused(true))
+  }, [])
+  const toggleVideo = useCallback(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (v.paused) void v.play().catch(() => {})
+    else v.pause()
+  }, [])
+
   return (
     <div className="pp-home">
       <section className="pp-hero">
@@ -65,17 +82,31 @@ export function Home({ onRun }: { onRun: (s: ScenarioSpec) => void }) {
               <span className="pp-hero-light" />
               <em>passport · agent journey</em>
             </div>
-            <video
-              className="pp-hero-video"
-              src="/agent-journey.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              controls
-              preload="metadata"
-              aria-label="Agent journey: an agent reorders your usual DoorDash, gated by Passport approval"
-            />
+            <div className="pp-hero-video-wrap">
+              <video
+                ref={attachVideo}
+                className="pp-hero-video"
+                src="/agent-journey.mp4"
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                onClick={toggleVideo}
+                onPlay={() => setVideoPaused(false)}
+                onPause={() => setVideoPaused(true)}
+                aria-label="Agent journey: an agent reorders your usual DoorDash, gated by Passport approval"
+              />
+              {videoPaused && (
+                <button
+                  type="button"
+                  className="pp-hero-play"
+                  onClick={toggleVideo}
+                  aria-label="Play the agent journey video"
+                >
+                  <span aria-hidden="true">▶</span>
+                </button>
+              )}
+            </div>
           </div>
           <figcaption className="pp-hero-cap">
             <span className="pp-hero-dot" /> An agent reorders your usual DoorDash — and stops to ask <b>before it pays</b>.
